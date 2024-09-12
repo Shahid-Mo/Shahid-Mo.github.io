@@ -2,6 +2,7 @@ baseURL: "https://shahid-mo.github.io/"
 title: "TensorTunes"
 theme: "PaperMod"
 languageCode: "en-us"
+defaultContentLanguage: "en"
 
 params:
   defaultTheme: auto
@@ -19,4 +20,3 @@ menu:
       name: Tags
       url: /tags/
       weight: 20
-      
