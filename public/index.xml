@@ -2,17 +2,17 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>TensorTunes</title>
-    <link>http://localhost:1313/</link>
+    <link>https://shahid-mo.github.io/</link>
     <description>Recent content on TensorTunes</description>
     <generator>Hugo -- 0.129.0</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 11 Sep 2024 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://shahid-mo.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Welcome to TensorTunes</title>
-      <link>http://localhost:1313/posts/decoding-from-language-models/</link>
+      <link>https://shahid-mo.github.io/posts/decoding-from-language-models/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/posts/decoding-from-language-models/</guid>
+      <guid>https://shahid-mo.github.io/posts/decoding-from-language-models/</guid>
       <description>Welcome to TensorTunes, where we explore the fascinating intersection of mathematics, music, and machine learning. Our goal is to uncover the hidden harmonies in data and sound, using the power of algorithms and signal processing.
 Here&amp;rsquo;s a simple example of how we might use LaTeX to express a musical concept mathematically:
 The frequency $f$ of a note in the equal-tempered scale is given by:
