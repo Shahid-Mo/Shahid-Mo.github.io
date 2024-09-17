@@ -1,26 +1,26 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=36047&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=39705&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Quantization of Language Models | TensorTunes</title>
+<title>Quantization in LLMS (Part 1): LLM.int8(), NF4 | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="The Return of the Intro So you are a AI enthuasist, and want to run llms locally on your local on or you are a multi-billion dollar start up and you want to serve your prestine new model to you coustomers, either way you should know about qunatization
-Now Qunatization can be Broadly classified into 2 types
-QAT (Quantization Aware Training) PTQ (Post Training Qunatization) Another way you can Look into Qunatiztion is weather if you have a Finetuned model (ie, a model thay you are trying just to serve) or a model you are trying to FInetune on your own dataset, For finetunig a Instructino tuned (SFT) model, you can your use techniques like adapters or Just do QLoRA, which is the most popular and the most effective right now.">
+<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
+Quantization can broadly be categorized into two types:
+Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:36047/posts/quantization/">
+<link rel="canonical" href="http://localhost:39705/posts/quantization/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:36047/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:36047/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:36047/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:36047/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:36047/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:39705/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:39705/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:39705/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:39705/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:39705/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:36047/posts/quantization/">
+<link rel="alternate" hreflang="en" href="http://localhost:39705/posts/quantization/">
 <noscript>
     <style>
         #theme-toggle,
@@ -89,7 +89,7 @@ QAT (Quantization Aware Training) PTQ (Post Training Qunatization) Another way y
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:36047/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:39705/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -115,12 +115,12 @@ QAT (Quantization Aware Training) PTQ (Post Training Qunatization) Another way y
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:36047/posts/" title="Posts">
+                <a href="http://localhost:39705/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:36047/tags/" title="Tags">
+                <a href="http://localhost:39705/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -133,203 +133,280 @@ QAT (Quantization Aware Training) PTQ (Post Training Qunatization) Another way y
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Quantization of Language Models
+      Quantization in LLMS (Part 1): LLM.int8(), NF4
     </h1>
     <div class="post-meta"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span>
 
 </div>
   </header> 
-  <div class="post-content"><h2 id="the-return-of-the-intro">The Return of the Intro<a hidden class="anchor" aria-hidden="true" href="#the-return-of-the-intro">#</a></h2>
-<p>So you are a AI enthuasist, and want to run llms locally on your local on or you are a multi-billion dollar start up and you want to serve your prestine new model to you coustomers, either way you should know about qunatization</p>
-<p>Now Qunatization can be Broadly classified into 2 types</p>
+  <div class="post-content"><h2 id="introduction-to-quantization">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization">#</a></h2>
+<p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, <strong>quantization</strong> is a technique you need to understand.</p>
+<p>Quantization can broadly be categorized into two types:</p>
 <ul>
-<li>QAT (Quantization Aware Training)</li>
-<li>PTQ (Post Training Qunatization)</li>
+<li>
+<p><strong>Quantization Aware Training (QAT):</strong> Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.</p>
+</li>
+<li>
+<p><strong>Post Training Quantization (PTQ):</strong> Applies quantization after a model is already trained, focusing on reducing its size and inference cost without retraining.</p>
+</li>
 </ul>
-<p>Another way you can Look into Qunatiztion is weather if you have a Finetuned model (ie, a model thay you are trying just to serve) or a model you are trying to FInetune on your own dataset, For finetunig a Instructino tuned (SFT) model, you can your use techniques like adapters or Just do QLoRA, which is the most popular and the most effective right now.</p>
-<p>This Post does not go into QLoRA or anyother PFET techniques, this post is about trying to Quantize an LLM for serving or making it small so that it runs on edge devices.</p>
-<h1 id="an-alternate-intro">An alternate Intro<a hidden class="anchor" aria-hidden="true" href="#an-alternate-intro">#</a></h1>
-<p>The costs to train an LLM are high. More importantly, inference costs far exceed training costs when deploying a model at any reasonable scale. In fact, the costs to inference ChatGPT exceed the training costs on a weekly basis.</p>
-<p>Now lets assume we have a fully trained LLM with some arbitrary &ldquo;n&quot;Billion params, Now somehow we want to make it smaller, there could be several  reasons for making the models smaller(for instance in my case i just wanted the see the largest model that i can run on colab or on my Local GPU, Ther could be), Another importnat is if you want to finetune an open weights model like LLam or Gemeni or any other multimodal models like PaliGemma or even diffusion models like Flux 1.0, ( I dont like to call them opensource models cause the trainig data is not open source ), Another reason is that you might want to serve your preety llm on lower costs which directly corresponds to lower memory ( This part of the ecnomics i am yet to figure out),</p>
-<p>So the trick here is called post training Quantization, So lets start with an example (I am going to use GPT2 Small as a running example throughout this blogpost and try and post some code snippets, and do check out the accompaning notebook and github code for further code examples), okay, lets load the GPT2 Model from Hugging Face and ill just point out some of the config its a 12 Layer model wiht 125M paramaters, so the model is trained in FP32 Precision and this is what you get when you load the model from hugging face as you can see below.</p>
-<p>Now Lest calculat the memory footprint of the model which is 124 1e6 (32/8) / 1024**2
-Now according to this papar we can finetune and even pretrain models in 16 bits of precision, which wont effect the performance of neural networks, so how do we convert this FP32 into 16 Bits or something even smaller, so lest dive straight into it.</p>
-<h3 id="precison-of-llms">Precison of LLMs<a hidden class="anchor" aria-hidden="true" href="#precison-of-llms">#</a></h3>
-<p>Lets talk about the different types of precison (data types) present in deep learnign, according to the official pytorch documentation these are the datatype present in pytorch</p>
-<!-- raw HTML omitted -->
-<p>We will start at FP32, this is the most common datatype used to train deep learning models, and if you dont specify the datatypes of tensors this is the default datatype in pytorch.</p>
-<p>the best way is to look at an example, lets assume we want to represent pi with the first 10 decimal places,</p>
-<p>pi = 3.1415926535</p>
-<p>This is quite basic, but this provides a deeper understanding and appreciation of the different datatypes like bf16 vs fp16 and in the future fp8(wich is currently suppored by the H100 gpus and Beond). How do we convert the decimal representation to binary</p>
-<p>To convert the decimal value of π (3.1415926535) to its FP32 (single-precision floating-point) representation, follow these steps:</p>
-<h3 id="step-1-understand-the-fp32-structure">Step 1: <strong>Understand the FP32 Structure</strong><a hidden class="anchor" aria-hidden="true" href="#step-1-understand-the-fp32-structure">#</a></h3>
-<p>FP32 uses 32 bits divided into three parts:</p>
+<p>In this post (and subsequent ones on this topic), we&rsquo;ll focus on Post Training Quantization (PTQ) — a method used to make trained models smaller and more efficient, particularly useful when deploying models to edge devices or serving models at lower hardware costs.</p>
+<h2 id="why-quantization">Why Quantization?<a hidden class="anchor" aria-hidden="true" href="#why-quantization">#</a></h2>
+<p>Consider this: the costs of training an LLM are already high, but inference costs — running the model to generate responses — can far exceed training costs, especially when deploying at scale. For example, inference costs for models like ChatGPT can surpass training costs within a week. Quantization reduces these costs by allowing models to operate in lower precision, such as FP16 or even FP8, without significant performance loss.</p>
+<p>Let’s start with a real-world example using the GPT-2 model from Hugging Face. We will quantize it to reduce its memory footprint and discuss how to efficiently convert FP32 to lower-precision formats like FP16 and beyond.</p>
+<p>We will begin with some &ldquo;back-of-the-napkin&rdquo; calculations. Suppose you want to run the LLaMA 3.1 70B model. What kind of memory and GPU are you looking at? If you load the model from Hugging Face, it will automatically be loaded in full precision (FP32). Just to load the model weights, you will require:
+$$
+70 \times 10^9 \text{ parameters} \times 32 \text{ bits per parameter} \div 8 \div 1024^3 \approx 280 \text{ GB}
+$$</p>
+<p>So, you would need at least an H100 GPU with 80 GB of VRAM to load the model, and you wouldn&rsquo;t even be able to perform inference or fine-tuning. You would likely need to get a cluster for that.</p>
+<p>This is where quantization can help you. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 35 GB, which can be accomplished even on the free-tier T4 Colab.</p>
+<h2 id="understanding-precision-in-llms">Understanding Precision in LLMs<a hidden class="anchor" aria-hidden="true" href="#understanding-precision-in-llms">#</a></h2>
+<p>If you&rsquo;re not familiar with terms like FP32 or 8-bit precision from the previous section, we&rsquo;re going to cover that next.</p>
+<h3 id="starting-with-fp32">Starting with FP32<a hidden class="anchor" aria-hidden="true" href="#starting-with-fp32">#</a></h3>
+<p>FP32 (32-bit floating point) is the most common datatype used to train deep learning models. If you don’t specify the datatypes of tensors in PyTorch, FP32 is the default datatype.</p>
+<p>To understand how FP32 works and why it is often preferred, let’s look at a simple example: representing $\pi$ (pi) up to 10 decimal places.</p>
+<h3 id="precision-in-deep-learning-models">Precision in Deep Learning Models<a hidden class="anchor" aria-hidden="true" href="#precision-in-deep-learning-models">#</a></h3>
+<p>Let&rsquo;s assume we want to represent $\pi$ with the first 10 decimal places:</p>
+<p>$$
+\pi \approx 3.1415926535
+$$</p>
+<p>While this example is quite basic, it helps illustrate the inner workings of different data types, such as BF16 and FP16 — and in future posts, FP8 (which is supported by the latest NVIDIA H100 GPUs and similar hardware).</p>
+<h1 id="how-to-convert-a-decimal-representation-to-fp32">How to Convert a Decimal Representation to FP32<a hidden class="anchor" aria-hidden="true" href="#how-to-convert-a-decimal-representation-to-fp32">#</a></h1>
+<p>To convert the decimal value of $\pi$ (3.1415926535) into its FP32 (single-precision floating-point) representation, we need to follow these steps:</p>
+<h2 id="1-understand-the-fp32-structure">1. Understand the FP32 Structure<a hidden class="anchor" aria-hidden="true" href="#1-understand-the-fp32-structure">#</a></h2>
+<p>FP32 is composed of 32 bits, divided into three parts:</p>
 <ul>
-<li><strong>Sign bit (1 bit)</strong>: Determines whether the number is positive or negative.</li>
-<li><strong>Exponent (8 bits)</strong>: Encodes the exponent of the number in a biased format.</li>
-<li><strong>Mantissa (23 bits)</strong>: Represents the significant digits of the number.</li>
+<li><strong>Sign bit (1 bit):</strong> Indicates whether the number is positive or negative.</li>
+<li><strong>Exponent (8 bits):</strong> Encodes the exponent using a biased format.</li>
+<li><strong>Mantissa (23 bits):</strong> Represents the significant digits of the number.</li>
 </ul>
-<h3 id="step-2-convert-π-to-binary">Step 2: <strong>Convert π to Binary</strong><a hidden class="anchor" aria-hidden="true" href="#step-2-convert-π-to-binary">#</a></h3>
-<p>First, convert the decimal value of π to its binary equivalent.</p>
-<h4 id="convert-the-integer-part">Convert the Integer Part:<a hidden class="anchor" aria-hidden="true" href="#convert-the-integer-part">#</a></h4>
-<p>The integer part of π is 3. Convert it to binary:
-$ 3_{10} = 11_2 $</p>
-<h4 id="convert-the-fractional-part">Convert the Fractional Part:<a hidden class="anchor" aria-hidden="true" href="#convert-the-fractional-part">#</a></h4>
-<p>Now, convert the fractional part (0.1415926535) to binary:</p>
+<h2 id="2-convert-pi-to-binary">2. Convert $\pi$ to Binary<a hidden class="anchor" aria-hidden="true" href="#2-convert-pi-to-binary">#</a></h2>
+<p>We start by converting the decimal value of $\pi$ into its binary equivalent.</p>
+<p><strong>Convert the Integer Part:</strong></p>
+<p>The integer part of $\pi$ is 3. In binary:</p>
+<p>$$
+3_{10} = 11_{2}
+$$</p>
+<p><strong>Convert the Fractional Part:</strong></p>
+<p>To convert the fractional part (0.1415926535) to binary:</p>
 <ul>
-<li>Multiply by 2, take the integer part, and repeat:
+<li>Multiply by 2 and record the integer part repeatedly:
 <ul>
-<li>0.1415926535 × 2 = 0.283185307 → 0</li>
-<li>0.283185307 × 2 = 0.566370614 → 0</li>
-<li>0.566370614 × 2 = 1.132741228 → 1</li>
-<li>0.132741228 × 2 = 0.265482456 → 0</li>
-<li>0.265482456 × 2 = 0.530964912 → 0</li>
-<li>0.530964912 × 2 = 1.061929824 → 1</li>
-<li>Continue this until you have enough bits.</li>
+<li>$0.1415926535 \times 2 = 0.283185307 \rightarrow 0$</li>
+<li>$0.283185307 \times 2 = 0.566370614 \rightarrow 0$</li>
+<li>$0.566370614 \times 2 = 1.132741228 \rightarrow 1$</li>
+<li>$0.132741228 \times 2 = 0.265482456 \rightarrow 0$</li>
+<li>$0.265482456 \times 2 = 0.530964912 \rightarrow 0$</li>
+<li>Continue this process to get more bits.</li>
 </ul>
 </li>
 </ul>
-<p>The binary representation of π ≈ 3.1415926535 in binary (truncated) is:
-$ π \approx 11.001001000011111101101010100010_2 $
-This is an approximation, you need to go through the apove multiplication till we get a zero to get an accurate representation of the decimal places.</p>
-<h3 id="step-3-normalize-the-binary-representation">Step 3: <strong>Normalize the Binary Representation</strong><a hidden class="anchor" aria-hidden="true" href="#step-3-normalize-the-binary-representation">#</a></h3>
-<p>Normalize the binary representation to fit the FP32 format:
-$ 11.001001000011111101101010100010_2 $
-$ = 1.1001001000011111101101010100010_2 × 2^1 $
-The above has 31 digits after the decimal.</p>
-<h3 id="step-4-determine-the-sign-bit">Step 4: <strong>Determine the Sign Bit</strong><a hidden class="anchor" aria-hidden="true" href="#step-4-determine-the-sign-bit">#</a></h3>
-<p>Since π is positive, the sign bit is 0.</p>
-<h3 id="step-5-determine-the-exponent">Step 5: <strong>Determine the Exponent</strong><a hidden class="anchor" aria-hidden="true" href="#step-5-determine-the-exponent">#</a></h3>
-<p>The exponent is stored with a bias of 127 in FP32. This is done so that we can represent very samll numbers as well, for example if you want to represent a number like planks constant like in the order of magnitude 6.6 x 10^-34, the exponent will be of the order 2^(-..) so to represent these numbers as well we use a bias of 127,<br>
-Since the binary exponent is 1:
-$ \text{Exponent} = 1 + 127 = 128 $
-This is a Biased 127 Representation of the exponemt, this determines the max and min we can represent. The max we can represet with 8 bit exponent is up to 2^128, in decimal it is $ \aprox $. If you wanted to represent larger numbers that these you need to represent them in FP64.
-The binary representation of 128 is:
-$ 128_{10} = 10000000_2 $
-so basically exponent controls how large a number we can store,</p>
-<h3 id="step-6-determine-the-mantissa">Step 6: <strong>Determine the Mantissa</strong><a hidden class="anchor" aria-hidden="true" href="#step-6-determine-the-mantissa">#</a></h3>
-<p>The mantissa (fractional part) after normalization:
-$ 10010010000111111011010_2 $
-Only the first 23 bits after the leading 1 are used in the mantissa:
-$ \text{Mantissa} = 10010010000111111011010_2 $
-The rest of the digits are truncated, this loosed precision, this is quite important as stated in the example above, after converting the number to FP32 we loose some precision.</p>
-<h3 id="step-7-combine-the-components">Step 7: <strong>Combine the Components</strong><a hidden class="anchor" aria-hidden="true" href="#step-7-combine-the-components">#</a></h3>
-<p>Now, combine the sign bit, exponent, and mantissa:</p>
+<p>The binary representation of $\pi$ up to a reasonable precision is approximately:</p>
+<p>$$
+\pi \approx 11.001001000011111101101010100010_{2}
+$$</p>
+<h2 id="3-normalize-the-binary-representation">3. Normalize the Binary Representation<a hidden class="anchor" aria-hidden="true" href="#3-normalize-the-binary-representation">#</a></h2>
+<p>To fit the FP32 format, normalize the binary number so that it appears as:</p>
+<p>$$
+11.001001000011111101101010100010_{2} = 1.1001001000011111101101010100010_{2} \times 2^1
+$$</p>
+<h2 id="4-determine-the-sign-bit">4. Determine the Sign Bit<a hidden class="anchor" aria-hidden="true" href="#4-determine-the-sign-bit">#</a></h2>
+<p>Since $\pi$ is positive, the sign bit is:</p>
+<p>$$
+\text{Sign bit} = 0
+$$</p>
+<h2 id="5-calculate-the-exponent">5. Calculate the Exponent<a hidden class="anchor" aria-hidden="true" href="#5-calculate-the-exponent">#</a></h2>
+<p>The exponent is stored with a bias of 127 in FP32. This bias allows the representation of both very large and very small numbers. In FP32, the largest number you can represent is approximately $3.4 \times 10^{38}$, while the smallest positive number (close to zero) is around $1.4 \times 10^{-45}$.</p>
+<p>For $\pi$, the exponent after normalization is 1:</p>
+<p>$$
+\text{Exponent} = 1 + 127 = 128
+$$</p>
+<p>The exponent in binary is:</p>
+<p>$$
+128_{10} = 10000000_{2}
+$$</p>
+<h2 id="6-determine-the-mantissa">6. Determine the Mantissa<a hidden class="anchor" aria-hidden="true" href="#6-determine-the-mantissa">#</a></h2>
+<p>The mantissa consists of the significant digits after the leading 1:</p>
+<p>$$
+\text{Mantissa} = 10010010000111111011010_{2}
+$$</p>
+<p>Only the first 23 bits are retained, and any extra bits are truncated, resulting in some loss of precision. FP32 typically provides around 7 to 8 decimal places of precision. If you require more precision, you could use FP64 (double-precision), but for deep learning, FP32 is often more than sufficient.</p>
+<h2 id="7-combine-the-components">7. Combine the Components<a hidden class="anchor" aria-hidden="true" href="#7-combine-the-components">#</a></h2>
+<p>Combine the sign bit, exponent, and mantissa to form the final FP32 representation:</p>
 <ul>
 <li><strong>Sign bit:</strong> 0</li>
 <li><strong>Exponent:</strong> 10000000</li>
 <li><strong>Mantissa:</strong> 10010010000111111011010</li>
 </ul>
-<p>The FP32 representation of π ≈ 3.1415926535 is:
-$ \text{FP32} = 0 10000000 10010010000111111011010_2 $</p>
-<p>This is the IEEE 754 representation of π in FP32 format.</p>
-<p>Now that we have an understanding, we can look at the different floating point and int representations present used in Deep Learingin</p>
-<p>Now that we have an understand of the FP32 representation, The TF32 or TensorFloat 32,Intoroduce by Nvidia (2020) tf32 is primarily supported by NVIDIA GPUs, starting with the Ampere architecture (e.g., RTX 30 and A100 series). These GPUs have dedicated hardware for handling tf32 operations, leading to substantial performance improvements in deep learning workloads.</p>
-<ul>
-<li>Becaue of the difference between the exponent in FP32 and FP16, you might enounter &ldquo;NaN&rdquo; errors while training this is becaue the value is outside the precision of the format you are using, one naive soultion is if you are using FP16 is to load the model in full FP32 precision and you are good to go, a more principles approacht would be to figure out you your gradients are exploding or vaninsingh, This is generally not the case for Transformer base architectues, I faced this problem when I was trying to finetune a UNet diffusion model with and loaded the model in 16 Bit prcision, and the authors of the models had originally trained it on 32 Bit Precision.</li>
-</ul>
-<p>BF16 also called as Brain Float 16, was develope by google brain and gained populatiry in 2019, currently the most popular foramt to Train and Finetune LLMs right now, The big advantage of this format is that it has smae number of Exponet Bits comapred to the FP32 Format so it Makse loading the model in 16 Bits and then Finetunign it very easy, you dont run into &ldquo;Nan&rdquo; Loss errors as well when fine Tuning, The tradeoff is you loose precision but this paper has shown, that ther is not much difference beteen training and finetuning a LLM on 16 Bits, when compared to 32 bits, and this trade of in precision to smaller model size is totally worth it.</p>
-<p>Lets just have a look at what FP32 is then we can discuss how do we convert it into the different types of precisions.
-ok FP32 is Floating Point 32 which is a way to store floating point number on computers,
-so this basically means we (so this is basically the IEEE 754 Floating point representation)</p>
-<p>Take a Quick sidebar blog on on IEEE 754 Floating Point Numbers and</p>
-<p>Explanation of FP32
-Now acc to tis pape NNs dont need FP32 for training a NN can be trained on 16Bit precision as well.
-So there are two 16 Bit representation FP16 and BF16 (called Brain Float 16, invented by Google Brain) So converting from FP32 to FP16 is a pain in the ass and converting from FP32 to FP16 then finetunig your model is a big hastle, luckiely there is BF16 whic sould work on most moder gpus (In my hubmeb opinion the only reason to use FP16 over BF16 is if your hardware doesnt support it or you have a legacy model already in FP16)</p>
-<p>Now Its not enough jsut to reduce the model size to 16 bits, we can make it even smaller and store the model weights in even lower precison if we want to serve this model, (Just remember to convert the model back to FP16 before applying techniques like Q lora, this can be easily implemented in libraries like bits and bytes)</p>
-<p>Another importan reason for moving away for FP16 is the way to convert form FP32 to FP16 is quite nasty and Hairy, with some step pitfalls, you need to keep checking for numarical stability and at any point you loss can go up in flames.</p>
-<p>Now lest look at int8 and int4 qunatization (here i am going to discuss the most popular int8 and int4 quantization methods)</p>
-<h2 id="int-8-quantization">Int 8 Quantization<a hidden class="anchor" aria-hidden="true" href="#int-8-quantization">#</a></h2>
-<p>16 Bit Quantization is quite simple, but int8 quantization is hard, not hard per say,</p>
-<p>The numbers you can store with 8 bit precision are from -127 to 128, or 0 to 256.
-Lest look at the most popular Int 8 Quantization</p>
-<p>The two most common techniques to qunatize models to 8 bit precision are zeropoint qunatization and absmax qunatization.
-While zeropoint quantization offers high precision by using the full bit-range of the datatype, it is
-rarely used due to practical constraints.</p>
-<h3 id="absmax-quantization">AbsMax Quantization<a hidden class="anchor" aria-hidden="true" href="#absmax-quantization">#</a></h3>
-<p>(Explanation)
-Now that we know how to quantize llms in int8, are we done, not even close</p>
-<p>As we can see from the above figure, the yellow line shows that if we try to quantize a model beond like 3 billion parameters, the accuracy drops drastically, One of the big reason is the presence of outliers. Now in like traditional ML and Stats we cant just igonre these outlies, these outliers are the reason for the emergent properties of llms.</p>
-<p>So we will go over in detail how the most populat int 8 Qunatization technique works under the hood.</p>
-<h3 id="llmint8">LLM.int8()<a hidden class="anchor" aria-hidden="true" href="#llmint8">#</a></h3>
-<p>The first Technique is Vector wise quantization</p>
-<p>Ther are tons of ways to Quantize models into 8 bit and 4 Bit precision, these are current the most relavant and popular.</p>
-<ul>
-<li>Quic sidenote, the int8 and int4 quantization methods are becomning popular for serving LLMs, if you want to apply Finetunig techniques like QLora, then you need to convert the int8/4 representation into Floating Point representation for computation (mostly BF16).</li>
-</ul>
-<h2 id="nvidia-gpus-for-dummies">Nvidia GPUs for Dummies<a hidden class="anchor" aria-hidden="true" href="#nvidia-gpus-for-dummies">#</a></h2>
-<p>Now since we have seen the Int4 quntization, int8 Qunatization and the BF16, and FP16 precision representations, one might think naively i can just load any model in any GPU in Int8 or Int4 for inference or Just load a FP32 model in BF16 and strart training (I thought so naively, until the reality of Nvidia GPUs hitme.)</p>
-<p>This whole realization strarted when i tried to load the GPT2 model in Int4 precison using the Bits and Bytes library, and to my suprose when i did torch.tensor.dtype for it showed the model had loaded in uint8, a format which we have not even discussed, another shock came to me that even if i loaded the model in int4 qunatization, at that time No Nvidia GPU supported Native Int4 Quantization Calcualations, the thing that happened under the hood is that the gpu dequantize the Int4 matrices and Vector to either FP16 or FP32 before doing the calcualtion, Till now the only benifit for qunatization seemed liked that i could load larger models on GPUs but whith degraded quality and increased the inference time, this might have been useful for some silly project on my resume or github ,but i offeres no advantage in te real life eitehr for inference time or GPU size, So i decided to dig deeper, are there any gpus that support matirx operations in Int4, this was recently added on the BlackWell Architectures, Even Pytorch dosent support an int4 datatype nativeyl, hence hte use of uint8 by bits and bytes, here the workaround is that the model weights are qunatize into 4 bits but it use 8 bits ie,uint8 for storing the 2 4bit ints, but duing computation these are dequnatize into 16 bits.</p>
-<p>So after the breif prelague, lets look at the state of Nvidia GPU, Take a Look at the table below and we will discuss some important properties, about thes GPUs</p>
+<p>Thus, the FP32 representation of $\pi$ is:</p>
+<p>$$
+\text{FP32} = 0\ 10000000\ 10010010000111111011010_{2}
+$$</p>
+<p>This is the IEEE 754 standard representation of $\pi$ in FP32 format.</p>
+<h1 id="python-code-to-demonstrate-fp32-and-other-precisions">Python Code to Demonstrate FP32 and Other Precisions<a hidden class="anchor" aria-hidden="true" href="#python-code-to-demonstrate-fp32-and-other-precisions">#</a></h1>
+<p>Let&rsquo;s use Python to compare different floating-point representations of $\pi$ and calculate their precision errors:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> torch
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Pi value up to 10 digits</span>
+</span></span><span style="display:flex;"><span>pi_val <span style="color:#f92672">=</span> <span style="color:#ae81ff">3.1415926535</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># FP32 (single precision)</span>
+</span></span><span style="display:flex;"><span>pi_fp32 <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>tensor(pi_val, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>float32)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># BF16 (Brain Floating Point 16, half precision)</span>
+</span></span><span style="display:flex;"><span>pi_bf16 <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>tensor(pi_val, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span></code></pre></div><pre tabindex="0"><code>og:   pi = 3.1415926535
+FP32: Pi = 3.1415927410125732, Error % = 0.0000027856%
+BF16: Pi = 3.140625,           Error % = 0.0308013675%
+</code></pre><h3 id="fp8">FP8<a hidden class="anchor" aria-hidden="true" href="#fp8">#</a></h3>
+<p>Recent research, such as the &ldquo;FP8 FORMATS FOR DEEP LEARNING&rdquo; paper from September 2022, even shows that it&rsquo;s possible to train large language models (LLMs) using FP8 with just 2 or 3 bits of mantissa (depending on the E4M3 or E5M2 format).</p>
+<figure class="center">
+    <img loading="lazy" src="/images/quant_p1/fp8_vs_bf16.png"
+         alt="FP8 vs BF16 comparison"/> <figcaption>
+            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
+        </figcaption>
+</figure>
+
+<p>Here’s the table formatted in Markdown for your blog, which you can directly use if your blog platform supports Markdown syntax:</p>
+<h3 id="gpu-performance-table">GPU Performance Table<a hidden class="anchor" aria-hidden="true" href="#gpu-performance-table">#</a></h3>
 <table>
 <thead>
 <tr>
-<th><strong>Architecture</strong></th>
-<th><strong>Flagship GPU</strong></th>
-<th><strong>Release Date</strong></th>
-<th><strong>Compute Precision Supported</strong></th>
-<th><strong>Primary Use Cases</strong></th>
-<th><strong>Other Notable GPUs</strong></th>
+<th>GPU</th>
+<th>P100</th>
+<th>V100</th>
+<th>T4</th>
+<th>A100</th>
+<th>H100</th>
+<th>L40</th>
+<th>B100</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><strong>Pascal</strong></td>
-<td>Tesla P100</td>
-<td>April 5, 2016</td>
-<td>FP64, FP32, FP16</td>
-<td>AI training, HPC, scientific research</td>
-<td>GeForce GTX 1080 Ti, GTX 1080, GTX 1070, GTX 1060, Quadro P6000, P5000</td>
+<td><strong>VRAM</strong></td>
+<td>16GB</td>
+<td>32GB</td>
+<td>16GB</td>
+<td>40GB*</td>
+<td>80GB</td>
+<td>48GB</td>
+<td>192GB</td>
 </tr>
 <tr>
-<td><strong>Volta</strong></td>
-<td>Tesla V100</td>
-<td>May 10, 2017</td>
-<td>FP64, FP32, FP16 (Tensor Cores for FP16)</td>
-<td>AI training, HPC, scientific research</td>
-<td>Titan V, Quadro GV100</td>
+<td><strong>Architecture</strong></td>
+<td>Pascal</td>
+<td>Volta</td>
+<td>Turing</td>
+<td>Ampere</td>
+<td>Hopper</td>
+<td>Ada Lovelace</td>
+<td>Blackwell</td>
 </tr>
 <tr>
-<td><strong>Turing</strong></td>
-<td>Nvidia T4</td>
-<td>September 12, 2018</td>
-<td>FP32, FP16, INT8, INT4</td>
-<td>AI inference, video processing, edge computing</td>
-<td>GeForce RTX 2080 Ti, RTX 2080, RTX 2070, RTX 2060, Quadro RTX 8000, RTX 6000</td>
+<td><strong>Release Date</strong></td>
+<td>Apr-16</td>
+<td>May-17</td>
+<td>Sep-18</td>
+<td>May-20</td>
+<td>Mar-22</td>
+<td>Sep-22</td>
+<td>Mar-24</td>
 </tr>
 <tr>
-<td><strong>Ampere</strong></td>
-<td>Nvidia A100</td>
-<td>May 14, 2020</td>
-<td>FP64, FP32, TF32, FP16, BFLOAT16, INT8, INT4 (Tensor Cores for mixed precision)</td>
-<td>Large-scale AI training, HPC, inference, data analytics</td>
-<td>GeForce RTX 3090, RTX 3080, RTX 3070, RTX 3060, RTX 3050, RTX A6000, A5000</td>
+<td><strong>FP32</strong></td>
+<td>10.6</td>
+<td>8.2</td>
+<td>8.1</td>
+<td>19.5</td>
+<td>67</td>
+<td>90.5</td>
+<td>60</td>
 </tr>
 <tr>
-<td><strong>Hopper</strong></td>
-<td>Nvidia H100</td>
-<td>March 22, 2022</td>
-<td>FP64, FP32, TF32, FP16, BFLOAT16, FP8 (Tensor Cores for mixed and low precision)</td>
-<td>Large-scale AI model training, deep learning inference, HPC, scientific computing</td>
-<td>-</td>
+<td><strong>TF32</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>312</td>
+<td>989</td>
+<td>181</td>
+<td>1800</td>
 </tr>
 <tr>
-<td><strong>Ada Lovelace</strong></td>
-<td>GeForce RTX 4090</td>
-<td>October 12, 2022</td>
-<td>FP64, FP32, TF32, FP16, BFLOAT16, FP8 (Tensor Cores for mixed and low precision)</td>
-<td>Gaming, real-time ray tracing, AI acceleration, professional graphics, content creation</td>
-<td>GeForce RTX 4080, RTX 4070 Ti, RTX 4070, RTX 4060 Ti, RTX 4060, RTX 6000 Ada</td>
+<td><strong>FP16</strong></td>
+<td></td>
+<td>130</td>
+<td>65</td>
+<td>624</td>
+<td>1979</td>
+<td>362</td>
+<td>3500</td>
+</tr>
+<tr>
+<td><strong>BF16</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>624</td>
+<td>1979</td>
+<td>362</td>
+<td>3500</td>
+</tr>
+<tr>
+<td><strong>INT8</strong></td>
+<td>X</td>
+<td>X</td>
+<td>130</td>
+<td>1248</td>
+<td>3958</td>
+<td>724</td>
+<td>7000</td>
+</tr>
+<tr>
+<td><strong>INT4</strong></td>
+<td>X</td>
+<td>X</td>
+<td>260</td>
+<td>2496</td>
+<td></td>
+<td>1448</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>FP8</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>3958</td>
+<td>724</td>
+<td>7000</td>
+</tr>
+<tr>
+<td><strong>FP4</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>14000</td>
 </tr>
 </tbody>
 </table>
-<h3 id="an-alternate-intro-1">An alternate Intro<a hidden class="anchor" aria-hidden="true" href="#an-alternate-intro-1">#</a></h3>
-<p>So you are a AI enthuasist, and want to run llms locally on your local on or you are a multi-billion dollar start up and you want to serve you prestine new model to you coustomers,either on you Gaming GPU or you have a Mac (Sorry for the guys on windows who dont have a GPU (I think you probably can run a model on your cpu, but its not parctical in any sensen, not in the time it takes to get the generation or the stress you put your cpu througn, once i ran i Diffusion model on my cpu cause it was too big to fit on my GPU, and after that run my laptop started glitching, i had to restart it. So dont run LLMs on your cpus, Bad Idea!!))</p>
-<p>Now Qunatization can be Broadly classified into 2 types</p>
+<h3 id="how-to-use-this-table-in-your-blog">How to Use This Table in Your Blog<a hidden class="anchor" aria-hidden="true" href="#how-to-use-this-table-in-your-blog">#</a></h3>
 <ul>
-<li>QAT (Quantization Aware Training)</li>
-<li>PTQ (Post Training Qunatization)</li>
+<li><strong>Headers</strong> are defined with the <code>|</code> symbol.</li>
+<li><strong>Values</strong> are centered by using colons <code>:</code> at the start and end of the hyphens <code>---</code> for each column.</li>
+<li><strong>Cells marked with &lsquo;X&rsquo;</strong> indicate the data type is not supported by that GPU.</li>
 </ul>
+<h4 id="additional-formatting-tips">Additional Formatting Tips:<a hidden class="anchor" aria-hidden="true" href="#additional-formatting-tips">#</a></h4>
+<ul>
+<li>To make this table &ldquo;dank&rdquo; or visually appealing, consider using a custom stylesheet for your blog or platform. You can add background colors, borders, or hover effects using CSS.</li>
+<li><strong>Use a monospaced font</strong> for the table or apply a dark theme to your blog to match the style.</li>
+</ul>
+<p>Feel free to copy and paste this Markdown into your blog editor!</p>
 
 
   </div>
@@ -342,7 +419,7 @@ Now that we know how to quantize llms in int8, are we done, not even close</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:36047/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:39705/">TensorTunes</a></span> · 
 
     <span>
         Powered by
