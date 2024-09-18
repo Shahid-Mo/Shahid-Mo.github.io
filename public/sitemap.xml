@@ -2,23 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost:39705/posts/decoding-from-language-models/</loc>
+    <loc>http://localhost:34579/posts/decoding-from-language-models/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:39705/posts/from-retrieval-to-rag-part1/</loc>
+    <loc>http://localhost:34579/posts/from-retrieval-to-rag-part1/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:39705/posts/</loc>
+    <loc>http://localhost:34579/posts/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:39705/posts/quantization/</loc>
+    <loc>http://localhost:34579/posts/quantization/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:39705/</loc>
+    <loc>http://localhost:34579/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>http://localhost:39705/categories/</loc>
+    <loc>http://localhost:34579/categories/</loc>
   </url><url>
-    <loc>http://localhost:39705/tags/</loc>
+    <loc>http://localhost:34579/tags/</loc>
   </url>
 </urlset>

@@ -20,3 +20,9 @@ menu:
       name: Tags
       url: /tags/
       weight: 20
+
+# Add this section to enable HTML in Markdown
+markup:
+  goldmark:
+    renderer:
+      unsafe: true

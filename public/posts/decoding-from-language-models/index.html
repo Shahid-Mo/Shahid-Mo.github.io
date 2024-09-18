@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=39705&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=34579&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
@@ -10,16 +10,16 @@
 <meta name="description" content="A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
 At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:39705/posts/decoding-from-language-models/">
+<link rel="canonical" href="http://localhost:34579/posts/decoding-from-language-models/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:39705/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:39705/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:39705/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:39705/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:39705/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:34579/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:34579/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:34579/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:34579/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:34579/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:39705/posts/decoding-from-language-models/">
+<link rel="alternate" hreflang="en" href="http://localhost:34579/posts/decoding-from-language-models/">
 <noscript>
     <style>
         #theme-toggle,
@@ -88,7 +88,7 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:39705/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:34579/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -114,12 +114,12 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:39705/posts/" title="Posts">
+                <a href="http://localhost:34579/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:39705/tags/" title="Tags">
+                <a href="http://localhost:34579/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -144,7 +144,9 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
 <p>$$
 S = f(\lbrace y \rbrace _{&lt;t} )
 $$</p>
-<!-- raw HTML omitted -->
+<div style="text-align: center;">
+where, \( f \) is the Language model.
+</div>
 <p>The model then applies the softmax function to these scores to obtain a probability distribution over the vocabulary, representing the likelihood of each token being the next word given the preceding context.</p>
 <p>$$
 P(y_t = w \mid { y_{&lt;t} }) = \frac{\exp(S_w)}{\sum_{w&rsquo; \in V} \exp(S_{w&rsquo;})}
@@ -289,7 +291,7 @@ $$</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:39705/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:34579/">TensorTunes</a></span> · 
 
     <span>
         Powered by

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=39705&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=34579&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
@@ -11,16 +11,16 @@
 Quantization can broadly be categorized into two types:
 Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:39705/posts/quantization/">
+<link rel="canonical" href="http://localhost:34579/posts/quantization/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:39705/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:39705/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:39705/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:39705/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:39705/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:34579/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:34579/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:34579/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:34579/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:34579/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:39705/posts/quantization/">
+<link rel="alternate" hreflang="en" href="http://localhost:34579/posts/quantization/">
 <noscript>
     <style>
         #theme-toggle,
@@ -89,7 +89,7 @@ Quantization Aware Training (QAT): Integrates quantization into the training pro
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:39705/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:34579/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -115,12 +115,12 @@ Quantization Aware Training (QAT): Integrates quantization into the training pro
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:39705/posts/" title="Posts">
+                <a href="http://localhost:34579/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:39705/tags/" title="Tags">
+                <a href="http://localhost:34579/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -258,8 +258,30 @@ $$</p>
 </span></span></code></pre></div><pre tabindex="0"><code>og:   pi = 3.1415926535
 FP32: Pi = 3.1415927410125732, Error % = 0.0000027856%
 BF16: Pi = 3.140625,           Error % = 0.0308013675%
-</code></pre><h3 id="fp8">FP8<a hidden class="anchor" aria-hidden="true" href="#fp8">#</a></h3>
-<p>Recent research, such as the &ldquo;FP8 FORMATS FOR DEEP LEARNING&rdquo; paper from September 2022, even shows that it&rsquo;s possible to train large language models (LLMs) using FP8 with just 2 or 3 bits of mantissa (depending on the E4M3 or E5M2 format).</p>
+</code></pre><p>Now that we have an understanding, we can look at the different floating point and int representations present used in Deep Learingin</p>
+<figure class="center">
+    <img loading="lazy" src="/images/quant_p1/FP_16_32_TF32.png"
+         alt="FP8 vs BF16 comparison"/> <figcaption>
+            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
+        </figcaption>
+</figure>
+
+<h3 id="tf32">TF32<a hidden class="anchor" aria-hidden="true" href="#tf32">#</a></h3>
+<p>TF32 is a special datatype introduced by Nvidia from the Ampear Architecture, this is not present in pytorch ,you cannot simply declare a variable as TF32 in pytorch like you can do FP16, This is a datatype that is specifically uded by the cuda cores of the GPU, as you can see from the figure below, Nvidia GPU convert the FP32 Tensors, into TF32 Tensors and perform the matrix multiplications, and this is significantly faster than doing calcualtion in the FP32 format.
+Now that we have an understand of the FP32 representation, The TF32 or TensorFloat 32,Intoroduce by Nvidia (2020) tf32 is primarily supported by NVIDIA GPUs, starting with the Ampere architecture (e.g., RTX 30 and A100 series). These GPUs have dedicated hardware for handling tf32 operations, leading to substantial performance improvements in deep learning workloads.</p>
+<figure class="center">
+    <img loading="lazy" src="/images/quant_p1/TF32_explained.png"
+         alt="FP8 vs BF16 comparison"/> <figcaption>
+            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
+        </figcaption>
+</figure>
+
+<h3 id="fp16">FP16<a hidden class="anchor" aria-hidden="true" href="#fp16">#</a></h3>
+<p>As you can see from the figure, the FP16 format has fewer Exponent and Mantisa Bits, the reduction of the number of Manissa bits has the Effect of reducing the max and Min values that can be stored using this formtat the Max and min values fall from (fp32 numbere) to (fp16 number), and min value form, &hellip;   .This is an important thing to understan cause Naively loading the FP32 model in FP16 to Fit onto you gpu and then start finetuning is a bad idea, had to learn this the hard way,
+Becaue of the difference between the exponent in FP32 and FP16, you might enounter &ldquo;NaN&rdquo; errors while training this is becaue the value is outside the precision of the format you are using, one naive soultion is if you are using FP16 is to load the model in full FP32 precision and you are good to go, a more principles approacht would be to figure out you your gradients are exploding or vaninsingh, This is generally not the case for Transformer base architectues, I faced this problem when I was trying to finetune a UNet diffusion model with and loaded the model in 16 Bit prcision, and the authors of the models had originally trained it on 32 Bit Precision.</p>
+<h3 id="bf16">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16">#</a></h3>
+<p>BF16 also called as Brain Float 16, was develope by google brain and gained populatiry in 2019, currently the most popular foramt to Train and Finetune LLMs right now, The big advantage of this format is that it has smae number of Exponet Bits comapred to the FP32 Format so it Makse loading the model in 16 Bits and then Finetunign it very easy, you dont run into &ldquo;Nan&rdquo; Loss errors as well when fine Tuning, The tradeoff is you loose precision but this paper has shown, that ther is not much difference beteen training and finetuning a LLM on 16 Bits, when compared to 32 bits, and this trade of in precision to smaller model size is totally worth it.</p>
+<h3 id="fp8">FP8<a hidden class="anchor" aria-hidden="true" href="#fp8">#</a></h3>
 <figure class="center">
     <img loading="lazy" src="/images/quant_p1/fp8_vs_bf16.png"
          alt="FP8 vs BF16 comparison"/> <figcaption>
@@ -267,6 +289,53 @@ BF16: Pi = 3.140625,           Error % = 0.0308013675%
         </figcaption>
 </figure>
 
+<p>Recent research, such as the &ldquo;FP8 FORMATS FOR DEEP LEARNING&rdquo; paper from September 2022, even shows that it&rsquo;s possible to train large language models (LLMs) using FP8 with just 2 or 3 bits of mantissa (depending on the E4M3 or E5M2 format).</p>
+<h1 id="nvidia-exists-">Nvidia Exists !!!!!!!!!<a hidden class="anchor" aria-hidden="true" href="#nvidia-exists-">#</a></h1>
+<p>Lets just Adress the 2.5 Trillion dollar elephat in the room, So till now, i have just hinted that the TF32 datatype was introduced in the Ampear architecture, and that the FP8 datatype is supported from the H100 gpu series. and we have been blissfully studying and enjoying different and different data type, But hers the thing, you read my post and get excited by the BF32 architecture so much that you want to try it out so you load the free version of the colab, and realize the T4 architecture dosent support the BF16 architecture, Fear not i have done the gruling work of sifting through Nvidias whitepapers, so that you dont have to. So heres the thing you need to know exactly what Hardware you have and what datatype these hardware suppoort so that you know whcich GPU cluste to surrender your soul out to, and make Nvidia richer (They are truly selling shovels in a Gold Rush, the more intresting thing is we cant buy our shovels from AMD or Intel Either). So i want you to Contemplate the below chart and i will follow with some observations, The numbers represent FLops (or TOPs for the INT Data types), The X represent the datatype is not supported by this architecture,</p>
+<p>some commetnts about the Nvidia GPUs</p>
+<h1 id="some-headline-to-make-it-all-go-away">some Headline to make it all go away<a hidden class="anchor" aria-hidden="true" href="#some-headline-to-make-it-all-go-away">#</a></h1>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
+  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/FP_16_32_TF32.png" alt="FP16 vs TF32 comparison" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/TF32_explained.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/Emergence.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/nf4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 <p>Here’s the table formatted in Markdown for your blog, which you can directly use if your blog platform supports Markdown syntax:</p>
 <h3 id="gpu-performance-table">GPU Performance Table<a hidden class="anchor" aria-hidden="true" href="#gpu-performance-table">#</a></h3>
 <table>
@@ -407,6 +476,478 @@ BF16: Pi = 3.140625,           Error % = 0.0308013675%
 <li><strong>Use a monospaced font</strong> for the table or apply a dark theme to your blog to match the style.</li>
 </ul>
 <p>Feel free to copy and paste this Markdown into your blog editor!</p>
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 18px;
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+  }
+  th, td {
+    padding: 12px;
+    border: 1px solid #ddd;
+  }
+  th {
+    background-color: #4CAF50;
+    color: white;
+  }
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  tr:hover {
+    background-color: #ddd;
+  }
+  .not-supported {
+    color: #FF6347;
+    font-weight: bold;
+  }
+</style>
+<table>
+  <thead>
+    <tr>
+      <th>GPU</th>
+      <th>P100</th>
+      <th>V100</th>
+      <th>T4</th>
+      <th>A100</th>
+      <th>H100</th>
+      <th>L40</th>
+      <th>B100</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>VRAM</b></td>
+      <td>16GB</td>
+      <td>32GB</td>
+      <td>16GB</td>
+      <td>40GB*</td>
+      <td>80GB</td>
+      <td>48GB</td>
+      <td>192GB</td>
+    </tr>
+    <tr>
+      <td><b>Architecture</b></td>
+      <td>Pascal</td>
+      <td>Volta</td>
+      <td>Turing</td>
+      <td>Ampere</td>
+      <td>Hopper</td>
+      <td>Ada Lovelace</td>
+      <td>Blackwell</td>
+    </tr>
+    <tr>
+      <td><b>Release Date</b></td>
+      <td>Apr-16</td>
+      <td>May-17</td>
+      <td>Sep-18</td>
+      <td>May-20</td>
+      <td>Mar-22</td>
+      <td>Sep-22</td>
+      <td>Mar-24</td>
+    </tr>
+    <tr>
+      <td><b>FP32</b></td>
+      <td>10.6</td>
+      <td>8.2</td>
+      <td>8.1</td>
+      <td>19.5</td>
+      <td>67</td>
+      <td>90.5</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td><b>TF32</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>312</td>
+      <td>989</td>
+      <td>181</td>
+      <td>1800</td>
+    </tr>
+    <tr>
+      <td><b>FP16</b></td>
+      <td class="not-supported">X</td>
+      <td>130</td>
+      <td>65</td>
+      <td>624</td>
+      <td>1979</td>
+      <td>362</td>
+      <td>3500</td>
+    </tr>
+    <tr>
+      <td><b>BF16</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>624</td>
+      <td>1979</td>
+      <td>362</td>
+      <td>3500</td>
+    </tr>
+    <tr>
+      <td><b>INT8</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>130</td>
+      <td>1248</td>
+      <td>3958</td>
+      <td>724</td>
+      <td>7000</td>
+    </tr>
+    <tr>
+      <td><b>INT4</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>260</td>
+      <td>2496</td>
+      <td class="not-supported">X</td>
+      <td>1448</td>
+      <td class="not-supported">X</td>
+    </tr>
+    <tr>
+      <td><b>FP8</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>3958</td>
+      <td>724</td>
+      <td>7000</td>
+    </tr>
+    <tr>
+      <td><b>FP4</b></td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td class="not-supported">X</td>
+      <td>14000</td>
+    </tr>
+  </tbody>
+</table>
+<h2 id="some-reandom-heading-to-differentiate-the-two">some reandom heading to differentiate the two<a hidden class="anchor" aria-hidden="true" href="#some-reandom-heading-to-differentiate-the-two">#</a></h2>
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 18px;
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+  }
+  th, td {
+    padding: 12px;
+    border: 1px solid #ddd;
+  }
+  th {
+    background-color: #4CAF50;
+    color: white;
+  }
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  tr:hover {
+    background-color: #ddd;
+  }
+</style>
+<table>
+  <thead>
+    <tr>
+      <th>GPU</th>
+      <th>P100</th>
+      <th>V100</th>
+      <th>T4</th>
+      <th>A100</th>
+      <th>H100</th>
+      <th>L40</th>
+      <th>B100</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>VRAM</b></td>
+      <td>16GB</td>
+      <td>32GB</td>
+      <td>16GB</td>
+      <td>40GB*</td>
+      <td>80GB</td>
+      <td>48GB</td>
+      <td>192GB</td>
+    </tr>
+    <tr>
+      <td><b>Architecture</b></td>
+      <td>Pascal</td>
+      <td>Volta</td>
+      <td>Turing</td>
+      <td>Ampere</td>
+      <td>Hopper</td>
+      <td>Ada Lovelace</td>
+      <td>Blackwell</td>
+    </tr>
+    <tr>
+      <td><b>Release Date</b></td>
+      <td>Apr-16</td>
+      <td>May-17</td>
+      <td>Sep-18</td>
+      <td>May-20</td>
+      <td>Mar-22</td>
+      <td>Sep-22</td>
+      <td>Mar-24</td>
+    </tr>
+    <tr>
+      <td><b>FP32</b></td>
+      <td>10.6</td>
+      <td>8.2</td>
+      <td>8.1</td>
+      <td>19.5</td>
+      <td>67</td>
+      <td>90.5</td>
+      <td>60</td>
+    </tr>
+    <tr>
+      <td><b>TF32</b></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>312</td>
+      <td>989</td>
+      <td>181</td>
+      <td>1800</td>
+    </tr>
+    <tr>
+      <td><b>FP16</b></td>
+      <td></td>
+      <td>130</td>
+      <td>65</td>
+      <td>624</td>
+      <td>1979</td>
+      <td>362</td>
+      <td>3500</td>
+    </tr>
+    <tr>
+      <td><b>BF16</b></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>624</td>
+      <td>1979</td>
+      <td>362</td>
+      <td>3500</td>
+    </tr>
+    <tr>
+      <td><b>INT8</b></td>
+      <td></td>
+      <td></td>
+      <td>130</td>
+      <td>1248</td>
+      <td>3958</td>
+      <td>724</td>
+      <td>7000</td>
+    </tr>
+    <tr>
+      <td><b>INT4</b></td>
+      <td></td>
+      <td></td>
+      <td>260</td>
+      <td>2496</td>
+      <td></td>
+      <td>1448</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td><b>FP8</b></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>3958</td>
+      <td>724</td>
+      <td>7000</td>
+    </tr>
+    <tr>
+      <td><b>FP4</b></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td>14000</td>
+    </tr>
+  </tbody>
+</table>
+<h1 id="integer-qunatization">Integer Qunatization<a hidden class="anchor" aria-hidden="true" href="#integer-qunatization">#</a></h1>
+<p>As you have already seen the T4 and Subsequnet gpu archtecture suppor INT8 and INT4 datatypes, thes datatypes can be used for inferecne and can be blazingly fast, (Just to keep another thing on the back of you mind is that if you load you matrix in a particula data type like INT8, this dosent necessarily mena the compuatations are Happening in IN8, will expand on this later)</p>
+<p>Lets start with some tradition Int8 quantization techniques just for the sake of completeness.</p>
+<h2 id="abs-max-quantization">ABS Max Quantization<a hidden class="anchor" aria-hidden="true" href="#abs-max-quantization">#</a></h2>
+<h3 id="llm-int8">LLM int8<a hidden class="anchor" aria-hidden="true" href="#llm-int8">#</a></h3>
+<h3 id="nf4-qunatization">NF4 qunatization<a hidden class="anchor" aria-hidden="true" href="#nf4-qunatization">#</a></h3>
+<p><strong>NF4 Quantization</strong> (NormalFloat 4-bit quantization) is a specialized quantization technique designed to optimally compress data that follows a zero-centered normal distribution. It builds on <strong>Quantile Quantization</strong>, a method that assigns equal numbers of input values to each quantization bin, making it an information-theoretically optimal data type.</p>
+<h3 id="overview-of-nf4-quantization">Overview of NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#overview-of-nf4-quantization">#</a></h3>
+<ol>
+<li>
+<p><strong>Quantile Quantization</strong>:
+Quantile quantization aims to ensure each quantization bin has an equal number of input values. It is considered optimal since it minimizes the information loss across all bins by distributing the data uniformly. However, computing exact quantiles is computationally expensive, which necessitates using fast quantile approximation algorithms like <strong>SRAM quantiles</strong>. These approximations can result in large quantization errors for outliers, which are often critical.</p>
+</li>
+<li>
+<p><strong>Fixed Distribution Quantization</strong>:
+When input tensors come from a distribution that is fixed except for a quantization constant, the quantile estimation becomes computationally feasible. Pretrained neural network weights typically have a zero-centered normal distribution with some standard deviation (\sigma). To use NF4 quantization, all weights are scaled to a fixed distribution range, which, for simplicity, is set to ([-1, 1]).</p>
+</li>
+<li>
+<p><strong>Transformation to Fixed Range</strong>:
+The weights are transformed to this range by normalizing them using their standard deviation (\sigma), effectively transforming all distributions to a standard normal form, (N(0, 1)). After normalization, the weights are quantized using a special 4-bit data type, NF4, that minimizes quantization error for normally distributed data.</p>
+</li>
+</ol>
+<h3 id="steps-for-nf4-quantization">Steps for NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#steps-for-nf4-quantization">#</a></h3>
+<p>To compute the optimal quantization scheme for normally distributed data, we perform the following steps:</p>
+<ol>
+<li>
+<p><strong>Estimate Quantiles</strong>:
+Calculate the quantiles for a standard normal distribution (N(0, 1)). For a 4-bit (i.e., (k = 4)) data type, we need to determine (2^{k} + 1 = 17) quantiles. The quantiles (q_i) are defined by:</p>
+<p>[
+q_i = \frac{1}{2} \left( Q_X \left( \frac{i}{2^k + 1} \right) + Q_X \left( \frac{i + 1}{2^k + 1} \right) \right)
+]</p>
+<p>where (Q_X(\cdot)) is the quantile function (inverse cumulative distribution function) of the standard normal distribution (N(0, 1)). This step gives us the quantile boundaries for the theoretical normal distribution.</p>
+</li>
+<li>
+<p><strong>Normalize Values</strong>:
+These quantiles are then normalized into the target range ([-1, 1]). The input tensor&rsquo;s values are rescaled accordingly by dividing by their absolute maximum value, ensuring that the quantization bins match the transformed distribution of the input tensor.</p>
+</li>
+<li>
+<p><strong>Quantize the Input Tensor</strong>:
+Rescale the standard deviation (\sigma) of the input tensor to match that of the data type (which fits within the range ([-1, 1])). The quantized values can now be represented in the desired 4-bit format. The quantization bins derived from the estimated quantiles ensure that the representation is information-theoretically optimal for zero-centered normal data.</p>
+</li>
+</ol>
+<h3 id="addressing-zero-representation">Addressing Zero Representation<a hidden class="anchor" aria-hidden="true" href="#addressing-zero-representation">#</a></h3>
+<p>A common problem with symmetric quantization schemes is the lack of an exact zero representation, which is crucial for efficient padding and zero-valued elements. To solve this:</p>
+<ul>
+<li>NF4 creates an <strong>asymmetric data type</strong> by separately estimating the quantiles for the negative and positive parts of the distribution:
+<ul>
+<li>For the negative part, calculate quantiles for (2^{k-1}) bins.</li>
+<li>For the positive part, calculate quantiles for (2^{k-1} + 1) bins.</li>
+</ul>
+</li>
+<li>The quantiles are then unified by removing one of the duplicate zeros that appear in both sets.</li>
+</ul>
+<p>This results in an asymmetric, information-theoretically optimal data type called <strong>NormalFloat (NFk)</strong>, which ensures zero-centered representation with minimal error.</p>
+<h3 id="double-quantization-dq">Double Quantization (DQ)<a hidden class="anchor" aria-hidden="true" href="#double-quantization-dq">#</a></h3>
+<p>To further reduce memory usage, <strong>Double Quantization</strong> (DQ) is introduced, which quantizes the quantization constants themselves:</p>
+<ol>
+<li>
+<p><strong>First Quantization</strong>:
+The initial quantization uses 32-bit constants and a block size of 64. This introduces a memory overhead of (32/64 = 0.5) bits per parameter.</p>
+</li>
+<li>
+<p><strong>Second Quantization</strong>:
+The 32-bit quantization constants (c_{FP32}^2) are treated as inputs for a second quantization. An 8-bit float representation is used with a block size of 256, yielding new quantized constants (c_{FP8}^2) and another set of quantization constants (c_{FP32}^1).</p>
+</li>
+<li>
+<p><strong>Memory Reduction Calculation</strong>:
+By employing 8-bit floats and symmetric quantization (centered around zero), the memory footprint per parameter is reduced from:</p>
+<p>[
+\frac{32}{64} = 0.5 \text{ bits} \rightarrow \frac{8}{64} + \frac{32}{(64 \cdot 256)} = 0.127 \text{ bits}
+]</p>
+<p>This represents a reduction of (0.373) bits per parameter.</p>
+</li>
+</ol>
+<h3 id="summary">Summary<a hidden class="anchor" aria-hidden="true" href="#summary">#</a></h3>
+<p><strong>NF4 Quantization</strong>:</p>
+<ul>
+<li>Optimally quantizes zero-centered normal distributions using an information-theoretically optimal 4-bit format.</li>
+<li>Utilizes quantile estimation, normalization to ([-1, 1]), and asymmetric binning to minimize quantization error.</li>
+<li>Incorporates <strong>Double Quantization</strong> to reduce memory usage for quantization constants, leveraging a two-tier quantization approach.</li>
+</ul>
+<p>By aligning the quantization bins with the natural distribution of neural network weights, NF4 quantization achieves a highly efficient and compact representation, maintaining performance while reducing memory requirements.</p>
+<p>Based on your images, here&rsquo;s a detailed blog post draft using the same structure and flow:</p>
+<hr>
+<h3 id="nf4-quantization-a-specialized-quantization-technique-for-deep-learning"><strong>NF4 Quantization: A Specialized Quantization Technique for Deep Learning</strong><a hidden class="anchor" aria-hidden="true" href="#nf4-quantization-a-specialized-quantization-technique-for-deep-learning">#</a></h3>
+<hr>
+<p><strong>NF4 Quantization</strong> is an specialized quantization technique that is designed to be information-theoretically optimal for data that follows a zero-centered normal distribution. This is particularly useful for neural network weights, which often have such distributions. NF4 builds upon the concept of <strong>Quantile Quantization (QQ)</strong>.</p>
+<p>It was introduced by Tim Detmers, in the QLoRa, and is one of the most common Datatype for PFET techniques like QLoRa and Adapters.
+NF4 quantization is a powerful technique used in cutting-edge PEFT methods, particularly in QLoRA. Introduced by Dettmers et al. in their QLoRA paper, it has proven highly effective for the efficient fine-tuning of large language models, offering significant performance improvements with reduced computational costs.</p>
+<h3 id="understanding-the-basis-quantile-quantization"><strong>Understanding the Basis: Quantile Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#understanding-the-basis-quantile-quantization">#</a></h3>
+<ul>
+<li><strong>Quantile Quantization</strong> aims to assign an equal number of values from the input tensor to each quantization bin.</li>
+<li><strong>Why Quantile Quantization is Considered Optimal</strong>: QQ minimizes information loss by distributing the data uniformly across all bins. This approach ensures that the quantization error is spread evenly across the range of data values.</li>
+</ul>
+<p>However, computing exact quantiles is <strong>computationally expensive</strong> (It works by estimating the Quantiles of the input tensors throught the emperical CDF). Therefore, quantile approximation algorithms like SRAM quantiles are often used.</p>
+<ul>
+<li><strong>The Downside of Quantile Approximation</strong>: Approximation can result in large quantization errors, especially for outliers, which can be critical in certain applications.</li>
+</ul>
+<h3 id="fixed-distribution-quantization-addressing-the-challenges"><strong>Fixed Distribution Quantization: Addressing the Challenges</strong><a hidden class="anchor" aria-hidden="true" href="#fixed-distribution-quantization-addressing-the-challenges">#</a></h3>
+<p>To mitigate the side effects of quantile approximation, we use <strong>Fixed Distribution Quantization</strong>.</p>
+<ul>
+<li><strong>How Fixed Distribution Quantization Helps</strong>: When input tensors come from a known or fixed distribution, quantile estimation becomes computationally feasible. It provides a constant for quantization that can be more accurately estimated.</li>
+</ul>
+<h3 id="applying-nf4-quantization"><strong>Applying NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#applying-nf4-quantization">#</a></h3>
+<p>Typically, neural network (NN) weights have a zero-centered normal distribution $ N(0, \sigma) $ with some standard deviation $ \sigma $.</p>
+<p>To utilize NF4 quantization:</p>
+<ol>
+<li>
+<p><strong>Normalization</strong>: All weights are scaled to a fixed distribution range, typically set to ([-1, 1]) for simplicity.</p>
+<ul>
+<li>The weights are converted to this range by normalizing them using their standard deviation ( \sigma ).</li>
+<li>This process effectively transforms all distributions to a standard normal form ( N(0, 1) ).</li>
+</ul>
+</li>
+<li>
+<p><strong>Quantization with NF4</strong>: After normalization, the weights are quantized using a special 4-bit datatype, NF4, that minimizes quantization errors for normally distributed data.</p>
+</li>
+</ol>
+<h3 id="steps-for-nf4-quantization-1"><strong>Steps for NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#steps-for-nf4-quantization-1">#</a></h3>
+<ol>
+<li><strong>Estimate Quantiles</strong>:
+<ul>
+<li>For a 4-bit datatype, determine ( 2^k + 1 = 17 ) quantiles.</li>
+<li>These quantiles, ( q_i ), are defined to distribute the data optimally.</li>
+</ul>
+</li>
+</ol>
+<h4 id="quick-sidebar-understanding-quantiles-in-probability-distributions"><strong>Quick Sidebar: Understanding Quantiles in Probability Distributions</strong><a hidden class="anchor" aria-hidden="true" href="#quick-sidebar-understanding-quantiles-in-probability-distributions">#</a></h4>
+<p><strong>Quantiles</strong> are values that divide a dataset or probability distribution into intervals with equal probabilities.</p>
+<ul>
+<li>Common quantiles include:
+<ul>
+<li><strong>Quartiles</strong>: 4 equal parts.</li>
+<li><strong>Deciles</strong>: 10 equal parts.</li>
+</ul>
+</li>
+</ul>
+<h3 id="why-use-nf4-quantization"><strong>Why Use NF4 Quantization?</strong><a hidden class="anchor" aria-hidden="true" href="#why-use-nf4-quantization">#</a></h3>
+<p>NF4 quantization offers several advantages:</p>
+<ul>
+<li><strong>Information-Theoretically Optimal</strong>: Especially effective for data with a zero-centered normal distribution.</li>
+<li><strong>Minimized Quantization Error</strong>: Reduces errors that could impact model performance, particularly for neural network weights.</li>
+<li><strong>Computational Efficiency</strong>: Provides a balance between maintaining model accuracy and computational feasibility.</li>
+</ul>
+<h3 id="comparing-nf4-with-other-quantization-methods"><strong>Comparing NF4 with Other Quantization Methods</strong><a hidden class="anchor" aria-hidden="true" href="#comparing-nf4-with-other-quantization-methods">#</a></h3>
+<ul>
+<li><strong>Uniform Quantization</strong>: Divides the data range into equal intervals without considering the data distribution, leading to potential information loss.</li>
+<li><strong>Fixed-Point and Linear Quantization</strong>: These methods do not account for the underlying distribution, making them less optimal compared to NF4 for normally distributed data.</li>
+</ul>
+<h3 id="applications-of-nf4-quantization"><strong>Applications of NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#applications-of-nf4-quantization">#</a></h3>
+<p>NF4 quantization is especially useful in scenarios where neural network weights are normally distributed, such as in deep learning models. Benefits include:</p>
+<ul>
+<li><strong>Memory Efficiency</strong>: Reduces the memory footprint of models.</li>
+<li><strong>Faster Inference</strong>: Optimizes performance on hardware with limited precision.</li>
+<li><strong>Maintained Accuracy</strong>: Keeps the model’s performance close to that of higher-precision representations.</li>
+</ul>
+<h3 id="conclusion"><strong>Conclusion</strong><a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h3>
+<p>NF4 quantization is a powerful technique for optimizing neural networks with normally distributed weights. It offers an information-theoretically optimal way to quantize data while balancing computational cost and model accuracy. As deep learning continues to evolve, methods like NF4 quantization will play a critical role in deploying efficient and accurate AI models.</p>
+<hr>
+<p>Feel free to adjust or add sections based on your audience&rsquo;s technical level or specific interests!</p>
+<h3 id="exact-qunantile-calculations">Exact Qunantile Calculations<a hidden class="anchor" aria-hidden="true" href="#exact-qunantile-calculations">#</a></h3>
+<p>This section is optional (Read only if you want to know exactly how these Quantiles are calculated)</p>
+<p>We will use, 2 bit qunatization for this explanation, the 4 bit quantization is exactly the same process, just some more Quantile calculations. First we will assuse we have out weights uniformly distributed instead of a normal distributions,(just to get out intuitions right.)</p>
+<h4 id="case-1-uniform-distribution">Case 1: Uniform Distribution<a hidden class="anchor" aria-hidden="true" href="#case-1-uniform-distribution">#</a></h4>
+<p>So the assumptions here are that our data is evenly distributed between [-1,1], so we have 2 bits to represet them, so instead of naively representing them as [-1,-0.5], [-0.5,1],[1,0.5],[0.5,1] (this would be information theoriticall suboptimal), we can use the our 4 representation as 4 partitions, and qunatize our continious distribution this way, [-1,-0.6],[-0.6,-0.2],[-0.2,0.2],[0.2,0.6],[0.6,1],
+where each bit represents the partition.</p>
+<p>we can use the Formulas to arrive at the same qunatiles.</p>
 
 
   </div>
@@ -419,7 +960,7 @@ BF16: Pi = 3.140625,           Error % = 0.0308013675%
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:39705/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:34579/">TensorTunes</a></span> · 
 
     <span>
         Powered by

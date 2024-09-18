@@ -2,35 +2,42 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">
   <channel>
     <title>TensorTunes</title>
-    <link>http://localhost:39705/</link>
+    <link>http://localhost:34579/</link>
     <description>Recent content on TensorTunes</description>
     <generator>Hugo -- 0.129.0</generator>
     <language>en-us</language>
     <lastBuildDate>Wed, 11 Sep 2024 00:00:00 +0000</lastBuildDate>
-    <atom:link href="http://localhost:39705/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="http://localhost:34579/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Deconding From Language Models</title>
-      <link>http://localhost:39705/posts/decoding-from-language-models/</link>
+      <link>http://localhost:34579/posts/decoding-from-language-models/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:39705/posts/decoding-from-language-models/</guid>
+      <guid>http://localhost:34579/posts/decoding-from-language-models/</guid>
       <description>A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&amp;lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
 At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary.</description>
     </item>
     <item>
       <title>From Retrieval to RAG (Part - 1)</title>
-      <link>http://localhost:39705/posts/from-retrieval-to-rag-part1/</link>
+      <link>http://localhost:34579/posts/from-retrieval-to-rag-part1/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:39705/posts/from-retrieval-to-rag-part1/</guid>
+      <guid>http://localhost:34579/posts/from-retrieval-to-rag-part1/</guid>
       <description>stuff</description>
     </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>
-      <link>http://localhost:39705/posts/quantization/</link>
+      <link>http://localhost:34579/posts/quantization/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:39705/posts/quantization/</guid>
+      <guid>http://localhost:34579/posts/quantization/</guid>
       <description>Introduction to Quantization Whether you&amp;rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
 Quantization can broadly be categorized into two types:
 Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.</description>
+    </item>
+    <item>
+      <title>Quantization in LLMS Part 2: GPTQ</title>
+      <link>http://localhost:34579/posts/gptq/</link>
+      <pubDate>Thu, 01 Aug 2024 09:51:17 -0400</pubDate>
+      <guid>http://localhost:34579/posts/gptq/</guid>
+      <description>Quantization Method On the fly quantization CPU CUDA GPU RoCm GPU (AMD) Metal (Apple Silicon) torch.compile() support Number of bits Supports fine-tuning (through PEFT) Serializable with 🤗 transformers 🤗 transformers support AQLM ● ● ● ● ● ● 1 / 2 ● ● ● AWQ ● ● ● ● ● ? 4 ● ● ● bitsandbytes ● ● ● ● ● 4 / 8 ● ● ● EETQ ● ● ● ● ?</description>
     </item>
   </channel>
 </rss>
