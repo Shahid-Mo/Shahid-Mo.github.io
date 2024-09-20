@@ -1,26 +1,9 @@
 +++
-title = 'Quantization in LLMS Part 2: GPTQ'
+title = 'Quantization in LLMS Part 2: GPTQ (A Mathematical View)'
 date = 2024-08-01T09:51:17-04:00
 draft = false
 math = true
 +++
-
-| Quantization Method | On the fly quantization | CPU | CUDA GPU | RoCm GPU (AMD) | Metal (Apple Silicon) | torch.compile() support | Number of bits | Supports fine-tuning (through PEFT) | Serializable with 🤗 transformers | 🤗 transformers support |
-|---------------------|------------------------|-----|----------|----------------|-----------------------|------------------------|---------------|------------------------------------|-----------------------------------|-------------------------|
-| AQLM                | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | 1 / 2 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| AWQ                 | <span style="color:red">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | ? | 4 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| bitsandbytes        | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | 4 / 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| EETQ                | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | ? | 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| GGUF / GGML         | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | 1 - 8 | See GGUF section | See GGUF section | See GGUF section |
-| GPTQ                | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | 2 - 3 - 4 - 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| HQQ                 | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | 1 - 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| Quanto              | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:red">●</span> | 2 / 4 / 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| FBGEMM_FP8          | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:green">●</span> | 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-| torchao             | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:red">●</span> | <span style="color:red">●</span> | partial support (int4 weight only) | 4 / 8 | <span style="color:green">●</span> | <span style="color:green">●</span> | <span style="color:green">●</span> |
-
-
-
-
 
 **Introduction**
 
@@ -28,7 +11,7 @@ Quantization is a crucial technique in deep learning that reduces the memory foo
 
 The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy. GPTQ builds upon previous methods like Optimal Brain Quantization (OBQ) but introduces significant modifications to make it scalable to models with billions of parameters.
 
-In this explanation, we will delve into the mathematical foundations of GPTQ, explain how it leverages the Hessian matrix and its inverse, discuss the role of the Cholesky decomposition, and provide a detailed walkthrough of the algorithm. We will also include examples to illustrate key concepts.
+In this explanation, we will delve into the mathematical foundations of GPTQ, starting with the Optimal Brain Sergeon. xplai..... how it leverages the Hessian matrix and its inverse, discuss the role of the Cholesky decomposition, and provide a detailed walkthrough of the algorithm. We will also include examples to illustrate key concepts.
 
 ---
 
@@ -50,6 +33,345 @@ $$
 **Goal**: Find $ \mathbf{W}_c $ that minimizes the output difference caused by quantization.
 
 ---
+
+One of the earlier methods proposed to solve this problem is the OBS (Optimal Brain Sergeon) approach. The GPTQ algorithm is base on the OBQ(Optimal Brain Quantization), which in turn is based on the OBS(Optimal Brain Sergeon) paper, and most of the Equantions prsent in the GPTQ papers are taken from the OBS Paper, so if you want to understand how the weights are quantized and where do these complex formulas come from, you need to First understand the OBS Paper.
+
+The meat of the OBS Paper is a Problem of Constrained Optimization, so i will provide a breifoverview of COnstrained opimization and some relevant formulas for understanding the topics ahead.
+(This post assumes that you are familiar wiht terms like gradient and Hessians, and this is not the first time you are hearing the term optimaization and Taylor series) 
+
+## A Quick Refresher on Constrained Optimaizaiton
+
+### Problem Setup:
+
+You have two things in a constrained optimization problem:
+1. **Objective function** $ f(x) $ — the function you want to maximize or minimize.
+2. **Constraint** $ g(x) = 0 $ — an equation that defines the condition your solution must satisfy.
+
+Mathematically, the goal is to:
+$$
+\text{Minimize } f(x) \quad \text{subject to } g(x) = 0
+$$
+
+### Lagrange Multipliers:
+To solve this problem, we introduce a new variable, called a **Lagrange multiplier**, denoted as $ \lambda $. The idea is to combine the objective function and the constraint into a single equation, called the **Lagrangian**:
+
+$$
+\mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
+$$
+
+- Here, $ f(x) $ is the objective function.
+- $ g(x) = 0 $ is the constraint.
+- $ \lambda $ is the Lagrange multiplier, which "enforces" the constraint.
+
+
+---
+
+### Why Does This Work? (Super Optional: Read if Intrested....)
+
+The logic behind this is that at the optimal point under the constraint, the gradient of the objective function $ \nabla f(x) $ must be aligned with the gradient of the constraint $ \nabla g(x) $.
+
+#### **Why Are the Gradients Aligned?**
+
+#### **1. The Gradient and Direction of Steepest Ascent**
+
+- **Gradient of a Function ($ \nabla f(x) $)**: Points in the direction of the steepest increase of the function $ f(x) $ at point $ x $.
+
+- **Constraint Surface ($ g(x) = 0 $)**: Defines a surface (or curve) in the space of $ x $. Any movement along this surface keeps $ g(x) $ constant.
+
+#### **2. Feasible Directions and Tangent Space**
+
+- **Feasible Directions**: Directions in which you can move without violating the constraint $ g(x) = 0 $. These directions lie in the **tangent space** of the constraint surface at point $ x $.
+
+- **Tangent Space**: The set of all vectors $ d $ such that $ \nabla g(x)^\top d = 0 $. This means moving a small amount $ \epsilon d $ keeps you on the constraint surface to first order.
+
+#### **3. Optimality Condition Under Constraint**
+
+- At the **optimal point**, you cannot find a feasible direction $ d $ that will further decrease $ f(x) $.
+
+- **Mathematically**: The directional derivative of $ f $ in any feasible direction $ d $ must be zero:
+  $$
+  \nabla f(x)^\top d = 0 \quad \text{for all } d \text{ such that } \nabla g(x)^\top d = 0
+  $$
+
+#### **4. Gradients Must Be Parallel**
+
+- The only way for $ \nabla f(x)^\top d = 0 $ for all feasible $ d $ is if $ \nabla f(x) $ is a **linear combination** of $ \nabla g(x) $.
+
+- **Conclusion**: There exists a scalar $ \lambda $ such that:
+  $$
+  \nabla f(x) = -\lambda \nabla g(x)
+  $$
+  This means $ \nabla f(x) $ and $ \nabla g(x) $ are **aligned** (parallel or antiparallel).
+
+---
+
+### Steps to Solve:
+
+1. **Form the Lagrangian**: As mentioned earlier, combine the objective and constraint:
+   $$
+   \mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
+   $$
+
+2. **Take Partial Derivatives**:
+   - Take the derivative of $ \mathcal{L} $ with respect to $ x $ (the variables in your objective function).
+   - Take the derivative of $ \mathcal{L} $ with respect to $ \lambda $.
+
+3. **Set Derivatives to Zero**: 
+   $$
+   \frac{\partial \mathcal{L}}{\partial x} = 0 \quad \text{and} \quad \frac{\partial \mathcal{L}}{\partial \lambda} = 0
+   $$
+   The first condition ensures that the gradients of $ f(x) $ and $ g(x) $ are aligned, and the second condition ensures that the constraint $ g(x) = 0 $ is satisfied.
+
+4. **Solve the System of Equations**: 
+   You now have a system of equations involving $ x $ and $ \lambda $. Solve this system to find the optimal values of $ x $ (and $ \lambda $, though you usually don’t care about its value directly).
+
+
+### A quick review of Taylor Series
+
+A function $f(x + \Delta {x})$ may be Taylor expanded about a base point $x$ (if $f$ is differentiable at $x$):
+
+$$
+f(x + \Delta {x}) = f(x) + \frac{d f(x)}{d {x}} \Delta {x} + \frac{d^2 f(x)}{d {x}^2} \frac{\Delta {x}^2}{2!} + \dots
+$$
+
+We don't deal with scalars (anymore!)
+
+$$
+f(\mathbf{x} + \Delta \mathbf{x}) = f(\mathbf{x}) + \nabla f(\mathbf{x}) \cdot \Delta \mathbf{x} + \frac{1}{2!} \Delta \mathbf{x}^T H(f(\mathbf{x})) \Delta \mathbf{x} + \dots
+$$
+
+- $\nabla f(\mathbf{x})$ = gradient of $f$ at $\mathbf{x}$, a vector of partial derivatives
+
+$$
+\nabla f(\mathbf{x}) = \left( \frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \dots, \frac{\partial f}{\partial x_n} \right)
+$$
+
+- $H(f(\mathbf{x}))$ = second-order partial derivatives of $f$ at $\mathbf{x}$, with elements $H_{ij} = \frac{\partial^2 f}{\partial x_i \partial x_j}$
+
+$$
+\Delta \mathbf{x}^T H(f(\mathbf{x})) \Delta \mathbf{x}
+$$
+is a quadratic form, this term computes how much the function curves in the direction of $\Delta \mathbf{x}$, weighted by the second derivatives (Hessian).
+
+Phew, we are done with our Background so lets Begin
+
+## OBS (Optimnal Brain Surgery)
+
+### Overview
+OBS is a method for pruning neural networks by removing weights while minimizing the increase in the loss fuction. It uses secone order (Hessian ) information to identify which weights can be pruned with minimal impact on performance.
+
+### Problem Context
+In a neural network, each weight $ w_p $ contributes to the overall performance (or loss) of the model. If you want to **remove** a weight (i.e., prune it), there is a chance that this removal will negatively affect the network's performance, causing the loss function to increase.
+
+To avoid large increases in the loss function, OBS prunes weights in a **careful, optimized way**. The goal is to find which weight(s) can be removed and adjust the other weights such that the **impact on the loss function is minimal**.
+
+### Optimization Problem
+This all sounds great, but how is this an optimization problem?
+When you prune a weight, it affects the entire neural network. Simply setting a weight to zero will not work well unless you **adjust the other weights** in the network to compensate for the change. This adjustment of weights forms an optimization problem:
+
+- **Objective:** Minimize the **increase in the loss function** caused by pruning.
+- **Constraint:** Set the specific weight $ w_p $ to zero (i.e., prune it).
+
+This optimization problem helps find the best way to modify the remaining weights while ensuring the selected weight is removed.
+
+
+### Mathematical Formulation
+The loss function $ L(\mathbf{w}) $ of a neural network depends on the weights $ \mathbf{w} = [w_1, w_2, \dots, w_n] $. When we prune a weight, we want to minimize the change in the loss function, specifically:
+
+$$
+\Delta L = L(\mathbf{w} + \delta \mathbf{w}) - L(\mathbf{w})
+$$
+
+$
+\mathbf{w} \in \mathbb{R}^n \quad \text{original set of weights}
+$
+
+$
+\delta\mathbf{w} \in \mathbb{R}^n \quad \text{change applied to the weights}
+$ (In case of pruning a specific weight $w_p$, $\delta w_p$ would be a negative value)$ \delta w_p = -w_p $
+
+2nd order Taylor Series Expansion
+
+$$
+L(\mathbf{w} + \delta \mathbf{w}) = L(\mathbf{w}) + \nabla L(\mathbf{w})^T \delta \mathbf{w} + \frac{1}{2} \delta \mathbf{w}^T H \delta \mathbf{w}
+$$
+
+Neglecting the gradient!!!
+
+In practice, when we are pruning weights, we assume the network is already near a local minimum (already trained), so the gradient $\nabla L(\mathbf{w})$ is close to 0. This simplifies the expression.
+
+$$
+\Delta L = L(w) + \nabla L(w)^T \delta w + \frac{1}{2} \delta w^T H \delta w - L(w)
+$$
+
+Therefore,
+
+$$
+\Delta L = \frac{1}{2} \delta w^T H \delta w
+$$
+### **Setting up the Optimization Problem:**
+The optimization problem becomes:
+
+$$
+\min_{\delta \mathbf{w}} \frac{1}{2} \delta \mathbf{w}^\top H \delta \mathbf{w}
+$$
+
+Subject to the constraint:
+
+$$
+\delta w_p = -w_p
+$$
+
+This constraint enforces the pruning of the weight $ w_p $, meaning we want the change in $ w_p $ to be exactly $ -w_p $ so that the new value becomes zero (i.e., $ w_p + \delta w_p = 0 $).
+
+### Solving the optimization problem
+
+### Step-by-Step Derivation:
+
+#### 1. **Formulating the Objective:**
+The objective is to **minimize** the increase in the loss function due to weight pruning. The quadratic approximation of the change in the loss function is:
+
+$$
+\min_{\delta \mathbf{w}} \quad \delta \mathbf{w}^\top H \delta \mathbf{w}
+$$
+
+Here:
+- $ \delta \mathbf{w} $ represents the change in the weights.
+- $ H $ is the Hessian matrix, which gives the second-order approximation of how the loss function changes with respect to the weights.
+
+#### 2. **Setting the Constraint:**
+When we prune a specific weight $ w_p $, the change in that weight should be exactly $ -w_p $ to set it to zero:
+
+$$
+\delta w_p = -w_p
+$$
+
+This ensures that the weight $ w_p $ is fully pruned.
+
+#### 3. **Setting up the Lagrangian:**
+To handle this constraint, we introduce a **Lagrange multiplier** $ \lambda $. The Lagrangian $ \mathcal{L} $ combines the objective function and the constraint:
+
+$$
+\mathcal{L}(\delta \mathbf{w}, \lambda) = \delta \mathbf{w}^\top H \delta \mathbf{w} + \lambda (\delta w_p + w_p)
+$$
+
+Where:
+- The term $ \lambda (\delta w_p + w_p) $ enforces the constraint that $ \delta w_p = -w_p $.
+- $ \lambda $ is the Lagrange multiplier.
+
+#### 4. **Taking the Derivative of the Lagrangian:**
+To minimize the Lagrangian, we take the derivative with respect to the change in weights $ \delta \mathbf{w} $ and the Lagrange multiplier $ \lambda $.
+
+##### a. **Derivative w.r.t. $ \delta \mathbf{w} $:**
+
+$$
+\frac{\partial \mathcal{L}}{\partial \delta \mathbf{w}} = 2H \delta \mathbf{w} + \lambda e_p = 0
+$$
+
+Here:
+- $ e_p $ is a vector with a 1 in the $ p $-th position (corresponding to $ w_p $) and 0 elsewhere, as the constraint only applies to the $ p $-th weight.
+- Solving this gives:
+
+$$
+H \delta \mathbf{w} = -\frac{\lambda}{2} e_p
+$$
+
+##### b. **Derivative w.r.t. $ \lambda $:**
+
+$$
+\frac{\partial \mathcal{L}}{\partial \lambda} = \delta w_p + w_p = 0
+$$
+
+This gives us the constraint:
+
+$$
+\delta w_p = -w_p
+$$
+
+#### 5. **Solving for $ \delta \mathbf{w} $:**
+From the equation $ H \delta \mathbf{w} = -\frac{\lambda}{2} e_p $, we can solve for $ \delta \mathbf{w} $ by multiplying both sides by the inverse of $ H $:
+
+$$
+\delta \mathbf{w} = -\frac{\lambda}{2} H^{-1} e_p
+$$
+
+The vector $ H^{-1} e_p $ represents the $ p $-th column of the inverse of the Hessian matrix $ H $.
+
+#### 6. **Solving for $ \lambda $:**
+We now use the constraint $ \delta w_p = -w_p $ to solve for $ \lambda $.
+
+From $ \delta w_p = e_p^\top \delta \mathbf{w} = -w_p $, we substitute $ \delta \mathbf{w} $:
+
+$$
+e_p^\top \left( -\frac{\lambda}{2} H^{-1} e_p \right) = -w_p
+$$
+
+This simplifies to:
+
+$$
+-\frac{\lambda}{2} [H^{-1}]_{pp} = -w_p
+$$
+
+Solving for $ \lambda $:
+
+$$
+\lambda = \frac{2 w_p}{[H^{-1}]_{pp}}
+$$
+
+#### 7. **Substitute $ \lambda $ Back into $ \delta \mathbf{w} $:**
+Now, substitute $ \lambda $ back into the expression for $ \delta \mathbf{w} $:
+
+$$
+\delta \mathbf{w} = -\frac{w_p}{[H^{-1}]_{pp}} H^{-1} e_p
+$$
+
+This equation gives the **update to the remaining weights** after pruning $ w_p $.
+
+
+
+### Finding $ \delta w $
+Now, substitute $ \lambda $ back into the expression for $ \delta w $:
+
+$$
+\delta w = -\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q
+$$
+
+This is the optimal weight change that minimizes the increase in error while setting $ w_q $ to zero.
+
+### Final Change in Error ($ L_q $)
+Now, we compute the resulting change in error $ \delta E $ by substituting $ \delta w $ into the second-order Taylor expansion of the error function:
+
+$$
+\delta E = \frac{1}{2} \delta w^T H \delta w
+$$
+
+Substitute $ \delta w = -\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q $ into this:
+
+$$
+\delta E = \frac{1}{2} \left(-\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q \right)^T H \left(-\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q \right)
+$$
+
+Simplifying:
+
+$$
+\delta E = \frac{1}{2} \frac{w_q^2}{(e_q^T H^{-1} e_q)^2} \left( e_q^T H^{-1} H H^{-1} e_q \right)
+$$
+
+Since $ H^{-1} H = I $, this becomes:
+
+$$
+\delta E = \frac{1}{2} \frac{w_q^2}{e_q^T H^{-1} e_q}
+$$
+
+This is the final expression for the change in error due to setting $ w_q $ to zero, which we denote as $ L_q $:
+
+$$
+L_q = \frac{1}{2} \frac{w_q^2}{(H^{-1})_{qq}}
+$$
+
+where $ (H^{-1})_{qq} = e_q^T H^{-1} e_q $ is the diagonal element of the inverse Hessian matrix corresponding to weight $ w_q $. This final equation represents the "saliency" or importance of weight $ w_q $ in the network.
+
+
 
 ### **2. Optimal Brain Quantization (OBQ)**
 
@@ -467,3 +789,6 @@ By understanding the mathematical foundations and practical implementations, we 
 
 - Frantar, E., & Alistarh, D. (2022). Optimal Brain Quantization. *Proceedings of the International Conference on Learning Representations (ICLR)*.
 - Nagel, M., Van Baalen, M., Blankevoort, T., & Welling, M. (2020). Up or Down? Adaptive Rounding for Post-Training Quantization. *Proceedings of the International Conference on Machine Learning (ICML)*.
+
+
+

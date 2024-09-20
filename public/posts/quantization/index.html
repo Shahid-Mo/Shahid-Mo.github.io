@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=34579&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
@@ -11,16 +11,16 @@
 Quantization can broadly be categorized into two types:
 Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:34579/posts/quantization/">
+<link rel="canonical" href="http://localhost:1313/posts/quantization/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:34579/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:34579/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:34579/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:34579/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:34579/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:34579/posts/quantization/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/quantization/">
 <noscript>
     <style>
         #theme-toggle,
@@ -89,7 +89,7 @@ Quantization Aware Training (QAT): Integrates quantization into the training pro
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:34579/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -115,12 +115,12 @@ Quantization Aware Training (QAT): Integrates quantization into the training pro
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:34579/posts/" title="Posts">
+                <a href="http://localhost:1313/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:34579/tags/" title="Tags">
+                <a href="http://localhost:1313/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -948,6 +948,155 @@ NF4 quantization is a powerful technique used in cutting-edge PEFT methods, part
 <p>So the assumptions here are that our data is evenly distributed between [-1,1], so we have 2 bits to represet them, so instead of naively representing them as [-1,-0.5], [-0.5,1],[1,0.5],[0.5,1] (this would be information theoriticall suboptimal), we can use the our 4 representation as 4 partitions, and qunatize our continious distribution this way, [-1,-0.6],[-0.6,-0.2],[-0.2,0.2],[0.2,0.6],[0.6,1],
 where each bit represents the partition.</p>
 <p>we can use the Formulas to arrive at the same qunatiles.</p>
+<table>
+<thead>
+<tr>
+<th>Quantization Method</th>
+<th>On the fly quantization</th>
+<th>CPU</th>
+<th>CUDA GPU</th>
+<th>RoCm GPU (AMD)</th>
+<th>Metal (Apple Silicon)</th>
+<th>torch.compile() support</th>
+<th>Number of bits</th>
+<th>Supports fine-tuning (through PEFT)</th>
+<th>Serializable with 🤗 transformers</th>
+<th>🤗 transformers support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AQLM</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>1 / 2</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+</tr>
+<tr>
+<td>AWQ</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>?</td>
+<td>4</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+</tr>
+<tr>
+<td>bitsandbytes</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>EETQ</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>?</td>
+<td>8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>GGUF / GGML</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>1 - 8</td>
+<td>See GGUF section</td>
+<td>See GGUF section</td>
+<td>See GGUF section</td>
+<td></td>
+</tr>
+<tr>
+<td>GPTQ</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>2 - 3 - 4 - 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>HQQ</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>1 - 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>Quanto</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>2 / 4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>FBGEMM_FP8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>torchao</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>partial support (int4 weight only)</td>
+<td>4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+</tbody>
+</table>
 
 
   </div>
@@ -960,7 +1109,7 @@ where each bit represents the partition.</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:34579/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
 
     <span>
         Powered by

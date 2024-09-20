@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=34579&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Quantization in LLMS Part 2: GPTQ | TensorTunes</title>
+<title>Quantization in LLMS Part 2: GPTQ (A Mathematical View) | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Quantization Method On the fly quantization CPU CUDA GPU RoCm GPU (AMD) Metal (Apple Silicon) torch.compile() support Number of bits Supports fine-tuning (through PEFT) Serializable with 🤗 transformers 🤗 transformers support AQLM ● ● ● ● ● ● 1 / 2 ● ● ● AWQ ● ● ● ● ● ? 4 ● ● ● bitsandbytes ● ● ● ● ● 4 / 8 ● ● ● EETQ ● ● ● ● ?">
+<meta name="description" content="Introduction
+Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.
+The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:34579/posts/gptq/">
+<link rel="canonical" href="http://localhost:1313/posts/gptq/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:34579/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:34579/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:34579/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:34579/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:34579/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:34579/posts/gptq/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/gptq/">
 <noscript>
     <style>
         #theme-toggle,
@@ -87,7 +89,7 @@
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:34579/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -113,12 +115,12 @@
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:34579/posts/" title="Posts">
+                <a href="http://localhost:1313/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:34579/tags/" title="Tags">
+                <a href="http://localhost:1313/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -131,165 +133,16 @@
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Quantization in LLMS Part 2: GPTQ
+      Quantization in LLMS Part 2: GPTQ (A Mathematical View)
     </h1>
     <div class="post-meta"><span title='2024-08-01 09:51:17 -0400 EDT'>August 1, 2024</span>
 
 </div>
   </header> 
-  <div class="post-content"><table>
-<thead>
-<tr>
-<th>Quantization Method</th>
-<th>On the fly quantization</th>
-<th>CPU</th>
-<th>CUDA GPU</th>
-<th>RoCm GPU (AMD)</th>
-<th>Metal (Apple Silicon)</th>
-<th>torch.compile() support</th>
-<th>Number of bits</th>
-<th>Supports fine-tuning (through PEFT)</th>
-<th>Serializable with 🤗 transformers</th>
-<th>🤗 transformers support</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>AQLM</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>1 / 2</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-</tr>
-<tr>
-<td>AWQ</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>?</td>
-<td>4</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-</tr>
-<tr>
-<td>bitsandbytes</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>EETQ</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>?</td>
-<td>8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>GGUF / GGML</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>1 - 8</td>
-<td>See GGUF section</td>
-<td>See GGUF section</td>
-<td>See GGUF section</td>
-<td></td>
-</tr>
-<tr>
-<td>GPTQ</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>2 - 3 - 4 - 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>HQQ</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>1 - 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>Quanto</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>2 / 4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>FBGEMM_FP8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>torchao</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>partial support (int4 weight only)</td>
-<td>4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Introduction</strong></p>
+  <div class="post-content"><p><strong>Introduction</strong></p>
 <p>Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.</p>
 <p>The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy. GPTQ builds upon previous methods like Optimal Brain Quantization (OBQ) but introduces significant modifications to make it scalable to models with billions of parameters.</p>
-<p>In this explanation, we will delve into the mathematical foundations of GPTQ, explain how it leverages the Hessian matrix and its inverse, discuss the role of the Cholesky decomposition, and provide a detailed walkthrough of the algorithm. We will also include examples to illustrate key concepts.</p>
+<p>In this explanation, we will delve into the mathematical foundations of GPTQ, starting with the Optimal Brain Sergeon. xplai&hellip;.. how it leverages the Hessian matrix and its inverse, discuss the role of the Cholesky decomposition, and provide a detailed walkthrough of the algorithm. We will also include examples to illustrate key concepts.</p>
 <hr>
 <h3 id="1-problem-statement"><strong>1. Problem Statement</strong><a hidden class="anchor" aria-hidden="true" href="#1-problem-statement">#</a></h3>
 <p>Given a pre-trained neural network, our goal is to quantize its weights so that the network&rsquo;s output remains as close as possible to that of the original network when processing a set of inputs. Specifically, for a linear (fully connected) layer, we aim to find a quantized weight matrix $ \mathbf{W}_c $ that minimizes the reconstruction error.</p>
@@ -305,6 +158,280 @@ $$</p>
 </ul>
 <p><strong>Goal</strong>: Find $ \mathbf{W}_c $ that minimizes the output difference caused by quantization.</p>
 <hr>
+<p>One of the earlier methods proposed to solve this problem is the OBS (Optimal Brain Sergeon) approach. The GPTQ algorithm is base on the OBQ(Optimal Brain Quantization), which in turn is based on the OBS(Optimal Brain Sergeon) paper, and most of the Equantions prsent in the GPTQ papers are taken from the OBS Paper, so if you want to understand how the weights are quantized and where do these complex formulas come from, you need to First understand the OBS Paper.</p>
+<p>The meat of the OBS Paper is a Problem of Constrained Optimization, so i will provide a breifoverview of COnstrained opimization and some relevant formulas for understanding the topics ahead.
+(This post assumes that you are familiar wiht terms like gradient and Hessians, and this is not the first time you are hearing the term optimaization and Taylor series)</p>
+<h2 id="a-quick-refresher-on-constrained-optimaizaiton">A Quick Refresher on Constrained Optimaizaiton<a hidden class="anchor" aria-hidden="true" href="#a-quick-refresher-on-constrained-optimaizaiton">#</a></h2>
+<h3 id="problem-setup">Problem Setup:<a hidden class="anchor" aria-hidden="true" href="#problem-setup">#</a></h3>
+<p>You have two things in a constrained optimization problem:</p>
+<ol>
+<li><strong>Objective function</strong> $ f(x) $ — the function you want to maximize or minimize.</li>
+<li><strong>Constraint</strong> $ g(x) = 0 $ — an equation that defines the condition your solution must satisfy.</li>
+</ol>
+<p>Mathematically, the goal is to:
+$$
+\text{Minimize } f(x) \quad \text{subject to } g(x) = 0
+$$</p>
+<h3 id="lagrange-multipliers">Lagrange Multipliers:<a hidden class="anchor" aria-hidden="true" href="#lagrange-multipliers">#</a></h3>
+<p>To solve this problem, we introduce a new variable, called a <strong>Lagrange multiplier</strong>, denoted as $ \lambda $. The idea is to combine the objective function and the constraint into a single equation, called the <strong>Lagrangian</strong>:</p>
+<p>$$
+\mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
+$$</p>
+<ul>
+<li>Here, $ f(x) $ is the objective function.</li>
+<li>$ g(x) = 0 $ is the constraint.</li>
+<li>$ \lambda $ is the Lagrange multiplier, which &ldquo;enforces&rdquo; the constraint.</li>
+</ul>
+<hr>
+<h3 id="why-does-this-work-super-optional-read-if-intrested">Why Does This Work? (Super Optional: Read if Intrested&hellip;.)<a hidden class="anchor" aria-hidden="true" href="#why-does-this-work-super-optional-read-if-intrested">#</a></h3>
+<p>The logic behind this is that at the optimal point under the constraint, the gradient of the objective function $ \nabla f(x) $ must be aligned with the gradient of the constraint $ \nabla g(x) $.</p>
+<h4 id="why-are-the-gradients-aligned"><strong>Why Are the Gradients Aligned?</strong><a hidden class="anchor" aria-hidden="true" href="#why-are-the-gradients-aligned">#</a></h4>
+<h4 id="1-the-gradient-and-direction-of-steepest-ascent"><strong>1. The Gradient and Direction of Steepest Ascent</strong><a hidden class="anchor" aria-hidden="true" href="#1-the-gradient-and-direction-of-steepest-ascent">#</a></h4>
+<ul>
+<li>
+<p><strong>Gradient of a Function ($ \nabla f(x) $)</strong>: Points in the direction of the steepest increase of the function $ f(x) $ at point $ x $.</p>
+</li>
+<li>
+<p><strong>Constraint Surface ($ g(x) = 0 $)</strong>: Defines a surface (or curve) in the space of $ x $. Any movement along this surface keeps $ g(x) $ constant.</p>
+</li>
+</ul>
+<h4 id="2-feasible-directions-and-tangent-space"><strong>2. Feasible Directions and Tangent Space</strong><a hidden class="anchor" aria-hidden="true" href="#2-feasible-directions-and-tangent-space">#</a></h4>
+<ul>
+<li>
+<p><strong>Feasible Directions</strong>: Directions in which you can move without violating the constraint $ g(x) = 0 $. These directions lie in the <strong>tangent space</strong> of the constraint surface at point $ x $.</p>
+</li>
+<li>
+<p><strong>Tangent Space</strong>: The set of all vectors $ d $ such that $ \nabla g(x)^\top d = 0 $. This means moving a small amount $ \epsilon d $ keeps you on the constraint surface to first order.</p>
+</li>
+</ul>
+<h4 id="3-optimality-condition-under-constraint"><strong>3. Optimality Condition Under Constraint</strong><a hidden class="anchor" aria-hidden="true" href="#3-optimality-condition-under-constraint">#</a></h4>
+<ul>
+<li>
+<p>At the <strong>optimal point</strong>, you cannot find a feasible direction $ d $ that will further decrease $ f(x) $.</p>
+</li>
+<li>
+<p><strong>Mathematically</strong>: The directional derivative of $ f $ in any feasible direction $ d $ must be zero:
+$$
+\nabla f(x)^\top d = 0 \quad \text{for all } d \text{ such that } \nabla g(x)^\top d = 0
+$$</p>
+</li>
+</ul>
+<h4 id="4-gradients-must-be-parallel"><strong>4. Gradients Must Be Parallel</strong><a hidden class="anchor" aria-hidden="true" href="#4-gradients-must-be-parallel">#</a></h4>
+<ul>
+<li>
+<p>The only way for $ \nabla f(x)^\top d = 0 $ for all feasible $ d $ is if $ \nabla f(x) $ is a <strong>linear combination</strong> of $ \nabla g(x) $.</p>
+</li>
+<li>
+<p><strong>Conclusion</strong>: There exists a scalar $ \lambda $ such that:
+$$
+\nabla f(x) = -\lambda \nabla g(x)
+$$
+This means $ \nabla f(x) $ and $ \nabla g(x) $ are <strong>aligned</strong> (parallel or antiparallel).</p>
+</li>
+</ul>
+<hr>
+<h3 id="steps-to-solve">Steps to Solve:<a hidden class="anchor" aria-hidden="true" href="#steps-to-solve">#</a></h3>
+<ol>
+<li>
+<p><strong>Form the Lagrangian</strong>: As mentioned earlier, combine the objective and constraint:
+$$
+\mathcal{L}(x, \lambda) = f(x) + \lambda g(x)
+$$</p>
+</li>
+<li>
+<p><strong>Take Partial Derivatives</strong>:</p>
+<ul>
+<li>Take the derivative of $ \mathcal{L} $ with respect to $ x $ (the variables in your objective function).</li>
+<li>Take the derivative of $ \mathcal{L} $ with respect to $ \lambda $.</li>
+</ul>
+</li>
+<li>
+<p><strong>Set Derivatives to Zero</strong>:
+$$
+\frac{\partial \mathcal{L}}{\partial x} = 0 \quad \text{and} \quad \frac{\partial \mathcal{L}}{\partial \lambda} = 0
+$$
+The first condition ensures that the gradients of $ f(x) $ and $ g(x) $ are aligned, and the second condition ensures that the constraint $ g(x) = 0 $ is satisfied.</p>
+</li>
+<li>
+<p><strong>Solve the System of Equations</strong>:
+You now have a system of equations involving $ x $ and $ \lambda $. Solve this system to find the optimal values of $ x $ (and $ \lambda $, though you usually don’t care about its value directly).</p>
+</li>
+</ol>
+<h3 id="a-quick-review-of-taylor-series">A quick review of Taylor Series<a hidden class="anchor" aria-hidden="true" href="#a-quick-review-of-taylor-series">#</a></h3>
+<p>A function $f(x + \Delta {x})$ may be Taylor expanded about a base point $x$ (if $f$ is differentiable at $x$):</p>
+<p>$$
+f(x + \Delta {x}) = f(x) + \frac{d f(x)}{d {x}} \Delta {x} + \frac{d^2 f(x)}{d {x}^2} \frac{\Delta {x}^2}{2!} + \dots
+$$</p>
+<p>We don&rsquo;t deal with scalars (anymore!)</p>
+<p>$$
+f(\mathbf{x} + \Delta \mathbf{x}) = f(\mathbf{x}) + \nabla f(\mathbf{x}) \cdot \Delta \mathbf{x} + \frac{1}{2!} \Delta \mathbf{x}^T H(f(\mathbf{x})) \Delta \mathbf{x} + \dots
+$$</p>
+<ul>
+<li>$\nabla f(\mathbf{x})$ = gradient of $f$ at $\mathbf{x}$, a vector of partial derivatives</li>
+</ul>
+<p>$$
+\nabla f(\mathbf{x}) = \left( \frac{\partial f}{\partial x_1}, \frac{\partial f}{\partial x_2}, \dots, \frac{\partial f}{\partial x_n} \right)
+$$</p>
+<ul>
+<li>$H(f(\mathbf{x}))$ = second-order partial derivatives of $f$ at $\mathbf{x}$, with elements $H_{ij} = \frac{\partial^2 f}{\partial x_i \partial x_j}$</li>
+</ul>
+<p>$$
+\Delta \mathbf{x}^T H(f(\mathbf{x})) \Delta \mathbf{x}
+$$
+is a quadratic form, this term computes how much the function curves in the direction of $\Delta \mathbf{x}$, weighted by the second derivatives (Hessian).</p>
+<p>Phew, we are done with our Background so lets Begin</p>
+<h2 id="obs-optimnal-brain-surgery">OBS (Optimnal Brain Surgery)<a hidden class="anchor" aria-hidden="true" href="#obs-optimnal-brain-surgery">#</a></h2>
+<h3 id="overview">Overview<a hidden class="anchor" aria-hidden="true" href="#overview">#</a></h3>
+<p>OBS is a method for pruning neural networks by removing weights while minimizing the increase in the loss fuction. It uses secone order (Hessian ) information to identify which weights can be pruned with minimal impact on performance.</p>
+<h3 id="problem-context">Problem Context<a hidden class="anchor" aria-hidden="true" href="#problem-context">#</a></h3>
+<p>In a neural network, each weight $ w_p $ contributes to the overall performance (or loss) of the model. If you want to <strong>remove</strong> a weight (i.e., prune it), there is a chance that this removal will negatively affect the network&rsquo;s performance, causing the loss function to increase.</p>
+<p>To avoid large increases in the loss function, OBS prunes weights in a <strong>careful, optimized way</strong>. The goal is to find which weight(s) can be removed and adjust the other weights such that the <strong>impact on the loss function is minimal</strong>.</p>
+<h3 id="optimization-problem">Optimization Problem<a hidden class="anchor" aria-hidden="true" href="#optimization-problem">#</a></h3>
+<p>This all sounds great, but how is this an optimization problem?
+When you prune a weight, it affects the entire neural network. Simply setting a weight to zero will not work well unless you <strong>adjust the other weights</strong> in the network to compensate for the change. This adjustment of weights forms an optimization problem:</p>
+<ul>
+<li><strong>Objective:</strong> Minimize the <strong>increase in the loss function</strong> caused by pruning.</li>
+<li><strong>Constraint:</strong> Set the specific weight $ w_p $ to zero (i.e., prune it).</li>
+</ul>
+<p>This optimization problem helps find the best way to modify the remaining weights while ensuring the selected weight is removed.</p>
+<h3 id="mathematical-formulation">Mathematical Formulation<a hidden class="anchor" aria-hidden="true" href="#mathematical-formulation">#</a></h3>
+<p>The loss function $ L(\mathbf{w}) $ of a neural network depends on the weights $ \mathbf{w} = [w_1, w_2, \dots, w_n] $. When we prune a weight, we want to minimize the change in the loss function, specifically:</p>
+<p>$$
+\Delta L = L(\mathbf{w} + \delta \mathbf{w}) - L(\mathbf{w})
+$$</p>
+<p>$
+\mathbf{w} \in \mathbb{R}^n \quad \text{original set of weights}
+$</p>
+<p>$
+\delta\mathbf{w} \in \mathbb{R}^n \quad \text{change applied to the weights}
+$ (In case of pruning a specific weight $w_p$, $\delta w_p$ would be a negative value)$ \delta w_p = -w_p $</p>
+<p>2nd order Taylor Series Expansion</p>
+<p>$$
+L(\mathbf{w} + \delta \mathbf{w}) = L(\mathbf{w}) + \nabla L(\mathbf{w})^T \delta \mathbf{w} + \frac{1}{2} \delta \mathbf{w}^T H \delta \mathbf{w}
+$$</p>
+<p>Neglecting the gradient!!!</p>
+<p>In practice, when we are pruning weights, we assume the network is already near a local minimum (already trained), so the gradient $\nabla L(\mathbf{w})$ is close to 0. This simplifies the expression.</p>
+<p>$$
+\Delta L = L(w) + \nabla L(w)^T \delta w + \frac{1}{2} \delta w^T H \delta w - L(w)
+$$</p>
+<p>Therefore,</p>
+<p>$$
+\Delta L = \frac{1}{2} \delta w^T H \delta w
+$$</p>
+<h3 id="setting-up-the-optimization-problem"><strong>Setting up the Optimization Problem:</strong><a hidden class="anchor" aria-hidden="true" href="#setting-up-the-optimization-problem">#</a></h3>
+<p>The optimization problem becomes:</p>
+<p>$$
+\min_{\delta \mathbf{w}} \frac{1}{2} \delta \mathbf{w}^\top H \delta \mathbf{w}
+$$</p>
+<p>Subject to the constraint:</p>
+<p>$$
+\delta w_p = -w_p
+$$</p>
+<p>This constraint enforces the pruning of the weight $ w_p $, meaning we want the change in $ w_p $ to be exactly $ -w_p $ so that the new value becomes zero (i.e., $ w_p + \delta w_p = 0 $).</p>
+<h3 id="solving-the-optimization-problem">Solving the optimization problem<a hidden class="anchor" aria-hidden="true" href="#solving-the-optimization-problem">#</a></h3>
+<h3 id="step-by-step-derivation">Step-by-Step Derivation:<a hidden class="anchor" aria-hidden="true" href="#step-by-step-derivation">#</a></h3>
+<h4 id="1-formulating-the-objective">1. <strong>Formulating the Objective:</strong><a hidden class="anchor" aria-hidden="true" href="#1-formulating-the-objective">#</a></h4>
+<p>The objective is to <strong>minimize</strong> the increase in the loss function due to weight pruning. The quadratic approximation of the change in the loss function is:</p>
+<p>$$
+\min_{\delta \mathbf{w}} \quad \delta \mathbf{w}^\top H \delta \mathbf{w}
+$$</p>
+<p>Here:</p>
+<ul>
+<li>$ \delta \mathbf{w} $ represents the change in the weights.</li>
+<li>$ H $ is the Hessian matrix, which gives the second-order approximation of how the loss function changes with respect to the weights.</li>
+</ul>
+<h4 id="2-setting-the-constraint">2. <strong>Setting the Constraint:</strong><a hidden class="anchor" aria-hidden="true" href="#2-setting-the-constraint">#</a></h4>
+<p>When we prune a specific weight $ w_p $, the change in that weight should be exactly $ -w_p $ to set it to zero:</p>
+<p>$$
+\delta w_p = -w_p
+$$</p>
+<p>This ensures that the weight $ w_p $ is fully pruned.</p>
+<h4 id="3-setting-up-the-lagrangian">3. <strong>Setting up the Lagrangian:</strong><a hidden class="anchor" aria-hidden="true" href="#3-setting-up-the-lagrangian">#</a></h4>
+<p>To handle this constraint, we introduce a <strong>Lagrange multiplier</strong> $ \lambda $. The Lagrangian $ \mathcal{L} $ combines the objective function and the constraint:</p>
+<p>$$
+\mathcal{L}(\delta \mathbf{w}, \lambda) = \delta \mathbf{w}^\top H \delta \mathbf{w} + \lambda (\delta w_p + w_p)
+$$</p>
+<p>Where:</p>
+<ul>
+<li>The term $ \lambda (\delta w_p + w_p) $ enforces the constraint that $ \delta w_p = -w_p $.</li>
+<li>$ \lambda $ is the Lagrange multiplier.</li>
+</ul>
+<h4 id="4-taking-the-derivative-of-the-lagrangian">4. <strong>Taking the Derivative of the Lagrangian:</strong><a hidden class="anchor" aria-hidden="true" href="#4-taking-the-derivative-of-the-lagrangian">#</a></h4>
+<p>To minimize the Lagrangian, we take the derivative with respect to the change in weights $ \delta \mathbf{w} $ and the Lagrange multiplier $ \lambda $.</p>
+<h5 id="a-derivative-wrt--delta-mathbfw-">a. <strong>Derivative w.r.t. $ \delta \mathbf{w} $:</strong><a hidden class="anchor" aria-hidden="true" href="#a-derivative-wrt--delta-mathbfw-">#</a></h5>
+<p>$$
+\frac{\partial \mathcal{L}}{\partial \delta \mathbf{w}} = 2H \delta \mathbf{w} + \lambda e_p = 0
+$$</p>
+<p>Here:</p>
+<ul>
+<li>$ e_p $ is a vector with a 1 in the $ p $-th position (corresponding to $ w_p $) and 0 elsewhere, as the constraint only applies to the $ p $-th weight.</li>
+<li>Solving this gives:</li>
+</ul>
+<p>$$
+H \delta \mathbf{w} = -\frac{\lambda}{2} e_p
+$$</p>
+<h5 id="b-derivative-wrt--lambda-">b. <strong>Derivative w.r.t. $ \lambda $:</strong><a hidden class="anchor" aria-hidden="true" href="#b-derivative-wrt--lambda-">#</a></h5>
+<p>$$
+\frac{\partial \mathcal{L}}{\partial \lambda} = \delta w_p + w_p = 0
+$$</p>
+<p>This gives us the constraint:</p>
+<p>$$
+\delta w_p = -w_p
+$$</p>
+<h4 id="5-solving-for--delta-mathbfw-">5. <strong>Solving for $ \delta \mathbf{w} $:</strong><a hidden class="anchor" aria-hidden="true" href="#5-solving-for--delta-mathbfw-">#</a></h4>
+<p>From the equation $ H \delta \mathbf{w} = -\frac{\lambda}{2} e_p $, we can solve for $ \delta \mathbf{w} $ by multiplying both sides by the inverse of $ H $:</p>
+<p>$$
+\delta \mathbf{w} = -\frac{\lambda}{2} H^{-1} e_p
+$$</p>
+<p>The vector $ H^{-1} e_p $ represents the $ p $-th column of the inverse of the Hessian matrix $ H $.</p>
+<h4 id="6-solving-for--lambda-">6. <strong>Solving for $ \lambda $:</strong><a hidden class="anchor" aria-hidden="true" href="#6-solving-for--lambda-">#</a></h4>
+<p>We now use the constraint $ \delta w_p = -w_p $ to solve for $ \lambda $.</p>
+<p>From $ \delta w_p = e_p^\top \delta \mathbf{w} = -w_p $, we substitute $ \delta \mathbf{w} $:</p>
+<p>$$
+e_p^\top \left( -\frac{\lambda}{2} H^{-1} e_p \right) = -w_p
+$$</p>
+<p>This simplifies to:</p>
+<p>$$
+-\frac{\lambda}{2} [H^{-1}]_{pp} = -w_p
+$$</p>
+<p>Solving for $ \lambda $:</p>
+<p>$$
+\lambda = \frac{2 w_p}{[H^{-1}]_{pp}}
+$$</p>
+<h4 id="7-substitute--lambda--back-into--delta-mathbfw-">7. <strong>Substitute $ \lambda $ Back into $ \delta \mathbf{w} $:</strong><a hidden class="anchor" aria-hidden="true" href="#7-substitute--lambda--back-into--delta-mathbfw-">#</a></h4>
+<p>Now, substitute $ \lambda $ back into the expression for $ \delta \mathbf{w} $:</p>
+<p>$$
+\delta \mathbf{w} = -\frac{w_p}{[H^{-1}]_{pp}} H^{-1} e_p
+$$</p>
+<p>This equation gives the <strong>update to the remaining weights</strong> after pruning $ w_p $.</p>
+<h3 id="finding--delta-w-">Finding $ \delta w $<a hidden class="anchor" aria-hidden="true" href="#finding--delta-w-">#</a></h3>
+<p>Now, substitute $ \lambda $ back into the expression for $ \delta w $:</p>
+<p>$$
+\delta w = -\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q
+$$</p>
+<p>This is the optimal weight change that minimizes the increase in error while setting $ w_q $ to zero.</p>
+<h3 id="final-change-in-error--l_q-">Final Change in Error ($ L_q $)<a hidden class="anchor" aria-hidden="true" href="#final-change-in-error--l_q-">#</a></h3>
+<p>Now, we compute the resulting change in error $ \delta E $ by substituting $ \delta w $ into the second-order Taylor expansion of the error function:</p>
+<p>$$
+\delta E = \frac{1}{2} \delta w^T H \delta w
+$$</p>
+<p>Substitute $ \delta w = -\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q $ into this:</p>
+<p>$$
+\delta E = \frac{1}{2} \left(-\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q \right)^T H \left(-\frac{w_q}{e_q^T H^{-1} e_q} H^{-1} e_q \right)
+$$</p>
+<p>Simplifying:</p>
+<p>$$
+\delta E = \frac{1}{2} \frac{w_q^2}{(e_q^T H^{-1} e_q)^2} \left( e_q^T H^{-1} H H^{-1} e_q \right)
+$$</p>
+<p>Since $ H^{-1} H = I $, this becomes:</p>
+<p>$$
+\delta E = \frac{1}{2} \frac{w_q^2}{e_q^T H^{-1} e_q}
+$$</p>
+<p>This is the final expression for the change in error due to setting $ w_q $ to zero, which we denote as $ L_q $:</p>
+<p>$$
+L_q = \frac{1}{2} \frac{w_q^2}{(H^{-1})_{qq}}
+$$</p>
+<p>where $ (H^{-1})_{qq} = e_q^T H^{-1} e_q $ is the diagonal element of the inverse Hessian matrix corresponding to weight $ w_q $. This final equation represents the &ldquo;saliency&rdquo; or importance of weight $ w_q $ in the network.</p>
 <h3 id="2-optimal-brain-quantization-obq"><strong>2. Optimal Brain Quantization (OBQ)</strong><a hidden class="anchor" aria-hidden="true" href="#2-optimal-brain-quantization-obq">#</a></h3>
 <h4 id="21-row-wise-independent-quantization"><strong>2.1. Row-wise Independent Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#21-row-wise-independent-quantization">#</a></h4>
 <p>OBQ simplifies the problem by treating each row $ \mathbf{w} $ of $ \mathbf{W} $ independently. This is reasonable because in a fully connected layer, each output neuron corresponds to one row of $ \mathbf{W} $, and the neurons operate independently given the inputs.</p>
@@ -710,7 +837,7 @@ $$</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:34579/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
 
     <span>
         Powered by
