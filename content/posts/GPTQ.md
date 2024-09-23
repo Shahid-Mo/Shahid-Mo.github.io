@@ -28,7 +28,7 @@ $$
 - $ \mathbf{W} $: Original full-precision weight matrix of the layer.
 - $ \mathbf{W}_c $: Quantized weight matrix we want to find.
 - $ \mathbf{X} $: Input matrix to the layer (a set of $ m $ input examples).
-- $ \| \cdot \|_2 $: Frobenius norm, summing over all elements.
+- $ \| \cdot \|_2 $: Frobenius norm, summing over all elements. (similar to enclidian norm for vectors)
 
 **Goal**: Find $ \mathbf{W}_c $ that minimizes the output difference caused by quantization.
 
@@ -196,18 +196,18 @@ $$
 L(\mathbf{w} + \delta \mathbf{w}) = L(\mathbf{w}) + \nabla L(\mathbf{w})^T \delta \mathbf{w} + \frac{1}{2} \delta \mathbf{w}^T H \delta \mathbf{w}
 $$
 
-Neglecting the gradient!!!
+**Neglecting the gradient!!!**, this is someting that we genrally dont do, (we generally ignore the first derivative)
 
 In practice, when we are pruning weights, we assume the network is already near a local minimum (already trained), so the gradient $\nabla L(\mathbf{w})$ is close to 0. This simplifies the expression.
 
 $$
-\Delta L = L(w) + \nabla L(w)^T \delta w + \frac{1}{2} \delta w^T H \delta w - L(w)
+\Delta L = L(\mathbf{w}) + \nabla L(\mathbf{w})^T \delta \mathbf{w} + \frac{1}{2} \delta \mathbf{w}^T H \delta \mathbf{w} - L(\mathbf{w})
 $$
 
 Therefore,
 
 $$
-\Delta L = \frac{1}{2} \delta w^T H \delta w
+\Delta L = \frac{1}{2} \delta \mathbf{w}^T H \delta \mathbf{w}
 $$
 ### **Setting up the Optimization Problem:**
 The optimization problem becomes:
@@ -229,10 +229,10 @@ This constraint enforces the pruning of the weight $ w_p $, meaning we want the 
 ### Step-by-Step Derivation:
 
 #### 1. **Formulating the Objective:**
-The objective is to **minimize** the increase in the loss function due to weight pruning. The quadratic approximation of the change in the loss function is:
+The objective is to **minimize** the increase in the loss function due to weight pruning. 
 
 $$
-\min_{\delta \mathbf{w}} \quad \delta \mathbf{w}^\top H \delta \mathbf{w}
+\min_{\delta \mathbf{w}} \frac{1}{2} \delta \mathbf{w}^\top H \delta \mathbf{w}
 $$
 
 Here:
@@ -246,17 +246,25 @@ $$
 \delta w_p = -w_p
 $$
 
+In vector form, this constraint can be written as:
+
+$$
+\mathbf{e}_p^T \delta \mathbf{w} + w_p = 0
+$$
+
+where $ \mathbf{e}_p $ is the one hot vector corresponding to the weight $ w_q $.
+
 This ensures that the weight $ w_p $ is fully pruned.
 
 #### 3. **Setting up the Lagrangian:**
 To handle this constraint, we introduce a **Lagrange multiplier** $ \lambda $. The Lagrangian $ \mathcal{L} $ combines the objective function and the constraint:
 
 $$
-\mathcal{L}(\delta \mathbf{w}, \lambda) = \delta \mathbf{w}^\top H \delta \mathbf{w} + \lambda (\delta w_p + w_p)
+\mathcal{L}(\delta \mathbf{w}, \lambda) = \frac{1}{2} \delta \mathbf{w}^\top H \delta \mathbf{w} + \lambda (\mathbf{e}_p^T \delta \mathbf{w} + w_p)
 $$
 
 Where:
-- The term $ \lambda (\delta w_p + w_p) $ enforces the constraint that $ \delta w_p = -w_p $.
+- The term $ \lambda (\mathbf{e}_p^T \delta \mathbf{w} + w_p) $ enforces the constraint that $ \delta w_p = -w_p $.
 - $ \lambda $ is the Lagrange multiplier.
 
 #### 4. **Taking the Derivative of the Lagrangian:**
@@ -265,7 +273,7 @@ To minimize the Lagrangian, we take the derivative with respect to the change in
 ##### a. **Derivative w.r.t. $ \delta \mathbf{w} $:**
 
 $$
-\frac{\partial \mathcal{L}}{\partial \delta \mathbf{w}} = 2H \delta \mathbf{w} + \lambda e_p = 0
+\frac{\partial \mathcal{L}}{\partial \delta \mathbf{w}} = H \delta \mathbf{w} + \lambda \mathbf{e}_p = 0
 $$
 
 Here:
@@ -273,7 +281,7 @@ Here:
 - Solving this gives:
 
 $$
-H \delta \mathbf{w} = -\frac{\lambda}{2} e_p
+H \delta \mathbf{w} = -\lambda \mathbf{e}_p
 $$
 
 ##### b. **Derivative w.r.t. $ \lambda $:**

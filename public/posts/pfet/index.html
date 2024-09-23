@@ -1,16 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head>
-	<meta name="generator" content="Hugo 0.129.0"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>TensorTunes</title>
-
-<meta name="description" content="">
+<title>Parameter Efficient Fine-tuning of LLMs (PEFT) | TensorTunes</title>
+<meta name="keywords" content="">
+<meta name="description" content="Prompt Tuning Prefix Tuning LoRA">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:1313/">
+<link rel="canonical" href="http://localhost:1313/posts/pfet/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://localhost:1313/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
@@ -19,8 +18,7 @@
 <link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/index.xml">
-<link rel="alternate" hreflang="en" href="http://localhost:1313/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/pfet/">
 <noscript>
     <style>
         #theme-toggle,
@@ -74,7 +72,7 @@
 </script>
 </head>
 
-<body class="list" id="top">
+<body class="" id="top">
 <script>
     if (localStorage.getItem("pref-theme") === "dark") {
         document.body.classList.add('dark');
@@ -127,100 +125,29 @@
         </ul>
     </nav>
 </header>
-<main class="main"> 
-<article class="first-entry home-info">
-    <header class="entry-header">
-        <h1>Welcome to TensorTunes</h1>
-    </header>
-    <div class="entry-content">
-        Exploring the harmony of mathematics and music through the lens of machine learning and signal processing.
-    </div>
-    <footer class="entry-footer">
-        <div class="social-icons" >
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Parameter Efficient Fine-tuning of LLMs (PEFT)
+    </h1>
+    <div class="post-meta"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span>
+
 </div>
+  </header> 
+  <div class="post-content"><p>Prompt Tuning
+Prefix Tuning
+LoRA</p>
 
-    </footer>
-</article>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Deconding From Language Models
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
-At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary....</p>
   </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Deconding From Language Models" href="http://localhost:1313/posts/decoding-from-language-models/"></a>
-</article>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
-Quantization can broadly be categorized into two types:
-Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/draft_quant/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">From Retrieval to RAG (Part - 1)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to From Retrieval to RAG (Part - 1)" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Parameter Efficient Fine-tuning of LLMs (PEFT)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Prompt Tuning Prefix Tuning LoRA</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Parameter Efficient Fine-tuning of LLMs (PEFT)" href="http://localhost:1313/posts/pfet/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Quantization in LLMS (Part 1): LLM.int8(), NF4
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/quantization/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Quantization in LLMS Part 2: GPTQ (A Mathematical View)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction
-Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.
-The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-08-01 09:51:17 -0400 EDT'>August 1, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Quantization in LLMS Part 2: GPTQ (A Mathematical View)" href="http://localhost:1313/posts/gptq/"></a>
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
 </article>
     </main>
     

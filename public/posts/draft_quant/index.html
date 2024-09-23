@@ -5,13 +5,13 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>From Retrieval to RAG (Part - 1) | TensorTunes</title>
+<title>Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4 | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.">
+<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
+Quantization can broadly be categorized into two types:
+Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/">
+<link rel="canonical" href="http://localhost:1313/posts/draft_quant/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://localhost:1313/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
@@ -20,7 +20,7 @@ Quantization Aware Training (QAT): This involves training the model with reduced
 <link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/draft_quant/">
 <noscript>
     <style>
         #theme-toggle,
@@ -133,21 +133,13 @@ Quantization Aware Training (QAT): This involves training the model with reduced
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      From Retrieval to RAG (Part - 1)
+      Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4
     </h1>
     <div class="post-meta"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span>
 
 </div>
   </header> 
   <div class="post-content"><h2 id="introduction-to-quantization">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization">#</a></h2>
-<p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, <strong>quantization</strong> is a key technique to understand.</p>
-<p>Quantization can be broadly categorized into two main approaches:</p>
-<ul>
-<li><strong>Quantization Aware Training (QAT):</strong> This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.</li>
-<li><strong>Post Training Quantization (PTQ):</strong> Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently.</li>
-</ul>
-<p>In this post (and subsequent ones), we&rsquo;ll focus on PTQ. It&rsquo;s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs, making it an excellent first step in your quantization journey.</p>
-<h2 id="introduction-to-quantization-1">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization-1">#</a></h2>
 <p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, <strong>quantization</strong> is a technique you need to understand.</p>
 <p>Quantization can broadly be categorized into two types:</p>
 <ul>
@@ -1553,6 +1545,89 @@ $$</li>
 </ul>
 <hr>
 <p>By leveraging the statistical properties of normal distributions, NF4 quantization minimizes quantization errors and maintains the performance of neural networks while significantly reducing memory requirements.</p>
+<p>Here’s a refined version for your blog:</p>
+<hr>
+<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia starting with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
+<p>As shown in the diagram, Nvidia GPUs convert FP32 tensors into TF32 tensors for matrix multiplication, then accumulate the results back in FP32. This process significantly speeds up calculations compared to performing them entirely in FP32. TF32 retains the 8-bit exponent of FP32 but reduces the mantissa to 10 bits, striking a balance between precision and speed.</p>
+<p>With dedicated hardware support for TF32, deep learning workloads see substantial performance improvements without much compromise in accuracy. TF32 is particularly useful for training large neural networks, as it enables faster computation while maintaining nearly the same numerical stability as FP32.</p>
+<hr>
+<p>This rephrasing clarifies the role and benefits of TF32 in deep learning and the context of its use in Nvidia GPUs.</p>
+<p>Here’s the revised version with an explanation of the figure:</p>
+<hr>
+<h3 id="tf32-tensorfloat-32">TF32 (TensorFloat 32)<a hidden class="anchor" aria-hidden="true" href="#tf32-tensorfloat-32">#</a></h3>
+<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
+<p>From the Ampere architecture onwards, all calculations involving FP32 matrices are done as shown in the figure. When performing matrix multiplications, the GPU automatically converts FP32 matrices into TF32 precision. The actual multiplication is done using TF32, which retains FP32’s 8-bit exponent but reduces the mantissa to 10 bits. Once the operation is complete, the results are accumulated back into FP32 format for higher precision in the final outcome.</p>
+<p>This process leverages TF32 for speed during calculations, while maintaining the precision of FP32 for the final result. Essentially, it balances the need for faster computation with the demand for precision in neural network training.</p>
+<hr>
+<p>This version focuses on explaining the role of TF32 in FP32 matrix operations and ties it directly to the figure you provided.</p>
+<h3 id="bf16-1">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16-1">#</a></h3>
+<p>BF16, also known as Brain Float 16, was developed by Google Brain and became popular around 2019. It’s now one of the most widely used formats for training and fine-tuning LLMs. The main advantage of BF16 is that it retains the same number of exponent bits as FP32, making it easier to load a model in 16-bit precision and proceed with fine-tuning without running into &ldquo;NaN&rdquo; errors.</p>
+<p>While BF16 sacrifices some precision compared to FP32, research has shown that the difference in performance when training or fine-tuning models on BF16 vs. FP32 is minimal. Given the tradeoff between slightly reduced precision and the substantial reduction in model size, using BF16 is often well worth it for modern deep learning tasks.</p>
+<p>Let&rsquo;s break down the equation step by step and clarify each part.</p>
+<h3 id="mixed-precision-decomposition-equation">Mixed-Precision Decomposition Equation:<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition-equation">#</a></h3>
+<p>[
+C_{f16} \approx \sum_{h \in O} A^h_{f16} \cdot B^h_{f16} + S \cdot \sum_{h \notin O} Q(A^h_{i8}) \cdot Q(B^h_{i8})
+]</p>
+<h4 id="what-does-each-symbol-represent">What Does Each Symbol Represent?<a hidden class="anchor" aria-hidden="true" href="#what-does-each-symbol-represent">#</a></h4>
+<ol>
+<li>
+<p><strong>( C_{f16} )</strong>:</p>
+<ul>
+<li>This is the final result matrix after performing matrix multiplication, but in <strong>FP16 (16-bit floating point)</strong> precision. It is the combination of high-precision and low-precision matrix multiplication results.</li>
+</ul>
+</li>
+<li>
+<p><strong>( A^h_{f16}, B^h_{f16} )</strong>:</p>
+<ul>
+<li>These are parts of the <strong>input matrix</strong> ( A ) and the <strong>weight matrix</strong> ( B ), but only for the <strong>outlier dimensions</strong>. The superscript ( h \in O ) refers to the outlier feature dimensions where the values are large, and ( A^h_{f16} ) and ( B^h_{f16} ) remain in <strong>FP16 precision</strong> because these are important for model performance.</li>
+</ul>
+</li>
+<li>
+<p><strong>( Q(A^h_{i8}), Q(B^h_{i8}) )</strong>:</p>
+<ul>
+<li>These are the <strong>quantized</strong> (converted from FP16 to Int8) versions of matrices ( A ) and ( B ), but for the non-outlier dimensions. The superscript ( h \notin O ) refers to the feature dimensions that are <strong>not outliers</strong>, so they are quantized into Int8 precision.</li>
+</ul>
+</li>
+<li>
+<p><strong>( O )</strong>:</p>
+<ul>
+<li>( O ) is the set of <strong>outlier dimensions</strong>, i.e., feature dimensions where the values are large and can&rsquo;t be accurately represented in Int8 without losing important information.</li>
+</ul>
+</li>
+<li>
+<p><strong>( S )</strong>:</p>
+<ul>
+<li>( S ) is a <strong>scaling factor</strong> that denormalizes the quantized matrices to maintain accuracy. After performing Int8 matrix multiplication, we multiply the result by ( S ) to scale it back to the original FP16 range.</li>
+</ul>
+</li>
+</ol>
+<h3 id="breaking-down-the-equation">Breaking Down the Equation:<a hidden class="anchor" aria-hidden="true" href="#breaking-down-the-equation">#</a></h3>
+<p>[
+C_{f16} \approx \sum_{h \in O} A^h_{f16} \cdot B^h_{f16}
+]</p>
+<ul>
+<li>This part represents the matrix multiplication of the <strong>outlier dimensions</strong>.</li>
+<li>Outliers are important because they have large values, so they are kept in <strong>FP16 precision</strong> to maintain accuracy.</li>
+<li>The summation ( \sum_{h \in O} ) goes over all the <strong>outlier dimensions</strong> ( h ), multiplying the corresponding parts of the matrices ( A^h_{f16} ) and ( B^h_{f16} ).</li>
+</ul>
+<p>[</p>
+<ul>
+<li>S \cdot \sum_{h \notin O} Q(A^h_{i8}) \cdot Q(B^h_{i8})
+]</li>
+</ul>
+<ul>
+<li>This part represents the matrix multiplication of the <strong>non-outlier dimensions</strong>.</li>
+<li>Since the values in these dimensions are smaller, they can be quantized into <strong>Int8</strong> to save memory.</li>
+<li>The summation ( \sum_{h \notin O} ) goes over the <strong>non-outlier dimensions</strong> ( h ), multiplying the quantized parts of matrices ( Q(A^h_{i8}) ) and ( Q(B^h_{i8}) ).</li>
+<li>After the matrix multiplication, the result is scaled back to the FP16 range by multiplying it with the <strong>scaling factor</strong> ( S ).</li>
+</ul>
+<h3 id="in-summary">In Summary:<a hidden class="anchor" aria-hidden="true" href="#in-summary">#</a></h3>
+<ul>
+<li><strong>Outlier dimensions</strong> are handled in <strong>FP16</strong> precision to preserve accuracy because their large values are critical.</li>
+<li><strong>Non-outlier dimensions</strong> are quantized to <strong>Int8</strong> to save memory, and the result is scaled back using ( S ) after multiplication.</li>
+<li>The final result, ( C_{f16} ), is a combination of both the high-precision (FP16) and low-precision (Int8) parts.</li>
+</ul>
+<p>This approach balances <strong>precision</strong> (for outliers) and <strong>efficiency</strong> (for non-outliers), allowing large models to be more memory-efficient while maintaining performance.</p>
 
 
   </div>
