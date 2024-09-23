@@ -5,6 +5,7 @@ languageCode: "en-us"
 defaultContentLanguage: "en"
 
 params:
+  comments: true
   defaultTheme: auto
   homeInfoParams:
     Title: "Welcome to TensorTunes"

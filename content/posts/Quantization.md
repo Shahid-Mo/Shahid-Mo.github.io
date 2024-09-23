@@ -2,6 +2,7 @@
 title: 'Quantization in LLMS (Part 1): LLM.int8(), NF4'
 date: 2024-09-11
 draft: false
+comments: true
 ---
 
 # Introduction to Quantization
@@ -453,9 +454,37 @@ Abs Max Quantization works, so shouldn't we just wrap up quantization and move o
 </p>
 </div>
 
-The figure points out that obove 2.7B paramaters, if you do quantization the model becomes lobatomized, ie a 125M paramamter can outperform a 13B paramater if we do naive 8 bit qunatization on it. This is because the outliers present in the model are the reason for these is that the outlers weights of the models is the reason for emergent and good behaviour of the modlels. so we want to protect these outler weights, so as not to degrade performance.
+The figure points out that once models exceed 2.7 billion parameters, naive 8-bit quantization significantly degrades performance. The drastic performance drop is due to the presence of **outliers**—weights that are crucial for enabling key behaviors like reasoning and in-context learning. These outliers are vital for the model's performance, so preserving them during quantization is essential to prevent significant degradation.
+This happens because outlier weights—which play a crucial role in driving the emergent behaviors of large models—get lost in the quantization process.
 
-LLM int8 proposes a two part soultion to the above proble, First instead of qunatizing the whole tensor in one go, we qunatize it vector by vector this increase the number of qunaitzation constants to sotre, but it is totally worth it!!!!!!! 
+LLM.int8() proposes a two-part strategy to address this issue:
+
+1. **Vector-wise Quantization**: Instead of quantizing the entire tensor with a single scaling constant, LLM.int8() quantizes vectors individually.  The challenge with using a single scaling constant per tensor is that just one outlier can distort the entire quantization process, reducing precision for all other values. By applying multiple scaling constants—one for each vector—this method ensures that outliers don’t interfere with the rest of the matrix.
+
+2. **Mixed-Precision Decomposition**: The second component of LLM.int8() involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Outliers that exceed this range are left in higher precision formats like FP16 or FP32. By doing this, LLM.int8() ensures that these critical outlier weights—responsible for much of the model's performance—are preserved in higher precision, avoiding the loss of accuracy that comes with squeezing them into lower precision formats.
+
+### Mixed-Precision Decomposition: Diving Deeper
+
+To handle even larger models—those beyond 6.7 billion parameters—LLM.int8() introduces **mixed-precision decomposition**. This technique specifically tackles the emergence of extreme outliers in a fraction of the model's features. LLM.int8() performs matrix multiplication for these outlier dimensions in FP16, while the rest of the matrix operates in 8-bit. This ensures that outliers, which constitute only a small percentage of the total features but have a major impact on the model’s accuracy, are treated with the precision they require.
+
+---
+
+This revised version keeps the content approachable while adding clarity and flow. How does it feel now?
+
+
+
+
+
+
+
+
+
+
+LLM int8 proposes a two part soultion to the above proble:
+
+First, instead of quantizing an entire tensor with a single scaling constant, it uses vector-wise quantization, applying different scaling constants to each vector in the tensor. The issue with using a single scaling constant is that even one large outlier can reduce the precision of all other values in the tensor. By quantizing vectors individually, we prevent this precision loss.
+
+First instead of qunatizing the whole tensor in one go, we qunatize it vector by vector this increase the number of qunaitzation constants to sotre, but it is totally worth it!!!!!!! 
 The main challenge with quantization methods that use a single scaling constant per tensor is that
 a single outlier can reduce the quantization precision of all other values. As such, it is desirable to
 have multiple scaling constants per tensor
