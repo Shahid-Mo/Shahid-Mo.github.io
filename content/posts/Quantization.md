@@ -440,8 +440,6 @@ As you have already seen the T4 and Subsequnet gpu archtecture suppor INT8 and I
 In summary, absmax quantization shrinks a floating-point tensor into the 8-bit range by dividing all elements by the largest absolute value in the tensor, then multiplying by 127 and rounding.
 
 
-
-
 ### LLM int8
 
 Abs Max Quantization works, so shouldn't we just wrap up quantization and move on? Not quite. In November 2022, *[Detmers et al.](https://arxiv.org/abs/2208.07339)* introduced LLM.int8(), a new quantization technique, addressing an important issue: Large language models (LLMs) have started to show impressive emergent behaviors like reasoning, in-context learning, and even few-shot problem solving—abilities that were being compromised by naive quantization methods.
@@ -461,46 +459,21 @@ LLM.int8() proposes a two-part strategy to address this issue:
 
 1. **Vector-wise Quantization**: Instead of quantizing the entire tensor with a single scaling constant, LLM.int8() quantizes vectors individually.  The challenge with using a single scaling constant per tensor is that just one outlier can distort the entire quantization process, reducing precision for all other values. By applying multiple scaling constants—one for each vector—this method ensures that outliers don’t interfere with the rest of the matrix.
 
-2. **Mixed-Precision Decomposition**: The second component of LLM.int8() involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Outliers that exceed this range are left in higher precision formats like FP16 or FP32. By doing this, LLM.int8() ensures that these critical outlier weights—responsible for much of the model's performance—are preserved in higher precision, avoiding the loss of accuracy that comes with squeezing them into lower precision formats.
+2. **Mixed-Precision Decomposition**: LLM.int8() quantizes only weights within a defined threshold, typically $[-6, 6]$. Outliers exceeding this range are preserved in higher precision formats (FP16 or FP32). This preserves critical outlier weights—crucial for model performance—at higher precision, avoiding accuracy loss from forcing them into lower precision formats. The approach maintains key model behaviors while achieving significant compression for most weights, effectively balancing performance and efficiency across varying model sizes.
 
-### Mixed-Precision Decomposition: Diving Deeper
+<div style="text-align: center;">
+  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 
-To handle even larger models—those beyond 6.7 billion parameters—LLM.int8() introduces **mixed-precision decomposition**. This technique specifically tackles the emergence of extreme outliers in a fraction of the model's features. LLM.int8() performs matrix multiplication for these outlier dimensions in FP16, while the rest of the matrix operates in 8-bit. This ensures that outliers, which constitute only a small percentage of the total features but have a major impact on the model’s accuracy, are treated with the precision they require.
+### the Mathematical details
 
----
+#### Vector-wise Quantization
 
-This revised version keeps the content approachable while adding clarity and flow. How does it feel now?
-
-
-
-
-
-
-
-
-
-
-LLM int8 proposes a two part soultion to the above proble:
-
-First, instead of quantizing an entire tensor with a single scaling constant, it uses vector-wise quantization, applying different scaling constants to each vector in the tensor. The issue with using a single scaling constant is that even one large outlier can reduce the precision of all other values in the tensor. By quantizing vectors individually, we prevent this precision loss.
-
-First instead of qunatizing the whole tensor in one go, we qunatize it vector by vector this increase the number of qunaitzation constants to sotre, but it is totally worth it!!!!!!! 
-The main challenge with quantization methods that use a single scaling constant per tensor is that
-a single outlier can reduce the quantization precision of all other values. As such, it is desirable to
-have multiple scaling constants per tensor
-ie in ABSMAX qunaitzation absolute value was taken for the enire matrix or tensor, but taking the absolute value of individual vectors is better than than takinf the abs of the whole matrix, this technique is followed in other qunatization techniques like GPTQ as well.
-The second idea of LLM.int8() is Qunatize weights within a certain threshold (this is huperparamater that you can set, default=6), ie if the weights are above or below this threshold $[-6,6]$ these weights are not qunatized, and stored in FP16/FP32/BF16 precision.
-**The Problem with Single Scaling Constants**
-
-- **Outliers**: In large tensors, especially in transformer models beyond a certain size (e.g., models larger than 6.7 billion parameters), there can be individual elements with exceptionally large values (outliers).
-- **Reduced Precision**: When using a single scaling constant, these outliers force the scaling factor to be small to accommodate the largest values. This compresses the dynamic range for the rest of the values, leading to a loss of precision for the majority of the tensor elements.
-- **Impact on Model Performance**: Reduced precision can degrade the performance of the model because small differences in weights or activations can significantly impact the model's outputs.
-
-## the Mathematical details
-
-### Vector-wise Quantization
-
-In vector-wise quantization, the main idea is to apply **different scaling constants** for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision. The key mathematical concepts behind vector-wise quantization are:
+In vector-wise quantization, the main idea is to apply **different scaling constants** for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision. 
 
 1. **Matrix Setup**:
    - Let $ X_{f16} \in \mathbb{R}^{b \times h} $ be the input matrix (e.g., hidden states), where $ b $ is the batch size and $ h $ is the hidden size.
@@ -508,7 +481,7 @@ In vector-wise quantization, the main idea is to apply **different scaling const
    
    The goal is to quantize these matrices from FP16 to Int8, applying different scaling constants to different rows or columns.
 
-2. **Quantization**:
+2. **Quantization**(similar to ABSMAX Quantization):
    - Quantization scales the values in each vector of $ X_{f16} $ and $ W_{f16} $ into the range $[-127, 127]$. The scaling constant for each row in $ X_{f16} $ is denoted $ c_{x_{f16}} $, and for each column in $ W_{f16} $, it is $ c_{w_{f16}} $.
    
    This can be represented as:
@@ -530,10 +503,6 @@ In vector-wise quantization, the main idea is to apply **different scaling const
    C_{f16} \approx \frac{1}{c_{x_{f16}} \otimes c_{w_{f16}}} \cdot C_{i32}
    $$
    where $ \otimes $ is the **outer product** of the row-wise scaling constants $ c_{x_{f16}} $ and column-wise scaling constants $ c_{w_{f16}} $. This product ensures that the entire matrix is scaled back appropriately.
-
-5. **Benefits**:
-   - **Increased Precision**: By using multiple scaling constants, vector-wise quantization reduces the impact of outliers confined to specific rows or columns, improving the precision of the quantized representation.
-   - **Efficiency**: This method maintains computational efficiency by applying row- and column-wise scaling, which is less computationally expensive than applying different scaling to every individual element.
 
 ### Mixed-Precision Decomposition
 
@@ -561,17 +530,208 @@ While vector-wise quantization works well for most situations, **outliers**—sp
 3. **Outlier Identification**:
    Outliers are identified based on a threshold $ \alpha $. If any value in a specific feature dimension exceeds $ \alpha $, that dimension is considered an outlier and handled with higher precision.
 
-4. **Benefits**:
-   - **High Precision for Critical Elements**: By isolating and handling outliers in FP16, the method maintains precision where it matters most, preserving model performance.
-   - **Memory Efficiency**: Since outliers are typically sparse (only about 0.1% of all feature dimensions), the memory overhead is minimal, leading to significant memory savings compared to full FP16 computation.
+### NF4 Quantization
 
-### Summary
-
-- **Vector-wise Quantization** improves precision by applying different scaling constants to rows and columns in the matrix, reducing the effect of outliers on the entire matrix.
-- **Mixed-Precision Decomposition** further improves efficiency and precision by handling outliers with high precision (FP16) and the rest of the matrix with low precision (Int8), balancing memory usage and accuracy in large models.
-
-These techniques allow large-scale models to be efficiently quantized while minimizing performance degradation caused by outliers.
+**NF4 Quantization** is a specialized technique optimized for data with a zero-centered normal distribution, such as neural network weights. It builds on **Quantile Quantization (QQ)**, which distributes values uniformly across bins to minimize information loss. However, computing exact quantiles is computationally expensive. To address this, **Fixed Distribution Quantization** leverages the known normal distribution of weights, allowing NF4 to efficiently estimate quantiles. This method, introduced in **QLoRA**, is particularly effective in fine-tuning large language models, offering strong performance while reducing computational costs and memory usage.
 
 
+
+### NF4 implementation details
+The NF4 datatype is used to quantize values in the interval $[-1, 1]$. Since NF4 is a 4-bit code, it consists of 16 values, $q_1, \dots, q_{16} \in [-1, 1]$.
+
+### **4. Designing the Quantization Levels $ q_j $**
+
+Determining the optimal set of 16 quantization levels is crucial for minimizing quantization error. NF4 leverages the properties of the normal distribution to design these levels, based on the observation that neural network parameters are approximately normally distributed.
+
+#### **Step 4: Calculate Quantization Levels**
+
+1. **Set $ \delta $:**
+
+$$
+\delta = \frac{1}{2} \left( \frac{1}{32} + \frac{1}{30} \right)
+$$
+
+- **Purpose:** $ \delta $ is a small probability value that helps in determining the extreme quantiles. (This is a hyper-paramater set in the Bits and Bytes Implementation of NF4)
+
+2. **Compute Evenly Spaced Probabilities:**
+
+   - **Lower Half ($ p_1, \ldots, p_8 $):**
+     
+     - $ p_1 = \delta $
+     - $ p_8 = \frac{1}{2} $
+     - **Evenly spaced** between $ \delta $ and $ \frac{1}{2} $.
+
+   - **Upper Half ($ r_9, \ldots, r_{16} $):**
+     
+     - $ r_8 = \frac{1}{2} $ (Note: $ r_8 $ is unused as $ q_8 $ is explicitly set to 0.)
+     - $ r_{16} = 1 - \delta $
+     - **Evenly spaced** between $ \frac{1}{2} $ and $ 1 - \delta $.
+
+3. **Find Quantiles Using the Gaussian CDF ($ \Phi $):**
+
+   - **Lower Half Quantiles ($ \tilde{q}_1, \ldots, \tilde{q}_8 $):**
+
+     $$
+     \tilde{q}_i = \Phi^{-1}(p_i) \quad \text{for } i = 1, \ldots, 8
+     $$
+
+   - **Upper Half Quantiles ($ \tilde{q}_9, \ldots, \tilde{q}\_{16} $):**
+
+     $$
+     \tilde{q}_i = \Phi^{-1}(r_i) \quad \text{for } i = 9, \ldots, 16
+     $$
+
+4. **Normalize Quantization Levels to $[-1, 1]$:**
+
+   $$
+   q_i = \frac{\tilde{q}\_i}{\max_{k} |\tilde{q}\_k|}
+   $$
+
+   - **Result:** The final quantization levels $ q_1 = -1 $, $ q_8 = 0 $, and $ q_{16} = 1 $, with other $ q_j $ values distributed according to the normal distribution's quantiles.
+
+```python
+import torch
+from scipy.stats import norm
+
+# Step 1: Calculate δ (small probability value for extreme quantiles)
+delta = 1/2 * (1/32 + 1/30)
+
+# Step 2: Compute lower half quantiles (p1 to p8)
+p = norm.ppf(torch.linspace(delta, 0.5, 8)).tolist()
+
+# Step 3: Compute upper half quantiles (r9 to r16)
+r = norm.ppf(torch.linspace(0.5, 1 - delta, 9)).tolist()
+
+# Step 4: Combine and sort quantiles
+q_tild = list(set(p + r))
+q_tild.sort()
+
+# Step 5: Normalize quantiles to the range [-1, 1]
+q_tild = torch.Tensor(q_tild)
+q = q_tild / q_tild.max()
+```
+```
+tensor([-1.0000, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0910,  0.0000,
+         0.0796,  0.1609,  0.2461,  0.3379,  0.4407,  0.5626,  0.7230,  1.0000])
+```
+
+Now that we have done the qunatile qunatization, lets look how do we qunaitze a block of weights
+
+#### **Step 1: Calculate the Absolute Maximum (absmax)**
+
+For a given block of $ B $ values $ w_1, w_2, \ldots, w_B $ from the matrix $ W $:
+
+$$
+M = \max_{i} |w_i|
+$$
+
+- **Purpose:** This scaling factor $ M $ ensures that all values in the block are normalized within $[-1, 1]$ when divided by $ M $.
+
+#### **Step 2: Determine Quantization Indices**
+
+Each value $ w_i $ in the block is quantized as follows:
+
+1. **Scale the Value:**
+
+$$
+w'_i = \frac{w_i}{M}
+$$
+
+Now, $ w'_i \in [-1, 1] $.
+
+2. **Map to Nearest Quantization Level:**
+
+$$
+c_i = \arg\min_{j} |q_j - w'_i|
+$$
+
+- **$ q_j $:** The set of 16 quantization levels within $[-1, 1]$.
+- **$ c_i $:** The index (from 1 to 16) of the nearest quantization level to $ w'_i $.
+
+#### **Step 3: Store Quantization Data**
+
+For each block:
+
+- **Store $ M $:** The scaling factor.
+- **Store $ c_1, c_2, \ldots, c_B $:** The quantization indices for each value in the block.
+
+**Dequantization:** To reconstruct the original values (approximately):
+
+$$
+w_i \approx c_i \times M
+$$
+
+
+
+## Code Implementation for NF4 and LLM.int8()
+
+a simple function for model loading
+```python
+def load_model(model_name, quantization_config=None, dtype=None):
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        quantization_config=quantization_config,
+        device_map="auto",
+        torch_dtype=dtype,
+    )
+    # for memory-usage calculation logic please refer to my github
+    return memory_used
+```
+How to load model in LLM.int8() and NF4 
+```python
+# 8-bit quantization
+quantization_config_8bit = BitsAndBytesConfig(
+    load_in_8bit=True,
+    llm_int8_threshold=6.0,
+)
+
+# 4-bit quantization
+quantization_config_4bit = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True
+)
+```
+Load and compare the models, using GPT2 for simplicity.
+```python
+def main():
+    model_name = "gpt2"
+    
+    memory_without_quant_fp32 = load_model(model_name)
+    memory_without_quant_bf16 = load_model(model_name, dtype=torch.bfloat16)
+    memory_with_8bit_quant = load_model(model_name, quantization_config_8bit, dtype=torch.bfloat16)
+    memory_with_4bit_quant = load_model(model_name, quantization_config_4bit, dtype=torch.bfloat16)
+```
+
+```
+GPU Memory Usage Comparison:
+Without quantization (FP32): 1029.47 MB
+Without quantization (BF16): 523.49 MB
+With 8-bit quantization (BF16 compute): 370.99 MB
+With 4-bit quantization (BF16 compute): 272.46 MB
+
+Memory Savings (compared to FP32):
+BF16 saved: 505.98 MB
+BF16 reduction percentage: 49.15%
+8-bit quantization saved: 658.48 MB
+8-bit reduction percentage: 63.96%
+4-bit quantization saved: 757.01 MB
+4-bit reduction percentage: 73.53%
+```
+
+## some experiments
+Below are results of some of the experiments that i ran, for the code refer to my github.
+```python
+Summary:
+FP32: Perplexity = 50.08, Throughput = 97.20 tokens/s
+BF16: Perplexity = 51.25, Throughput = 83.37 tokens/s
+8-bit: Perplexity = 51.25, Throughput = 19.37 tokens/s
+4-bit: Perplexity = 53.75, Throughput = 54.28 tokens/s
+```
+Remarks
+The throughput really took a hit with the LLM.int8() implementation, cause this might not be optimized, the close to 40% decrease from the FP32, to 4 Bit for the through-put needs can be explainede as the, because even thoght the model weights are storred in 8 bits, and my GPU supports 8 bit calculations, the calculations are performed in 16bit, as set up by us ```bnb_4bit_compute_dtype=torch.bfloat16```, the through put gets a hit causse of this qunatizing and dequnatizing process. 
+
+so you might rightly ask**why are we doing calculaitons in 16bit**, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.
 
 

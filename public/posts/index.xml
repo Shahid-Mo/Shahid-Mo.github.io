@@ -21,9 +21,7 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
       <link>http://localhost:1313/posts/draft_quant/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/draft_quant/</guid>
-      <description>Introduction to Quantization Whether you&amp;rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
-Quantization can broadly be categorized into two types:
-Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.</description>
+      <description>Mixed-Precision Decomposition: This technique applies to all model sizes and involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Any outliers exceeding this range are preserved in higher precision formats like FP16 or FP32. This approach ensures that critical outlier weights—responsible for much of the model&amp;rsquo;s performance—are maintained at higher precision, avoiding the accuracy loss that would occur if they were forced into lower precision formats.</description>
     </item>
     <item>
       <title>From Retrieval to RAG (Part - 1)</title>

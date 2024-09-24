@@ -520,30 +520,19 @@ This happens because outlier weights—which play a crucial role in driving the 
 <p><strong>Vector-wise Quantization</strong>: Instead of quantizing the entire tensor with a single scaling constant, LLM.int8() quantizes vectors individually.  The challenge with using a single scaling constant per tensor is that just one outlier can distort the entire quantization process, reducing precision for all other values. By applying multiple scaling constants—one for each vector—this method ensures that outliers don’t interfere with the rest of the matrix.</p>
 </li>
 <li>
-<p><strong>Mixed-Precision Decomposition</strong>: The second component of LLM.int8() involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Outliers that exceed this range are left in higher precision formats like FP16 or FP32. By doing this, LLM.int8() ensures that these critical outlier weights—responsible for much of the model&rsquo;s performance—are preserved in higher precision, avoiding the loss of accuracy that comes with squeezing them into lower precision formats.</p>
+<p><strong>Mixed-Precision Decomposition</strong>: LLM.int8() quantizes only weights within a defined threshold, typically $[-6, 6]$. Outliers exceeding this range are preserved in higher precision formats (FP16 or FP32). This preserves critical outlier weights—crucial for model performance—at higher precision, avoiding accuracy loss from forcing them into lower precision formats. The approach maintains key model behaviors while achieving significant compression for most weights, effectively balancing performance and efficiency across varying model sizes.</p>
 </li>
 </ol>
-<h3 id="mixed-precision-decomposition-diving-deeper">Mixed-Precision Decomposition: Diving Deeper<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition-diving-deeper">#</a></h3>
-<p>To handle even larger models—those beyond 6.7 billion parameters—LLM.int8() introduces <strong>mixed-precision decomposition</strong>. This technique specifically tackles the emergence of extreme outliers in a fraction of the model&rsquo;s features. LLM.int8() performs matrix multiplication for these outlier dimensions in FP16, while the rest of the matrix operates in 8-bit. This ensures that outliers, which constitute only a small percentage of the total features but have a major impact on the model’s accuracy, are treated with the precision they require.</p>
-<hr>
-<p>This revised version keeps the content approachable while adding clarity and flow. How does it feel now?</p>
-<p>LLM int8 proposes a two part soultion to the above proble:</p>
-<p>First, instead of quantizing an entire tensor with a single scaling constant, it uses vector-wise quantization, applying different scaling constants to each vector in the tensor. The issue with using a single scaling constant is that even one large outlier can reduce the precision of all other values in the tensor. By quantizing vectors individually, we prevent this precision loss.</p>
-<p>First instead of qunatizing the whole tensor in one go, we qunatize it vector by vector this increase the number of qunaitzation constants to sotre, but it is totally worth it!!!!!!!
-The main challenge with quantization methods that use a single scaling constant per tensor is that
-a single outlier can reduce the quantization precision of all other values. As such, it is desirable to
-have multiple scaling constants per tensor
-ie in ABSMAX qunaitzation absolute value was taken for the enire matrix or tensor, but taking the absolute value of individual vectors is better than than takinf the abs of the whole matrix, this technique is followed in other qunatization techniques like GPTQ as well.
-The second idea of LLM.int8() is Qunatize weights within a certain threshold (this is huperparamater that you can set, default=6), ie if the weights are above or below this threshold $[-6,6]$ these weights are not qunatized, and stored in FP16/FP32/BF16 precision.
-<strong>The Problem with Single Scaling Constants</strong></p>
-<ul>
-<li><strong>Outliers</strong>: In large tensors, especially in transformer models beyond a certain size (e.g., models larger than 6.7 billion parameters), there can be individual elements with exceptionally large values (outliers).</li>
-<li><strong>Reduced Precision</strong>: When using a single scaling constant, these outliers force the scaling factor to be small to accommodate the largest values. This compresses the dynamic range for the rest of the values, leading to a loss of precision for the majority of the tensor elements.</li>
-<li><strong>Impact on Model Performance</strong>: Reduced precision can degrade the performance of the model because small differences in weights or activations can significantly impact the model&rsquo;s outputs.</li>
-</ul>
-<h2 id="the-mathematical-details">the Mathematical details<a hidden class="anchor" aria-hidden="true" href="#the-mathematical-details">#</a></h2>
-<h3 id="vector-wise-quantization">Vector-wise Quantization<a hidden class="anchor" aria-hidden="true" href="#vector-wise-quantization">#</a></h3>
-<p>In vector-wise quantization, the main idea is to apply <strong>different scaling constants</strong> for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision. The key mathematical concepts behind vector-wise quantization are:</p>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h3 id="the-mathematical-details">the Mathematical details<a hidden class="anchor" aria-hidden="true" href="#the-mathematical-details">#</a></h3>
+<h4 id="vector-wise-quantization">Vector-wise Quantization<a hidden class="anchor" aria-hidden="true" href="#vector-wise-quantization">#</a></h4>
+<p>In vector-wise quantization, the main idea is to apply <strong>different scaling constants</strong> for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision.</p>
 <ol>
 <li>
 <p><strong>Matrix Setup</strong>:</p>
@@ -554,7 +543,7 @@ The second idea of LLM.int8() is Qunatize weights within a certain threshold (th
 <p>The goal is to quantize these matrices from FP16 to Int8, applying different scaling constants to different rows or columns.</p>
 </li>
 <li>
-<p><strong>Quantization</strong>:</p>
+<p><strong>Quantization</strong>(similar to ABSMAX Quantization):</p>
 <ul>
 <li>Quantization scales the values in each vector of $ X_{f16} $ and $ W_{f16} $ into the range $[-127, 127]$. The scaling constant for each row in $ X_{f16} $ is denoted $ c_{x_{f16}} $, and for each column in $ W_{f16} $, it is $ c_{w_{f16}} $.</li>
 </ul>
@@ -579,13 +568,6 @@ $$
 C_{f16} \approx \frac{1}{c_{x_{f16}} \otimes c_{w_{f16}}} \cdot C_{i32}
 $$
 where $ \otimes $ is the <strong>outer product</strong> of the row-wise scaling constants $ c_{x_{f16}} $ and column-wise scaling constants $ c_{w_{f16}} $. This product ensures that the entire matrix is scaled back appropriately.</p>
-</li>
-<li>
-<p><strong>Benefits</strong>:</p>
-<ul>
-<li><strong>Increased Precision</strong>: By using multiple scaling constants, vector-wise quantization reduces the impact of outliers confined to specific rows or columns, improving the precision of the quantized representation.</li>
-<li><strong>Efficiency</strong>: This method maintains computational efficiency by applying row- and column-wise scaling, which is less computationally expensive than applying different scaling to every individual element.</li>
-</ul>
 </li>
 </ol>
 <h3 id="mixed-precision-decomposition">Mixed-Precision Decomposition<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition">#</a></h3>
@@ -621,20 +603,187 @@ where:</p>
 <p><strong>Outlier Identification</strong>:
 Outliers are identified based on a threshold $ \alpha $. If any value in a specific feature dimension exceeds $ \alpha $, that dimension is considered an outlier and handled with higher precision.</p>
 </li>
-<li>
-<p><strong>Benefits</strong>:</p>
+</ol>
+<h3 id="nf4-quantization">NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#nf4-quantization">#</a></h3>
+<p><strong>NF4 Quantization</strong> is a specialized technique optimized for data with a zero-centered normal distribution, such as neural network weights. It builds on <strong>Quantile Quantization (QQ)</strong>, which distributes values uniformly across bins to minimize information loss. However, computing exact quantiles is computationally expensive. To address this, <strong>Fixed Distribution Quantization</strong> leverages the known normal distribution of weights, allowing NF4 to efficiently estimate quantiles. This method, introduced in <strong>QLoRA</strong>, is particularly effective in fine-tuning large language models, offering strong performance while reducing computational costs and memory usage.</p>
+<h3 id="nf4-implementation-details">NF4 implementation details<a hidden class="anchor" aria-hidden="true" href="#nf4-implementation-details">#</a></h3>
+<p>The NF4 datatype is used to quantize values in the interval $[-1, 1]$. Since NF4 is a 4-bit code, it consists of 16 values, $q_1, \dots, q_{16} \in [-1, 1]$.</p>
+<h3 id="4-designing-the-quantization-levels--q_j-"><strong>4. Designing the Quantization Levels $ q_j $</strong><a hidden class="anchor" aria-hidden="true" href="#4-designing-the-quantization-levels--q_j-">#</a></h3>
+<p>Determining the optimal set of 16 quantization levels is crucial for minimizing quantization error. NF4 leverages the properties of the normal distribution to design these levels, based on the observation that neural network parameters are approximately normally distributed.</p>
+<h4 id="step-4-calculate-quantization-levels"><strong>Step 4: Calculate Quantization Levels</strong><a hidden class="anchor" aria-hidden="true" href="#step-4-calculate-quantization-levels">#</a></h4>
+<ol>
+<li><strong>Set $ \delta $:</strong></li>
+</ol>
+<p>$$
+\delta = \frac{1}{2} \left( \frac{1}{32} + \frac{1}{30} \right)
+$$</p>
 <ul>
-<li><strong>High Precision for Critical Elements</strong>: By isolating and handling outliers in FP16, the method maintains precision where it matters most, preserving model performance.</li>
-<li><strong>Memory Efficiency</strong>: Since outliers are typically sparse (only about 0.1% of all feature dimensions), the memory overhead is minimal, leading to significant memory savings compared to full FP16 computation.</li>
+<li><strong>Purpose:</strong> $ \delta $ is a small probability value that helps in determining the extreme quantiles. (This is a hyper-paramater set in the Bits and Bytes Implementation of NF4)</li>
+</ul>
+<ol start="2">
+<li>
+<p><strong>Compute Evenly Spaced Probabilities:</strong></p>
+<ul>
+<li>
+<p><strong>Lower Half ($ p_1, \ldots, p_8 $):</strong></p>
+<ul>
+<li>$ p_1 = \delta $</li>
+<li>$ p_8 = \frac{1}{2} $</li>
+<li><strong>Evenly spaced</strong> between $ \delta $ and $ \frac{1}{2} $.</li>
+</ul>
+</li>
+<li>
+<p><strong>Upper Half ($ r_9, \ldots, r_{16} $):</strong></p>
+<ul>
+<li>$ r_8 = \frac{1}{2} $ (Note: $ r_8 $ is unused as $ q_8 $ is explicitly set to 0.)</li>
+<li>$ r_{16} = 1 - \delta $</li>
+<li><strong>Evenly spaced</strong> between $ \frac{1}{2} $ and $ 1 - \delta $.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Find Quantiles Using the Gaussian CDF ($ \Phi $):</strong></p>
+<ul>
+<li>
+<p><strong>Lower Half Quantiles ($ \tilde{q}_1, \ldots, \tilde{q}_8 $):</strong></p>
+<p>$$
+\tilde{q}_i = \Phi^{-1}(p_i) \quad \text{for } i = 1, \ldots, 8
+$$</p>
+</li>
+<li>
+<p><strong>Upper Half Quantiles ($ \tilde{q}_9, \ldots, \tilde{q}_{16} $):</strong></p>
+<p>$$
+\tilde{q}_i = \Phi^{-1}(r_i) \quad \text{for } i = 9, \ldots, 16
+$$</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Normalize Quantization Levels to $[-1, 1]$:</strong></p>
+<p>$$
+q_i = \frac{\tilde{q}_i}{\max_{k} |\tilde{q}_k|}
+$$</p>
+<ul>
+<li><strong>Result:</strong> The final quantization levels $ q_1 = -1 $, $ q_8 = 0 $, and $ q_{16} = 1 $, with other $ q_j $ values distributed according to the normal distribution&rsquo;s quantiles.</li>
 </ul>
 </li>
 </ol>
-<h3 id="summary">Summary<a hidden class="anchor" aria-hidden="true" href="#summary">#</a></h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> torch
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> scipy.stats <span style="color:#f92672">import</span> norm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 1: Calculate δ (small probability value for extreme quantiles)</span>
+</span></span><span style="display:flex;"><span>delta <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">32</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">30</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 2: Compute lower half quantiles (p1 to p8)</span>
+</span></span><span style="display:flex;"><span>p <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(delta, <span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">8</span>))<span style="color:#f92672">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 3: Compute upper half quantiles (r9 to r16)</span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(<span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> delta, <span style="color:#ae81ff">9</span>))<span style="color:#f92672">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 4: Combine and sort quantiles</span>
+</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> list(set(p <span style="color:#f92672">+</span> r))
+</span></span><span style="display:flex;"><span>q_tild<span style="color:#f92672">.</span>sort()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 5: Normalize quantiles to the range [-1, 1]</span>
+</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>Tensor(q_tild)
+</span></span><span style="display:flex;"><span>q <span style="color:#f92672">=</span> q_tild <span style="color:#f92672">/</span> q_tild<span style="color:#f92672">.</span>max()
+</span></span></code></pre></div><pre tabindex="0"><code>tensor([-1.0000, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0910,  0.0000,
+         0.0796,  0.1609,  0.2461,  0.3379,  0.4407,  0.5626,  0.7230,  1.0000])
+</code></pre><p>Now that we have done the qunatile qunatization, lets look how do we qunaitze a block of weights</p>
+<h4 id="step-1-calculate-the-absolute-maximum-absmax"><strong>Step 1: Calculate the Absolute Maximum (absmax)</strong><a hidden class="anchor" aria-hidden="true" href="#step-1-calculate-the-absolute-maximum-absmax">#</a></h4>
+<p>For a given block of $ B $ values $ w_1, w_2, \ldots, w_B $ from the matrix $ W $:</p>
+<p>$$
+M = \max_{i} |w_i|
+$$</p>
 <ul>
-<li><strong>Vector-wise Quantization</strong> improves precision by applying different scaling constants to rows and columns in the matrix, reducing the effect of outliers on the entire matrix.</li>
-<li><strong>Mixed-Precision Decomposition</strong> further improves efficiency and precision by handling outliers with high precision (FP16) and the rest of the matrix with low precision (Int8), balancing memory usage and accuracy in large models.</li>
+<li><strong>Purpose:</strong> This scaling factor $ M $ ensures that all values in the block are normalized within $[-1, 1]$ when divided by $ M $.</li>
 </ul>
-<p>These techniques allow large-scale models to be efficiently quantized while minimizing performance degradation caused by outliers.</p>
+<h4 id="step-2-determine-quantization-indices"><strong>Step 2: Determine Quantization Indices</strong><a hidden class="anchor" aria-hidden="true" href="#step-2-determine-quantization-indices">#</a></h4>
+<p>Each value $ w_i $ in the block is quantized as follows:</p>
+<ol>
+<li><strong>Scale the Value:</strong></li>
+</ol>
+<p>$$
+w&rsquo;_i = \frac{w_i}{M}
+$$</p>
+<p>Now, $ w&rsquo;_i \in [-1, 1] $.</p>
+<ol start="2">
+<li><strong>Map to Nearest Quantization Level:</strong></li>
+</ol>
+<p>$$
+c_i = \arg\min_{j} |q_j - w&rsquo;_i|
+$$</p>
+<ul>
+<li><strong>$ q_j $:</strong> The set of 16 quantization levels within $[-1, 1]$.</li>
+<li><strong>$ c_i $:</strong> The index (from 1 to 16) of the nearest quantization level to $ w&rsquo;_i $.</li>
+</ul>
+<h4 id="step-3-store-quantization-data"><strong>Step 3: Store Quantization Data</strong><a hidden class="anchor" aria-hidden="true" href="#step-3-store-quantization-data">#</a></h4>
+<p>For each block:</p>
+<ul>
+<li><strong>Store $ M $:</strong> The scaling factor.</li>
+<li><strong>Store $ c_1, c_2, \ldots, c_B $:</strong> The quantization indices for each value in the block.</li>
+</ul>
+<p><strong>Dequantization:</strong> To reconstruct the original values (approximately):</p>
+<p>$$
+w_i \approx c_i \times M
+$$</p>
+<h2 id="code-implementation-for-nf4-and-llmint8">Code Implementation for NF4 and LLM.int8()<a hidden class="anchor" aria-hidden="true" href="#code-implementation-for-nf4-and-llmint8">#</a></h2>
+<p>a simple function for model loading</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">load_model</span>(model_name, quantization_config<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>, dtype<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> AutoModelForCausalLM<span style="color:#f92672">.</span>from_pretrained(
+</span></span><span style="display:flex;"><span>        model_name,
+</span></span><span style="display:flex;"><span>        quantization_config<span style="color:#f92672">=</span>quantization_config,
+</span></span><span style="display:flex;"><span>        device_map<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;auto&#34;</span>,
+</span></span><span style="display:flex;"><span>        torch_dtype<span style="color:#f92672">=</span>dtype,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># for memory-usage calculation logic please refer to my github</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> memory_used
+</span></span></code></pre></div><p>How to load model in LLM.int8() and NF4</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 8-bit quantization</span>
+</span></span><span style="display:flex;"><span>quantization_config_8bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
+</span></span><span style="display:flex;"><span>    load_in_8bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    llm_int8_threshold<span style="color:#f92672">=</span><span style="color:#ae81ff">6.0</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4-bit quantization</span>
+</span></span><span style="display:flex;"><span>quantization_config_4bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
+</span></span><span style="display:flex;"><span>    load_in_4bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    bnb_4bit_quant_type<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;nf4&#34;</span>,
+</span></span><span style="display:flex;"><span>    bnb_4bit_compute_dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16,
+</span></span><span style="display:flex;"><span>    bnb_4bit_use_double_quant<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>Load and compare the models, using GPT2 for simplicity.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    model_name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gpt2&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    memory_without_quant_fp32 <span style="color:#f92672">=</span> load_model(model_name)
+</span></span><span style="display:flex;"><span>    memory_without_quant_bf16 <span style="color:#f92672">=</span> load_model(model_name, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span><span style="display:flex;"><span>    memory_with_8bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_8bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span><span style="display:flex;"><span>    memory_with_4bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_4bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span></code></pre></div><pre tabindex="0"><code>GPU Memory Usage Comparison:
+Without quantization (FP32): 1029.47 MB
+Without quantization (BF16): 523.49 MB
+With 8-bit quantization (BF16 compute): 370.99 MB
+With 4-bit quantization (BF16 compute): 272.46 MB
+
+Memory Savings (compared to FP32):
+BF16 saved: 505.98 MB
+BF16 reduction percentage: 49.15%
+8-bit quantization saved: 658.48 MB
+8-bit reduction percentage: 63.96%
+4-bit quantization saved: 757.01 MB
+4-bit reduction percentage: 73.53%
+</code></pre><h2 id="some-experiments">some experiments<a hidden class="anchor" aria-hidden="true" href="#some-experiments">#</a></h2>
+<p>Below are results of some of the experiments that i ran, for the code refer to my github.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Summary:
+</span></span><span style="display:flex;"><span>FP32: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">50.08</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">97.20</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span>BF16: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">83.37</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">8</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">19.37</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">53.75</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">54.28</span> tokens<span style="color:#f92672">/</span>s
+</span></span></code></pre></div><p>Remarks
+The throughput really took a hit with the LLM.int8() implementation, cause this might not be optimized, the close to 40% decrease from the FP32, to 4 Bit for the through-put needs can be explainede as the, because even thoght the model weights are storred in 8 bits, and my GPU supports 8 bit calculations, the calculations are performed in 16bit, as set up by us <code>bnb_4bit_compute_dtype=torch.bfloat16</code>, the through put gets a hit causse of this qunatizing and dequnatizing process.</p>
+<p>so you might rightly ask<strong>why are we doing calculaitons in 16bit</strong>, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.</p>
 
 
   </div>

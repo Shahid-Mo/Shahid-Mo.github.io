@@ -152,9 +152,7 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
     </h2>
   </header>
   <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
-Quantization can broadly be categorized into two types:
-Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training....</p>
+    <p>Mixed-Precision Decomposition: This technique applies to all model sizes and involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Any outliers exceeding this range are preserved in higher precision formats like FP16 or FP32. This approach ensures that critical outlier weights—responsible for much of the model’s performance—are maintained at higher precision, avoiding the accuracy loss that would occur if they were forced into lower precision formats....</p>
   </div>
   <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
   <a class="entry-link" aria-label="post link to Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/draft_quant/"></a>

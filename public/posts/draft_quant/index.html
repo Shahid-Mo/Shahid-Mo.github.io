@@ -5,11 +5,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4 | TensorTunes</title>
+<title>Quantization in LLMS (Part 1): LLM.int8(), NF4 | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, quantization is a technique you need to understand.
-Quantization can broadly be categorized into two types:
-Quantization Aware Training (QAT): Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.">
+<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
+Quantization can be broadly categorized into two main approaches:
+Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/draft_quant/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
@@ -133,54 +133,56 @@ Quantization Aware Training (QAT): Integrates quantization into the training pro
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4
+      Quantization in LLMS (Part 1): LLM.int8(), NF4
     </h1>
     <div class="post-meta"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span>
 
 </div>
   </header> 
-  <div class="post-content"><h2 id="introduction-to-quantization">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization">#</a></h2>
-<p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) locally on your personal device, a multi-billion-dollar startup aiming to serve a state-of-the-art model to customers, or someone wanting to fine-tune models like LLaMA or Flux, <strong>quantization</strong> is a technique you need to understand.</p>
-<p>Quantization can broadly be categorized into two types:</p>
+  <div class="post-content"><h1 id="introduction-to-quantization">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization">#</a></h1>
+<p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, <strong>quantization</strong> is a key technique to understand.</p>
+<p>Quantization can be broadly categorized into two main approaches:</p>
 <ul>
-<li>
-<p><strong>Quantization Aware Training (QAT):</strong> Integrates quantization into the training process, allowing the model to adapt to reduced precision during training.</p>
-</li>
-<li>
-<p><strong>Post Training Quantization (PTQ):</strong> Applies quantization after a model is already trained, focusing on reducing its size and inference cost without retraining.</p>
-</li>
+<li><strong>Quantization Aware Training (QAT):</strong> This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.</li>
+<li><strong>Post Training Quantization (PTQ):</strong> Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently.</li>
 </ul>
-<p>In this post (and subsequent ones on this topic), we&rsquo;ll focus on Post Training Quantization (PTQ) — a method used to make trained models smaller and more efficient, particularly useful when deploying models to edge devices or serving models at lower hardware costs.</p>
-<h2 id="why-quantization">Why Quantization?<a hidden class="anchor" aria-hidden="true" href="#why-quantization">#</a></h2>
-<p>Consider this: the costs of training an LLM are already high, but inference costs — running the model to generate responses — can far exceed training costs, especially when deploying at scale. For example, inference costs for models like ChatGPT can surpass training costs within a week. Quantization reduces these costs by allowing models to operate in lower precision, such as FP16 or even FP8, without significant performance loss.</p>
-<p>Let’s start with a real-world example using the GPT-2 model from Hugging Face. We will quantize it to reduce its memory footprint and discuss how to efficiently convert FP32 to lower-precision formats like FP16 and beyond.</p>
-<p>We will begin with some &ldquo;back-of-the-napkin&rdquo; calculations. Suppose you want to run the LLaMA 3.1 70B model. What kind of memory and GPU are you looking at? If you load the model from Hugging Face, it will automatically be loaded in full precision (FP32). Just to load the model weights, you will require:
-$$
-70 \times 10^9 \text{ parameters} \times 32 \text{ bits per parameter} \div 8 \div 1024^3 \approx 280 \text{ GB}
+<p>In this post (and subsequent ones on this topic), we&rsquo;ll focus on PTQ. It&rsquo;s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs.</p>
+<h1 id="why-quantization">Why Quantization?<a hidden class="anchor" aria-hidden="true" href="#why-quantization">#</a></h1>
+<p>The costs of training large language models (LLMs) are already high, but inference costs—running the model to generate responses—can far exceed training costs, especially when deploying at scale. For instance, inference costs for models like ChatGPT can surpass training costs within just a week. Quantization helps reduce these costs by enabling models to operate in lower precision, such as FP16 or even INT4, without significant performance loss.</p>
+<p>Let&rsquo;s look at an example: suppose you want to run the LLaMA 3.1 8B model. What kind of memory and GPU would you need? If you load the model from Hugging Face, it will automatically be loaded in full precision (FP32). So, just to load the model weights, you would need:</p>
+<p>$$
+8 \times 10^9 \text{ parameters} \times 4 \text{ bytes per parameter} \div 1024^3 \text{ for GB } \approx 30 \text{ GB}
 $$</p>
-<p>So, you would need at least an H100 GPU with 80 GB of VRAM to load the model, and you wouldn&rsquo;t even be able to perform inference or fine-tuning. You would likely need to get a cluster for that.</p>
-<p>This is where quantization can help you. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 35 GB, which can be accomplished even on the free-tier T4 Colab.</p>
-<h2 id="understanding-precision-in-llms">Understanding Precision in LLMs<a hidden class="anchor" aria-hidden="true" href="#understanding-precision-in-llms">#</a></h2>
-<p>If you&rsquo;re not familiar with terms like FP32 or 8-bit precision from the previous section, we&rsquo;re going to cover that next.</p>
-<h3 id="starting-with-fp32">Starting with FP32<a hidden class="anchor" aria-hidden="true" href="#starting-with-fp32">#</a></h3>
-<p>FP32 (32-bit floating point) is the most common datatype used to train deep learning models. If you don’t specify the datatypes of tensors in PyTorch, FP32 is the default datatype.</p>
-<p>To understand how FP32 works and why it is often preferred, let’s look at a simple example: representing $\pi$ (pi) up to 10 decimal places.</p>
+<p>This means you would need at least an A100 GPU with 40 GB of VRAM to load just the model weights. For fine-tuning, you would require around 90 GB, or a cluster of GPUs, and about 60 GB for inference.</p>
+<p>This is where quantization can help. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 4 GB for inference, and about 12 GB for fine-tuning, which can be done even on a free-tier T4 GPU on Google Colab.</p>
+<h1 id="understanding-precision-in-llms">Understanding Precision in LLMs<a hidden class="anchor" aria-hidden="true" href="#understanding-precision-in-llms">#</a></h1>
+<p>If you&rsquo;re unfamiliar with terms like FP32 or 8-bit precision mentioned earlier, don’t worry—we’ll cover them in the next section.</p>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/fp32_fp16_bf16.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="starting-with-fp32">Starting with FP32<a hidden class="anchor" aria-hidden="true" href="#starting-with-fp32">#</a></h2>
+<p>FP32 (32-bit floating point) is the most common datatype used to train deep learning models. If you don’t specify the datatype of tensors in PyTorch, FP32 is the default.</p>
+<p>To understand how FP32 works and why it&rsquo;s often preferred, let’s consider a simple example: representing the value of $\pi$ (pi) to 10 decimal places.</p>
 <h3 id="precision-in-deep-learning-models">Precision in Deep Learning Models<a hidden class="anchor" aria-hidden="true" href="#precision-in-deep-learning-models">#</a></h3>
 <p>Let&rsquo;s assume we want to represent $\pi$ with the first 10 decimal places:</p>
 <p>$$
 \pi \approx 3.1415926535
 $$</p>
-<p>While this example is quite basic, it helps illustrate the inner workings of different data types, such as BF16 and FP16 — and in future posts, FP8 (which is supported by the latest NVIDIA H100 GPUs and similar hardware).</p>
-<h1 id="how-to-convert-a-decimal-representation-to-fp32">How to Convert a Decimal Representation to FP32<a hidden class="anchor" aria-hidden="true" href="#how-to-convert-a-decimal-representation-to-fp32">#</a></h1>
-<p>To convert the decimal value of $\pi$ (3.1415926535) into its FP32 (single-precision floating-point) representation, we need to follow these steps:</p>
-<h2 id="1-understand-the-fp32-structure">1. Understand the FP32 Structure<a hidden class="anchor" aria-hidden="true" href="#1-understand-the-fp32-structure">#</a></h2>
+<p>While this example is simple, it illustrates the inner workings of different data types like BF16 and FP16 — and later, we’ll discuss FP8, supported by the latest NVIDIA H100 GPUs and similar hardware.</p>
+<h3 id="how-to-convert-a-decimal-representation-to-fp32">How to Convert a Decimal Representation to FP32<a hidden class="anchor" aria-hidden="true" href="#how-to-convert-a-decimal-representation-to-fp32">#</a></h3>
+<p>To convert the decimal value of $\pi$ (3.1415926535) into its FP32 (single-precision floating-point) representation, follow these steps:</p>
+<h3 id="1-understand-the-fp32-structure">1. Understand the FP32 Structure<a hidden class="anchor" aria-hidden="true" href="#1-understand-the-fp32-structure">#</a></h3>
 <p>FP32 is composed of 32 bits, divided into three parts:</p>
 <ul>
 <li><strong>Sign bit (1 bit):</strong> Indicates whether the number is positive or negative.</li>
 <li><strong>Exponent (8 bits):</strong> Encodes the exponent using a biased format.</li>
 <li><strong>Mantissa (23 bits):</strong> Represents the significant digits of the number.</li>
 </ul>
-<h2 id="2-convert-pi-to-binary">2. Convert $\pi$ to Binary<a hidden class="anchor" aria-hidden="true" href="#2-convert-pi-to-binary">#</a></h2>
+<h3 id="2-convert-pi-to-binary">2. Convert $\pi$ to Binary<a hidden class="anchor" aria-hidden="true" href="#2-convert-pi-to-binary">#</a></h3>
 <p>We start by converting the decimal value of $\pi$ into its binary equivalent.</p>
 <p><strong>Convert the Integer Part:</strong></p>
 <p>The integer part of $\pi$ is 3. In binary:</p>
@@ -197,42 +199,41 @@ $$</p>
 <li>$0.566370614 \times 2 = 1.132741228 \rightarrow 1$</li>
 <li>$0.132741228 \times 2 = 0.265482456 \rightarrow 0$</li>
 <li>$0.265482456 \times 2 = 0.530964912 \rightarrow 0$</li>
-<li>Continue this process to get more bits.</li>
+<li>Continue this process to generate more bits.</li>
 </ul>
 </li>
 </ul>
-<p>The binary representation of $\pi$ up to a reasonable precision is approximately:</p>
+<p>The binary representation of $\pi$, up to a reasonable precision, is approximately:</p>
 <p>$$
 \pi \approx 11.001001000011111101101010100010_{2}
 $$</p>
-<h2 id="3-normalize-the-binary-representation">3. Normalize the Binary Representation<a hidden class="anchor" aria-hidden="true" href="#3-normalize-the-binary-representation">#</a></h2>
+<h3 id="3-normalize-the-binary-representation">3. Normalize the Binary Representation<a hidden class="anchor" aria-hidden="true" href="#3-normalize-the-binary-representation">#</a></h3>
 <p>To fit the FP32 format, normalize the binary number so that it appears as:</p>
 <p>$$
 11.001001000011111101101010100010_{2} = 1.1001001000011111101101010100010_{2} \times 2^1
 $$</p>
-<h2 id="4-determine-the-sign-bit">4. Determine the Sign Bit<a hidden class="anchor" aria-hidden="true" href="#4-determine-the-sign-bit">#</a></h2>
+<h3 id="4-determine-the-sign-bit">4. Determine the Sign Bit<a hidden class="anchor" aria-hidden="true" href="#4-determine-the-sign-bit">#</a></h3>
 <p>Since $\pi$ is positive, the sign bit is:</p>
 <p>$$
 \text{Sign bit} = 0
 $$</p>
-<h2 id="5-calculate-the-exponent">5. Calculate the Exponent<a hidden class="anchor" aria-hidden="true" href="#5-calculate-the-exponent">#</a></h2>
-<p>The exponent is stored with a bias of 127 in FP32. This bias allows the representation of both very large and very small numbers. In FP32, the largest number you can represent is approximately $3.4 \times 10^{38}$, while the smallest positive number (close to zero) is around $1.4 \times 10^{-45}$.</p>
-<p>For $\pi$, the exponent after normalization is 1:</p>
+<h3 id="5-calculate-the-exponent">5. Calculate the Exponent<a hidden class="anchor" aria-hidden="true" href="#5-calculate-the-exponent">#</a></h3>
+<p>In FP32, the exponent is stored with a bias of 127. This bias allows FP32 to represent both very large and very small numbers. Using FP32, the largest representable number is approximately $3.4 \times 10^{38}$, while the smallest positive number (close to zero) is around $1.175 \times 10^{-38}$. For $\pi$, the exponent after normalization is:</p>
 <p>$$
 \text{Exponent} = 1 + 127 = 128
 $$</p>
-<p>The exponent in binary is:</p>
+<p>In binary, the exponent is:</p>
 <p>$$
 128_{10} = 10000000_{2}
 $$</p>
-<h2 id="6-determine-the-mantissa">6. Determine the Mantissa<a hidden class="anchor" aria-hidden="true" href="#6-determine-the-mantissa">#</a></h2>
+<h3 id="6-determine-the-mantissa">6. Determine the Mantissa<a hidden class="anchor" aria-hidden="true" href="#6-determine-the-mantissa">#</a></h3>
 <p>The mantissa consists of the significant digits after the leading 1:</p>
 <p>$$
 \text{Mantissa} = 10010010000111111011010_{2}
 $$</p>
-<p>Only the first 23 bits are retained, and any extra bits are truncated, resulting in some loss of precision. FP32 typically provides around 7 to 8 decimal places of precision. If you require more precision, you could use FP64 (double-precision), but for deep learning, FP32 is often more than sufficient.</p>
-<h2 id="7-combine-the-components">7. Combine the Components<a hidden class="anchor" aria-hidden="true" href="#7-combine-the-components">#</a></h2>
-<p>Combine the sign bit, exponent, and mantissa to form the final FP32 representation:</p>
+<p>Only the first 23 bits are kept; the rest are truncated, resulting in a small loss of precision. FP32 typically provides about 7 to 8 decimal places of precision. If more precision is needed, FP64 (double-precision) could be used, but for deep learning, FP32 is often more than sufficient.</p>
+<h3 id="7-combine-the-components">7. Combine the Components<a hidden class="anchor" aria-hidden="true" href="#7-combine-the-components">#</a></h3>
+<p>Now, combine the sign bit, exponent, and mantissa to form the final FP32 representation:</p>
 <ul>
 <li><strong>Sign bit:</strong> 0</li>
 <li><strong>Exponent:</strong> 10000000</li>
@@ -243,64 +244,29 @@ $$</p>
 \text{FP32} = 0\ 10000000\ 10010010000111111011010_{2}
 $$</p>
 <p>This is the IEEE 754 standard representation of $\pi$ in FP32 format.</p>
-<h1 id="python-code-to-demonstrate-fp32-and-other-precisions">Python Code to Demonstrate FP32 and Other Precisions<a hidden class="anchor" aria-hidden="true" href="#python-code-to-demonstrate-fp32-and-other-precisions">#</a></h1>
-<p>Let&rsquo;s use Python to compare different floating-point representations of $\pi$ and calculate their precision errors:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> torch
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Pi value up to 10 digits</span>
-</span></span><span style="display:flex;"><span>pi_val <span style="color:#f92672">=</span> <span style="color:#ae81ff">3.1415926535</span>
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># FP32 (single precision)</span>
-</span></span><span style="display:flex;"><span>pi_fp32 <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>tensor(pi_val, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>float32)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># BF16 (Brain Floating Point 16, half precision)</span>
-</span></span><span style="display:flex;"><span>pi_bf16 <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>tensor(pi_val, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
-</span></span></code></pre></div><pre tabindex="0"><code>og:   pi = 3.1415926535
-FP32: Pi = 3.1415927410125732, Error % = 0.0000027856%
-BF16: Pi = 3.140625,           Error % = 0.0308013675%
-</code></pre><p>Now that we have an understanding, we can look at the different floating point and int representations present used in Deep Learingin</p>
-<figure class="center">
-    <img loading="lazy" src="/images/quant_p1/FP_16_32_TF32.png"
-         alt="FP8 vs BF16 comparison"/> <figcaption>
-            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
-        </figcaption>
-</figure>
-
-<h3 id="tf32">TF32<a hidden class="anchor" aria-hidden="true" href="#tf32">#</a></h3>
-<p>TF32 is a special datatype introduced by Nvidia from the Ampear Architecture, this is not present in pytorch ,you cannot simply declare a variable as TF32 in pytorch like you can do FP16, This is a datatype that is specifically uded by the cuda cores of the GPU, as you can see from the figure below, Nvidia GPU convert the FP32 Tensors, into TF32 Tensors and perform the matrix multiplications, and this is significantly faster than doing calcualtion in the FP32 format.
-Now that we have an understand of the FP32 representation, The TF32 or TensorFloat 32,Intoroduce by Nvidia (2020) tf32 is primarily supported by NVIDIA GPUs, starting with the Ampere architecture (e.g., RTX 30 and A100 series). These GPUs have dedicated hardware for handling tf32 operations, leading to substantial performance improvements in deep learning workloads.</p>
-<figure class="center">
-    <img loading="lazy" src="/images/quant_p1/TF32_explained.png"
-         alt="FP8 vs BF16 comparison"/> <figcaption>
-            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
-        </figcaption>
-</figure>
-
-<h3 id="fp16">FP16<a hidden class="anchor" aria-hidden="true" href="#fp16">#</a></h3>
-<p>As you can see from the figure, the FP16 format has fewer Exponent and Mantisa Bits, the reduction of the number of Manissa bits has the Effect of reducing the max and Min values that can be stored using this formtat the Max and min values fall from (fp32 numbere) to (fp16 number), and min value form, &hellip;   .This is an important thing to understan cause Naively loading the FP32 model in FP16 to Fit onto you gpu and then start finetuning is a bad idea, had to learn this the hard way,
-Becaue of the difference between the exponent in FP32 and FP16, you might enounter &ldquo;NaN&rdquo; errors while training this is becaue the value is outside the precision of the format you are using, one naive soultion is if you are using FP16 is to load the model in full FP32 precision and you are good to go, a more principles approacht would be to figure out you your gradients are exploding or vaninsingh, This is generally not the case for Transformer base architectues, I faced this problem when I was trying to finetune a UNet diffusion model with and loaded the model in 16 Bit prcision, and the authors of the models had originally trained it on 32 Bit Precision.</p>
-<h3 id="bf16">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16">#</a></h3>
-<p>BF16 also called as Brain Float 16, was develope by google brain and gained populatiry in 2019, currently the most popular foramt to Train and Finetune LLMs right now, The big advantage of this format is that it has smae number of Exponet Bits comapred to the FP32 Format so it Makse loading the model in 16 Bits and then Finetunign it very easy, you dont run into &ldquo;Nan&rdquo; Loss errors as well when fine Tuning, The tradeoff is you loose precision but this paper has shown, that ther is not much difference beteen training and finetuning a LLM on 16 Bits, when compared to 32 bits, and this trade of in precision to smaller model size is totally worth it.</p>
-<h3 id="fp8">FP8<a hidden class="anchor" aria-hidden="true" href="#fp8">#</a></h3>
-<figure class="center">
-    <img loading="lazy" src="/images/quant_p1/fp8_vs_bf16.png"
-         alt="FP8 vs BF16 comparison"/> <figcaption>
-            <p>Figure 1: Comparison of FP8 and BF16 formats. Source: <a href="https://arxiv.org/abs/xxxx.xxxxx">Smith et al. (2023)</a></p>
-        </figcaption>
-</figure>
-
-<p>Recent research, such as the &ldquo;FP8 FORMATS FOR DEEP LEARNING&rdquo; paper from September 2022, even shows that it&rsquo;s possible to train large language models (LLMs) using FP8 with just 2 or 3 bits of mantissa (depending on the E4M3 or E5M2 format).</p>
-<h1 id="nvidia-exists-">Nvidia Exists !!!!!!!!!<a hidden class="anchor" aria-hidden="true" href="#nvidia-exists-">#</a></h1>
-<p>Lets just Adress the 2.5 Trillion dollar elephat in the room, So till now, i have just hinted that the TF32 datatype was introduced in the Ampear architecture, and that the FP8 datatype is supported from the H100 gpu series. and we have been blissfully studying and enjoying different and different data type, But hers the thing, you read my post and get excited by the BF32 architecture so much that you want to try it out so you load the free version of the colab, and realize the T4 architecture dosent support the BF16 architecture, Fear not i have done the gruling work of sifting through Nvidias whitepapers, so that you dont have to. So heres the thing you need to know exactly what Hardware you have and what datatype these hardware suppoort so that you know whcich GPU cluste to surrender your soul out to, and make Nvidia richer (They are truly selling shovels in a Gold Rush, the more intresting thing is we cant buy our shovels from AMD or Intel Either). So i want you to Contemplate the below chart and i will follow with some observations, The numbers represent FLops (or TOPs for the INT Data types), The X represent the datatype is not supported by this architecture,</p>
-<p>some commetnts about the Nvidia GPUs</p>
-<h1 id="some-headline-to-make-it-all-go-away">some Headline to make it all go away<a hidden class="anchor" aria-hidden="true" href="#some-headline-to-make-it-all-go-away">#</a></h1>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
+<h2 id="fp16">FP16<a hidden class="anchor" aria-hidden="true" href="#fp16">#</a></h2>
+<p>The FP16 format uses fewer exponent and mantissa bits compared to FP32, This reduction results in a smaller range of values that can be represented. Specifically, in <strong>FP32</strong>, the largest representable number is approximately <strong>$3.4 \times 10^{38}$</strong>, while the smallest positive normal number is <strong>$1.175 \times 10^{-38}$</strong></p>
+<p>In contrast, <strong>FP16</strong> reduces these limits: the largest representable number is approximately <strong>$6.55 \times 10^{4}$</strong>, while the smallest positive normal number is <strong>$6.10352 \times 10^{-5}$</strong>.</p>
+<p>This reduction in range makes FP16 more limited when storing very large or very small values, which can affect the stability of models when when using FP16 for training.</p>
+<p><strong>Implications for Model Training and Fine-Tuning</strong>:</p>
+<ul>
+<li>
+<p><strong>Loading FP32 Models in FP16</strong>: Simply converting an FP32 model to FP16 to fit it onto a GPU can lead to issues. The reduced range means that large weights or activations from the FP32 model might exceed FP16’s maximum representable value, causing overflow and resulting in &ldquo;NaN&rdquo; (Not a Number) errors during training.</p>
+</li>
+<li>
+<p><strong>Practical Solutions</strong>:</p>
+<ul>
+<li><strong>Mixed Precision Training</strong>: A common approach is to use FP16 for most computations while keeping certain critical variables, like weights or gradients, in FP32. This balances the memory and speed benefits of FP16 with the numerical stability of FP32.</li>
+<li><strong>Gradient Clipping</strong>: Implementing techniques like gradient clipping can help prevent gradients from becoming too large, mitigating the risk of overflow in FP16.</li>
+<li><strong>Loss Scaling</strong>: Adjusting the scale of loss values can help maintain precision during backpropagation, reducing the chances of underflow in FP16.</li>
+</ul>
+</li>
+</ul>
+<h2 id="bf16">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16">#</a></h2>
+<p>BF16, also known as Brain Float 16, was developed by Google Brain and became popular around 2019. It’s now one of the most widely used formats for training and fine-tuning LLMs. The main advantage of BF16 is that it retains the same number of exponent bits as FP32, making it easier to load a model in 16-bit precision and proceed with fine-tuning without running into &ldquo;NaN&rdquo; errors.</p>
+<p>While BF16 sacrifices some precision compared to FP32, <a href="https://arxiv.org/abs/1905.12322">research</a> has shown that the difference in performance when training or fine-tuning models on BF16 vs FP32 is minimal across different domains. Given the tradeoff between slightly reduced precision and the substantial reduction in model size, using BF16 is often well worth it for modern deep learning tasks.</p>
+<h2 id="more-data-types">More Data Types<a hidden class="anchor" aria-hidden="true" href="#more-data-types">#</a></h2>
+<h2 id="tf32-tensorfloat-32">TF32 (TensorFloat 32)<a hidden class="anchor" aria-hidden="true" href="#tf32-tensorfloat-32">#</a></h2>
 <div style="text-align: center;">
   <img src="/images/quant_p1/FP_16_32_TF32.png" alt="FP16 vs TF32 comparison" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
@@ -308,6 +274,9 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
+<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
+<p>From the Ampere architecture onwards, all calculations involving FP32 matrices are done as shown in the figure. When performing matrix multiplications, the GPU automatically converts FP32 matrices into TF32 precision. The actual multiplication is done using TF32, which retains FP32’s 8-bit exponent but reduces the mantissa to 10 bits. Once the operation is complete, the results are accumulated back into FP32 format for higher precision in the final outcome.</p>
+<p>This process leverages TF32 for speed during calculations, while maintaining the precision of FP32 for the final result.</p>
 <div style="text-align: center;">
   <img src="/images/quant_p1/TF32_explained.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
@@ -315,167 +284,34 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
+<h2 id="fp8-e4m3-and-e5m2-formats">FP8 (E4M3 and E5M2 Formats)<a hidden class="anchor" aria-hidden="true" href="#fp8-e4m3-and-e5m2-formats">#</a></h2>
 <div style="text-align: center;">
-  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  <img src="/images/quant_p1/FP8.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
+  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
   Figure 1: Comparison of FP8 and BF16 formats. Source: 
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/Emergence.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/nf4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>Here’s the table formatted in Markdown for your blog, which you can directly use if your blog platform supports Markdown syntax:</p>
-<h3 id="gpu-performance-table">GPU Performance Table<a hidden class="anchor" aria-hidden="true" href="#gpu-performance-table">#</a></h3>
-<table>
-<thead>
-<tr>
-<th>GPU</th>
-<th>P100</th>
-<th>V100</th>
-<th>T4</th>
-<th>A100</th>
-<th>H100</th>
-<th>L40</th>
-<th>B100</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>VRAM</strong></td>
-<td>16GB</td>
-<td>32GB</td>
-<td>16GB</td>
-<td>40GB*</td>
-<td>80GB</td>
-<td>48GB</td>
-<td>192GB</td>
-</tr>
-<tr>
-<td><strong>Architecture</strong></td>
-<td>Pascal</td>
-<td>Volta</td>
-<td>Turing</td>
-<td>Ampere</td>
-<td>Hopper</td>
-<td>Ada Lovelace</td>
-<td>Blackwell</td>
-</tr>
-<tr>
-<td><strong>Release Date</strong></td>
-<td>Apr-16</td>
-<td>May-17</td>
-<td>Sep-18</td>
-<td>May-20</td>
-<td>Mar-22</td>
-<td>Sep-22</td>
-<td>Mar-24</td>
-</tr>
-<tr>
-<td><strong>FP32</strong></td>
-<td>10.6</td>
-<td>8.2</td>
-<td>8.1</td>
-<td>19.5</td>
-<td>67</td>
-<td>90.5</td>
-<td>60</td>
-</tr>
-<tr>
-<td><strong>TF32</strong></td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>312</td>
-<td>989</td>
-<td>181</td>
-<td>1800</td>
-</tr>
-<tr>
-<td><strong>FP16</strong></td>
-<td></td>
-<td>130</td>
-<td>65</td>
-<td>624</td>
-<td>1979</td>
-<td>362</td>
-<td>3500</td>
-</tr>
-<tr>
-<td><strong>BF16</strong></td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>624</td>
-<td>1979</td>
-<td>362</td>
-<td>3500</td>
-</tr>
-<tr>
-<td><strong>INT8</strong></td>
-<td>X</td>
-<td>X</td>
-<td>130</td>
-<td>1248</td>
-<td>3958</td>
-<td>724</td>
-<td>7000</td>
-</tr>
-<tr>
-<td><strong>INT4</strong></td>
-<td>X</td>
-<td>X</td>
-<td>260</td>
-<td>2496</td>
-<td></td>
-<td>1448</td>
-<td></td>
-</tr>
-<tr>
-<td><strong>FP8</strong></td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>3958</td>
-<td>724</td>
-<td>7000</td>
-</tr>
-<tr>
-<td><strong>FP4</strong></td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>X</td>
-<td>14000</td>
-</tr>
-</tbody>
-</table>
-<h3 id="how-to-use-this-table-in-your-blog">How to Use This Table in Your Blog<a hidden class="anchor" aria-hidden="true" href="#how-to-use-this-table-in-your-blog">#</a></h3>
+<p>FP8 is an emerging precision format designed to accelerate deep learning training and inference beyond the 16-bit formats commonly used today. Introduced in recent research paper <em><a href="https://arxiv.org/abs/2209.05433">FP8 Formats for Deep Learning</a></em> from September 2022, FP8 comes with two encoding options: <strong>E4M3</strong> (4-bit exponent, 3-bit mantissa) and <strong>E5M2</strong> (5-bit exponent, 2-bit mantissa). FP8 was introduced as part of Nvidia&rsquo;s Hopper Architecture (H100 GPUs).</p>
+<p>The main advantage of FP8 is its ability to drastically reduce memory and compute requirements while maintaining comparable performance to higher precision formats like FP16 and BF16. The flexibility between the E4M3 and E5M2 formats allows FP8 to allocate an additional bit either to range or precision, depending on the task requirements.</p>
+<p>As shown in the figures:</p>
 <ul>
-<li><strong>Headers</strong> are defined with the <code>|</code> symbol.</li>
-<li><strong>Values</strong> are centered by using colons <code>:</code> at the start and end of the hyphens <code>---</code> for each column.</li>
-<li><strong>Cells marked with &lsquo;X&rsquo;</strong> indicate the data type is not supported by that GPU.</li>
+<li><strong>FP8 calculations</strong>: Input matrices are converted to FP8, multiplied, and then accumulated in a higher precision format (FP16 or FP32). This allows for efficient computation while retaining enough precision in the final result.</li>
+<li><strong>Efficacy of FP8</strong>: The graph below illustrates the training loss (perplexity) across various large models (GPT-3 variants with up to 175 billion parameters), showing that FP8 training closely matches the results achieved with BF16.</li>
 </ul>
-<h4 id="additional-formatting-tips">Additional Formatting Tips:<a hidden class="anchor" aria-hidden="true" href="#additional-formatting-tips">#</a></h4>
-<ul>
-<li>To make this table &ldquo;dank&rdquo; or visually appealing, consider using a custom stylesheet for your blog or platform. You can add background colors, borders, or hover effects using CSS.</li>
-<li><strong>Use a monospaced font</strong> for the table or apply a dark theme to your blog to match the style.</li>
-</ul>
-<p>Feel free to copy and paste this Markdown into your blog editor!</p>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
+  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h4 id="fp8-in-practice">FP8 in Practice<a hidden class="anchor" aria-hidden="true" href="#fp8-in-practice">#</a></h4>
+<p>In the paper, FP8 was used for training a wide variety of models, including CNNs, RNNs, and Transformer-based architectures, covering both image and language tasks. No changes were made to the model architectures, optimizer settings, or hyperparameters. FP8 post-training quantization (PTQ) was also evaluated, and it showed that models could be quantized to FP8 without a significant loss in accuracy, a major benefit for deployment.</p>
+<h3 id="nvidia-is-everywhere">Nvidia is Everywhere!<a hidden class="anchor" aria-hidden="true" href="#nvidia-is-everywhere">#</a></h3>
+<p>Let&rsquo;s address the $2.5 trillion elephant in the room. Up until now, I’ve briefly mentioned that the TF32 datatype was introduced with Nvidia’s Ampere architecture, and that FP8 support starts with the H100 GPUs. We&rsquo;ve been happily exploring the ins and outs of these different data types, but here’s the catch: You might get super excited about BF16 after reading this post and rush to try it out on a free Colab instance, only to realize the T4 GPUs don’t support BF16.</p>
+<p>Don’t worry—I’ve done the hard work of sifting through Nvidia’s whitepapers so you don’t have to. Here&rsquo;s the deal: you need to know exactly what hardware you’re working with and which data types it supports. This way, you can make an informed decision about which GPU cluster to dedicate your time to and, in the process, help Nvidia grow even richer (they’re truly the ones selling shovels in this AI gold rush). And no, unfortunately, you can’t go running to AMD or Intel for your GPU needs either.</p>
+<p>Take a look at the chart below, and I’ll follow up with some key observations. The numbers represent FLOPs (or TOPs for INT data types), and the X’s indicate that the datatype isn’t supported by a particular architecture.</p>
 <style>
   table {
     width: 100%;
@@ -501,6 +337,10 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
   }
   .not-supported {
     color: #FF6347;
+    font-weight: bold;
+  }
+  .sparse-matrix {
+    color: #4682B4; /* Different color to highlight sparse matrix values */
     font-weight: bold;
   }
 </style>
@@ -563,50 +403,50 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
-      <td>312</td>
-      <td>989</td>
-      <td>181</td>
-      <td>1800</td>
+      <td class="sparse-matrix">312</td>
+      <td class="sparse-matrix">989</td>
+      <td class="sparse-matrix">181</td>
+      <td class="sparse-matrix">1800</td>
     </tr>
     <tr>
       <td><b>FP16</b></td>
-      <td class="not-supported">X</td>
+      <td></td>
       <td>130</td>
       <td>65</td>
-      <td>624</td>
-      <td>1979</td>
-      <td>362</td>
-      <td>3500</td>
+      <td class="sparse-matrix">624</td>
+      <td class="sparse-matrix">1979</td>
+      <td class="sparse-matrix">362</td>
+      <td class="sparse-matrix">3500</td>
     </tr>
     <tr>
       <td><b>BF16</b></td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
-      <td>624</td>
-      <td>1979</td>
-      <td>362</td>
-      <td>3500</td>
+      <td class="sparse-matrix">624</td>
+      <td class="sparse-matrix">1979</td>
+      <td class="sparse-matrix">362</td>
+      <td class="sparse-matrix">3500</td>
     </tr>
     <tr>
       <td><b>INT8</b></td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td>130</td>
-      <td>1248</td>
-      <td>3958</td>
-      <td>724</td>
-      <td>7000</td>
+      <td class="sparse-matrix">1248</td>
+      <td class="sparse-matrix">3958</td>
+      <td class="sparse-matrix">724</td>
+      <td class="sparse-matrix">7000</td>
     </tr>
     <tr>
       <td><b>INT4</b></td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td>260</td>
-      <td>2496</td>
-      <td class="not-supported">X</td>
-      <td>1448</td>
-      <td class="not-supported">X</td>
+      <td class="sparse-matrix">2496</td>
+      <td></td>
+      <td class="sparse-matrix">1448</td>
+      <td></td>
     </tr>
     <tr>
       <td><b>FP8</b></td>
@@ -614,9 +454,9 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
-      <td>3958</td>
-      <td>724</td>
-      <td>7000</td>
+      <td class="sparse-matrix">3958</td>
+      <td class="sparse-matrix">724</td>
+      <td class="sparse-matrix">7000</td>
     </tr>
     <tr>
       <td><b>FP4</b></td>
@@ -626,164 +466,18 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
       <td class="not-supported">X</td>
-      <td>14000</td>
+      <td class="sparse-matrix">14000</td>
     </tr>
   </tbody>
 </table>
-<h2 id="some-reandom-heading-to-differentiate-the-two">some reandom heading to differentiate the two<a hidden class="anchor" aria-hidden="true" href="#some-reandom-heading-to-differentiate-the-two">#</a></h2>
-<style>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 25px 0;
-    font-size: 18px;
-    font-family: 'Arial', sans-serif;
-    text-align: center;
-  }
-  th, td {
-    padding: 12px;
-    border: 1px solid #ddd;
-  }
-  th {
-    background-color: #4CAF50;
-    color: white;
-  }
-  tr:nth-child(even) {
-    background-color: #f2f2f2;
-  }
-  tr:hover {
-    background-color: #ddd;
-  }
-</style>
-<table>
-  <thead>
-    <tr>
-      <th>GPU</th>
-      <th>P100</th>
-      <th>V100</th>
-      <th>T4</th>
-      <th>A100</th>
-      <th>H100</th>
-      <th>L40</th>
-      <th>B100</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><b>VRAM</b></td>
-      <td>16GB</td>
-      <td>32GB</td>
-      <td>16GB</td>
-      <td>40GB*</td>
-      <td>80GB</td>
-      <td>48GB</td>
-      <td>192GB</td>
-    </tr>
-    <tr>
-      <td><b>Architecture</b></td>
-      <td>Pascal</td>
-      <td>Volta</td>
-      <td>Turing</td>
-      <td>Ampere</td>
-      <td>Hopper</td>
-      <td>Ada Lovelace</td>
-      <td>Blackwell</td>
-    </tr>
-    <tr>
-      <td><b>Release Date</b></td>
-      <td>Apr-16</td>
-      <td>May-17</td>
-      <td>Sep-18</td>
-      <td>May-20</td>
-      <td>Mar-22</td>
-      <td>Sep-22</td>
-      <td>Mar-24</td>
-    </tr>
-    <tr>
-      <td><b>FP32</b></td>
-      <td>10.6</td>
-      <td>8.2</td>
-      <td>8.1</td>
-      <td>19.5</td>
-      <td>67</td>
-      <td>90.5</td>
-      <td>60</td>
-    </tr>
-    <tr>
-      <td><b>TF32</b></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>312</td>
-      <td>989</td>
-      <td>181</td>
-      <td>1800</td>
-    </tr>
-    <tr>
-      <td><b>FP16</b></td>
-      <td></td>
-      <td>130</td>
-      <td>65</td>
-      <td>624</td>
-      <td>1979</td>
-      <td>362</td>
-      <td>3500</td>
-    </tr>
-    <tr>
-      <td><b>BF16</b></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>624</td>
-      <td>1979</td>
-      <td>362</td>
-      <td>3500</td>
-    </tr>
-    <tr>
-      <td><b>INT8</b></td>
-      <td></td>
-      <td></td>
-      <td>130</td>
-      <td>1248</td>
-      <td>3958</td>
-      <td>724</td>
-      <td>7000</td>
-    </tr>
-    <tr>
-      <td><b>INT4</b></td>
-      <td></td>
-      <td></td>
-      <td>260</td>
-      <td>2496</td>
-      <td></td>
-      <td>1448</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><b>FP8</b></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>3958</td>
-      <td>724</td>
-      <td>7000</td>
-    </tr>
-    <tr>
-      <td><b>FP4</b></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td>14000</td>
-    </tr>
-  </tbody>
-</table>
+<h3 id="some-observations">Some Observations<a hidden class="anchor" aria-hidden="true" href="#some-observations">#</a></h3>
+<ul>
+<li>All the values in blue are for sparse matrices.</li>
+<li>As you can see, TF32 preforamce compared to the FP32 is 30 times.</li>
+<li>INT4 and INT8 data types were introduce in the Turing architecture for inference.</li>
+</ul>
 <h1 id="integer-qunatization">Integer Qunatization<a hidden class="anchor" aria-hidden="true" href="#integer-qunatization">#</a></h1>
 <p>As you have already seen the T4 and Subsequnet gpu archtecture suppor INT8 and INT4 datatypes, thes datatypes can be used for inferecne and can be blazingly fast, (Just to keep another thing on the back of you mind is that if you load you matrix in a particula data type like INT8, this dosent necessarily mena the compuatations are Happening in IN8, will expand on this later)</p>
-<p>Lets start with some tradition Int8 quantization techniques for the sake of completeness.</p>
 <h2 id="abs-max-quantization">ABS Max Quantization<a hidden class="anchor" aria-hidden="true" href="#abs-max-quantization">#</a></h2>
 <p><strong>Absmax quantization</strong> is a method used to convert floating-point values (like FP16) into 8-bit integer values. Here&rsquo;s how it works in simpler terms:</p>
 <ol>
@@ -810,8 +504,7 @@ This process allows a tensor originally in a high precision format (FP16) to be 
 </ol>
 <p>In summary, absmax quantization shrinks a floating-point tensor into the 8-bit range by dividing all elements by the largest absolute value in the tensor, then multiplying by 127 and rounding.</p>
 <h3 id="llm-int8">LLM int8<a hidden class="anchor" aria-hidden="true" href="#llm-int8">#</a></h3>
-<p>Now if we have the Abs Max Quantization technique which is simple and works, shouldnt we just close this qunatization chapter and move on?
-Not so fast, in Nov 2022, Detmers et.al published a paper proposing a new int8 qunatization technique called LLM.int8(), the reason for this new technique is that the emergent behaviours, of LLMs that we all love like reasoning and &hellip; . were suffering with qunatization.</p>
+<p>Abs Max Quantization works, so shouldn&rsquo;t we just wrap up quantization and move on? Not quite. In November 2022, <em><a href="https://arxiv.org/abs/2208.07339">Detmers et al.</a></em> introduced LLM.int8(), a new quantization technique, addressing an important issue: Large language models (LLMs) have started to show impressive emergent behaviors like reasoning, in-context learning, and even few-shot problem solving—abilities that were being compromised by naive quantization methods.</p>
 <div style="text-align: center;">
   <img src="/images/quant_p1/Emergence.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
@@ -819,815 +512,279 @@ Not so fast, in Nov 2022, Detmers et.al published a paper proposing a new int8 q
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
-<p>The figure points out that obove 2.7B paramaters, if you do quantization the model becomes lobatomized, ie a 125M paramamter can outperform a 13B paramater if we do naive 8 bit qunatization on it. This is because the outliers present in the model are the reason for these is that the outlers weights of the models is the reason for emergent and good behaviour of the modlels. so we want to protect these outler weights, so as not to degrade performance.</p>
-<p>The fundemental idea of LLM.int8() is Qunatize weights within a certain threshold (this is huperparamater that you can set, default=6), ie if the weights are above or below this threshold [-6,6] these weights are not qunatized, and stored in FP16/FP32/BF16 precision.</p>
-<p>Another thing that is different from naive 8 bit quantization is vector qunatization, The main challenge with quantization methods that use a single scaling constant per tensor is that
-a single outlier can reduce the quantization precision of all other values. As such, it is desirable to
-have multiple scaling constants per tensor
-ie in ABSMAX qunaitzation absolute value was taken for the enire matrix or tensor, but taking the absolute value of individual vectors is better than than takinf the abs of the whole matrix, this technique is followed in other qunatization techniques like GPTQ as well.</p>
+<p>The figure points out that once models exceed 2.7 billion parameters, naive 8-bit quantization significantly degrades performance. The drastic performance drop is due to the presence of <strong>outliers</strong>—weights that are crucial for enabling key behaviors like reasoning and in-context learning. These outliers are vital for the model&rsquo;s performance, so preserving them during quantization is essential to prevent significant degradation.
+This happens because outlier weights—which play a crucial role in driving the emergent behaviors of large models—get lost in the quantization process.</p>
+<p>LLM.int8() proposes a two-part strategy to address this issue:</p>
+<ol>
+<li>
+<p><strong>Vector-wise Quantization</strong>: Instead of quantizing the entire tensor with a single scaling constant, LLM.int8() quantizes vectors individually.  The challenge with using a single scaling constant per tensor is that just one outlier can distort the entire quantization process, reducing precision for all other values. By applying multiple scaling constants—one for each vector—this method ensures that outliers don’t interfere with the rest of the matrix.</p>
+</li>
+<li>
+<p><strong>Mixed-Precision Decomposition</strong>: LLM.int8() quantizes only weights within a defined threshold, typically $[-6, 6]$. Outliers exceeding this range are preserved in higher precision formats (FP16 or FP32). This preserves critical outlier weights—crucial for model performance—at higher precision, avoiding accuracy loss from forcing them into lower precision formats. The approach maintains key model behaviors while achieving significant compression for most weights, effectively balancing performance and efficiency across varying model sizes.</p>
+</li>
+</ol>
+<div style="text-align: center;">
+  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 <h3 id="the-mathematical-details">the Mathematical details<a hidden class="anchor" aria-hidden="true" href="#the-mathematical-details">#</a></h3>
-<p><strong>Introduction</strong></p>
-<p>When dealing with large-scale transformer models (like those used in natural language processing), efficiently handling computations and memory usage becomes crucial. Quantization is a common technique used to reduce the precision of numbers in computations, thereby saving memory and increasing computational speed. Specifically, moving from 16-bit floating-point numbers (FP16) to 8-bit integers (Int8) can halve the memory usage.</p>
-<p>However, quantization introduces challenges, especially when scaling up to large models. The key concepts involved are <strong>Int8 matrix multiplication</strong>, <strong>vector-wise quantization</strong>, and <strong>mixed-precision decomposition</strong>. Let&rsquo;s delve into each of these concepts to understand how they address the challenges of quantizing large-scale transformer models.</p>
-<hr>
-<h3 id="1-challenges-with-single-scaling-constant-quantization"><strong>1. Challenges with Single Scaling Constant Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#1-challenges-with-single-scaling-constant-quantization">#</a></h3>
-<p><strong>Quantization Basics</strong></p>
-<ul>
-<li><strong>Quantization</strong> involves mapping a set of continuous values (like FP16 numbers) to a smaller set of discrete values (like Int8 numbers).</li>
-<li>Typically, this is done by scaling the entire tensor (a multi-dimensional array) using a single scaling constant, which is often derived from the maximum absolute value in the tensor.</li>
-</ul>
-<p><strong>The Problem with Single Scaling Constants</strong></p>
-<ul>
-<li><strong>Outliers</strong>: In large tensors, especially in transformer models beyond a certain size (e.g., models larger than 6.7 billion parameters), there can be individual elements with exceptionally large values (outliers).</li>
-<li><strong>Reduced Precision</strong>: When using a single scaling constant, these outliers force the scaling factor to be small to accommodate the largest values. This compresses the dynamic range for the rest of the values, leading to a loss of precision for the majority of the tensor elements.</li>
-<li><strong>Impact on Model Performance</strong>: Reduced precision can degrade the performance of the model because small differences in weights or activations can significantly impact the model&rsquo;s outputs.</li>
-</ul>
-<hr>
-<h3 id="2-vector-wise-quantization"><strong>2. Vector-wise Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#2-vector-wise-quantization">#</a></h3>
-<p><strong>Moving Beyond Single Scaling Constants</strong></p>
-<ul>
-<li>To mitigate the impact of outliers, one approach is to increase the number of scaling constants used during quantization.</li>
-<li>By dividing the tensor into smaller blocks and assigning a scaling constant to each block, the effect of an outlier is confined to its block, preserving the precision in other blocks.</li>
-</ul>
-<p><strong>Row-wise and Column-wise Quantization</strong></p>
-<ul>
-<li><strong>Row-wise Quantization</strong>: Assigns a scaling constant to each row of the tensor.</li>
-<li><strong>Column-wise Quantization</strong>: Assigns a scaling constant to each column.</li>
-</ul>
-<p><strong>Vector-wise Quantization Explained</strong></p>
-<ul>
-<li><strong>Concept</strong>: Treats matrix multiplication as a series of independent inner products (dot products between vectors).</li>
-<li><strong>Implementation</strong>:
-<ul>
-<li>For the input matrix $ X_{f16} $ of shape $ b \times h $ (where $ b $ is batch size and $ h $ is hidden size), assign a scaling constant $ c_{x_{f16}} $ to each row (or vector) in $ X_{f16} $.</li>
-<li>For the weight matrix $ W_{f16} $ of shape $ h \times o $ (where $ o $ is output size), assign a scaling constant $ c_{w_{f16}} $ to each column (or vector) in $ W_{f16} $.</li>
-</ul>
-</li>
-<li><strong>Denormalization</strong>:
-<ul>
-<li>After performing quantized matrix multiplication, scale the result back (denormalize) using the outer product of the scaling constants: $ c_{x_{f16}} \otimes c_{w_{f16}} $.</li>
-</ul>
-</li>
-<li><strong>Equation</strong>:
-$$
-C_{f16} \approx \frac{1}{c_{x_{f16}} \otimes c_{w_{f16}}} C_{i32} = S \cdot C_{i32} = S \cdot A_{i8} B_{i8} = S \cdot Q(A_{f16}) , Q(B_{f16})
-$$
-<ul>
-<li>$ Q(\cdot) $ denotes the quantization function.</li>
-<li>$ S $ is the combined scaling factor.</li>
-<li>$ C_{i32} $ is the result of the Int8 matrix multiplication before scaling back.</li>
-</ul>
-</li>
-</ul>
-<p><strong>Benefits of Vector-wise Quantization</strong></p>
-<ul>
-<li><strong>Increased Precision</strong>: By using multiple scaling constants, the quantization is more adaptive to the range of values in different vectors, reducing the impact of outliers.</li>
-<li><strong>Efficiency</strong>: It strikes a balance between computational efficiency and precision, as scaling constants are still shared across vectors rather than individual elements.</li>
-</ul>
-<hr>
-<h3 id="3-mixed-precision-decomposition"><strong>3. Mixed-Precision Decomposition</strong><a hidden class="anchor" aria-hidden="true" href="#3-mixed-precision-decomposition">#</a></h3>
-<p><strong>Limitations of Vector-wise Quantization</strong></p>
-<ul>
-<li>While vector-wise quantization improves precision, it may still not be sufficient for handling outliers in large models.</li>
-<li>In models larger than 6.7 billion parameters, outliers occur systematically across almost all sequences but are limited to specific feature dimensions.</li>
-</ul>
-<p><strong>Understanding Outlier Features</strong></p>
-<ul>
-<li><strong>Outlier Features</strong>: Specific dimensions (columns in the input matrix) where values are consistently large.</li>
-<li><strong>Sparsity of Outliers</strong>: These outlier features are extremely sparse, often constituting about 0.1% of all feature dimensions.</li>
-</ul>
-<p><strong>Mixed-Precision Decomposition Explained</strong></p>
-<ul>
-<li><strong>Idea</strong>: Separate the outlier features and handle them with higher precision (FP16), while the rest of the features are quantized to Int8.</li>
-<li><strong>Implementation</strong>:
-<ul>
-<li><strong>Identify Outlier Dimensions</strong>:
-<ul>
-<li>Define a threshold $ \alpha $ (e.g., $ \alpha = 6.0 $).</li>
-<li>Collect the set of feature dimensions $ O $ where any value exceeds $ \alpha $.</li>
-</ul>
-</li>
-<li><strong>Decompose the Input Matrix</strong>:
-<ul>
-<li>Split $ X_{f16} $ into two parts:
-<ul>
-<li>$ X_{\text{outliers}} $: Contains the outlier features (dimensions in $ O $).</li>
-<li>$ X_{\text{regular}} $: Contains the remaining features.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>Matrix Multiplication</strong>:
-<ul>
-<li>Compute the high-precision part:
-$$
-C_{\text{outliers}} = X_{\text{outliers}} W_{\text{outliers}}
-$$</li>
-<li>Compute the quantized low-precision part:
-$$
-C_{\text{regular}} = S_{f16} \cdot \left( Q(X_{\text{regular}}) , Q(W_{\text{regular}}) \right)
-$$
-<ul>
-<li>$ S_{f16} $ is the scaling factor for dequantization.</li>
-</ul>
-</li>
-<li>Combine the results:
-$$
-C_{f16} \approx C_{\text{outliers}} + C_{\text{regular}}
-$$</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><strong>Equation</strong>:
-$$
-C_{f16} \approx \sum_{h \in O} X_{f16}^{h} W_{f16}^{h} + S_{f16} \cdot \sum_{h \notin O} X_{i8}^{h} W_{i8}^{h}
-$$
-<ul>
-<li>The first term handles the outlier dimensions in high precision.</li>
-<li>The second term handles the regular dimensions in low precision.</li>
-</ul>
-</li>
-</ul>
-<p><strong>Benefits of Mixed-Precision Decomposition</strong></p>
-<ul>
-<li><strong>High Precision for Critical Elements</strong>: By handling outlier features in FP16, we maintain the precision where it matters most for model performance.</li>
-<li><strong>Memory Efficiency</strong>: Since outlier features are sparse (about 0.1%), the memory overhead is minimal compared to full FP16 computation.</li>
-<li><strong>Scalability</strong>: This approach allows the quantization method to scale to very large models (e.g., BLOOM-176B), providing significant memory savings without sacrificing performance.</li>
-</ul>
-<hr>
-<h3 id="4-practical-implications-and-results"><strong>4. Practical Implications and Results</strong><a hidden class="anchor" aria-hidden="true" href="#4-practical-implications-and-results">#</a></h3>
-<p><strong>Memory Savings</strong></p>
-<ul>
-<li><strong>Reduction in Memory Footprint</strong>: For example, in the BLOOM-176B model, this method reduces the memory usage by approximately 1.96 times compared to using full FP16 precision.</li>
-</ul>
-<p><strong>Performance Preservation</strong></p>
-<ul>
-<li><strong>Minimal Degradation</strong>: By carefully handling outliers, the model maintains its performance, as the critical computations are performed in higher precision.</li>
-<li><strong>Threshold Selection</strong>: Setting $ \alpha = 6.0 $ was found sufficient to reduce performance degradation close to zero.</li>
-</ul>
-<hr>
-<h3 id="5-summary"><strong>5. Summary</strong><a hidden class="anchor" aria-hidden="true" href="#5-summary">#</a></h3>
-<ul>
-<li><strong>Int8 Matrix Multiplication at Scale</strong>: Quantizing large transformer models to use Int8 computations saves memory and increases speed but introduces challenges due to outliers.</li>
-<li><strong>Challenges with Single Scaling Constants</strong>: Using one scaling constant per tensor is insufficient because outliers force a scaling that reduces precision for the majority of values.</li>
-<li><strong>Vector-wise Quantization</strong>: Assigns scaling constants to vectors (rows or columns), improving precision by confining the effect of outliers to specific vectors.</li>
-<li><strong>Limitations of Vector-wise Quantization</strong>: Not sufficient for very large models where outliers occur systematically across sequences.</li>
-<li><strong>Mixed-Precision Decomposition</strong>: Separates outlier features and computes them in FP16, while the rest are quantized to Int8, preserving performance and achieving memory efficiency.</li>
-<li><strong>Practical Benefits</strong>: Enables large-scale transformer models to benefit from quantization techniques without significant loss in accuracy.</li>
-</ul>
-<hr>
-<p><strong>Conclusion</strong></p>
-<p>The combination of vector-wise quantization and mixed-precision decomposition, referred to as <strong>LLM.int8()</strong>, provides an effective solution for scaling Int8 matrix multiplication in large transformer models. By intelligently handling outlier features and leveraging the sparsity of these outliers, it&rsquo;s possible to achieve significant memory savings and maintain high model performance.</p>
-<p>This approach is crucial for deploying large language models in resource-constrained environments, making advanced AI applications more accessible and efficient.</p>
-<h3 id="nf4-qunatization">NF4 qunatization<a hidden class="anchor" aria-hidden="true" href="#nf4-qunatization">#</a></h3>
-<p><strong>NF4 Quantization</strong> (NormalFloat 4-bit quantization) is a specialized quantization technique designed to optimally compress data that follows a zero-centered normal distribution. It builds on <strong>Quantile Quantization</strong>, a method that assigns equal numbers of input values to each quantization bin, making it an information-theoretically optimal data type.</p>
-<h3 id="overview-of-nf4-quantization">Overview of NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#overview-of-nf4-quantization">#</a></h3>
+<h4 id="vector-wise-quantization">Vector-wise Quantization<a hidden class="anchor" aria-hidden="true" href="#vector-wise-quantization">#</a></h4>
+<p>In vector-wise quantization, the main idea is to apply <strong>different scaling constants</strong> for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision.</p>
 <ol>
 <li>
-<p><strong>Quantile Quantization</strong>:
-Quantile quantization aims to ensure each quantization bin has an equal number of input values. It is considered optimal since it minimizes the information loss across all bins by distributing the data uniformly. However, computing exact quantiles is computationally expensive, which necessitates using fast quantile approximation algorithms like <strong>SRAM quantiles</strong>. These approximations can result in large quantization errors for outliers, which are often critical.</p>
+<p><strong>Matrix Setup</strong>:</p>
+<ul>
+<li>Let $ X_{f16} \in \mathbb{R}^{b \times h} $ be the input matrix (e.g., hidden states), where $ b $ is the batch size and $ h $ is the hidden size.</li>
+<li>Let $ W_{f16} \in \mathbb{R}^{h \times o} $ be the weight matrix, where $ o $ is the output size.</li>
+</ul>
+<p>The goal is to quantize these matrices from FP16 to Int8, applying different scaling constants to different rows or columns.</p>
 </li>
 <li>
-<p><strong>Fixed Distribution Quantization</strong>:
-When input tensors come from a distribution that is fixed except for a quantization constant, the quantile estimation becomes computationally feasible. Pretrained neural network weights typically have a zero-centered normal distribution with some standard deviation $\sigma$. To use NF4 quantization, all weights are scaled to a fixed distribution range, which, for simplicity, is set to $[-1, 1]$.</p>
+<p><strong>Quantization</strong>(similar to ABSMAX Quantization):</p>
+<ul>
+<li>Quantization scales the values in each vector of $ X_{f16} $ and $ W_{f16} $ into the range $[-127, 127]$. The scaling constant for each row in $ X_{f16} $ is denoted $ c_{x_{f16}} $, and for each column in $ W_{f16} $, it is $ c_{w_{f16}} $.</li>
+</ul>
+<p>This can be represented as:
+$$
+Q(X_{f16}) = \frac{127}{|X_{f16}|_{\infty}} X_{f16}
+$$
+where $ |X_{f16}|_{\infty} $ is the infinity norm (the maximum absolute value of the vector).</p>
 </li>
 <li>
-<p><strong>Transformation to Fixed Range</strong>:
-The weights are transformed to this range by normalizing them using their standard deviation $\sigma$, effectively transforming all distributions to a standard normal form, $N(0, 1)$. After normalization, the weights are quantized using a special 4-bit data type, NF4, that minimizes quantization error for normally distributed data.</p>
+<p><strong>Matrix Multiplication</strong>:
+The quantized matrix multiplication is then performed in Int8 precision:
+$$
+C_{i32} = Q(X_{f16}) \cdot Q(W_{f16})
+$$
+Here, $ C_{i32} $ represents the result of the Int8 matrix multiplication.</p>
+</li>
+<li>
+<p><strong>Denormalization</strong>:
+To recover the correct FP16 result after quantization, the matrix result must be <strong>denormalized</strong> by the outer product of the scaling constants:
+$$
+C_{f16} \approx \frac{1}{c_{x_{f16}} \otimes c_{w_{f16}}} \cdot C_{i32}
+$$
+where $ \otimes $ is the <strong>outer product</strong> of the row-wise scaling constants $ c_{x_{f16}} $ and column-wise scaling constants $ c_{w_{f16}} $. This product ensures that the entire matrix is scaled back appropriately.</p>
 </li>
 </ol>
-<h3 id="steps-for-nf4-quantization">Steps for NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#steps-for-nf4-quantization">#</a></h3>
-<p>To compute the optimal quantization scheme for normally distributed data, we perform the following steps:</p>
+<h3 id="mixed-precision-decomposition">Mixed-Precision Decomposition<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition">#</a></h3>
+<p>While vector-wise quantization works well for most situations, <strong>outliers</strong>—specific dimensions with significantly larger values—can still affect overall precision, especially in very large models (e.g., 6.7B parameters or more). Mixed-precision decomposition addresses this by applying different precisions for different parts of the matrix.</p>
 <ol>
 <li>
-<p><strong>Estimate Quantiles</strong>:
-Calculate the quantiles for a standard normal distribution $N(0, 1)$. For a 4-bit (i.e., $k = 4$) data type, we need to determine $2^{k} + 1 = 17$ quantiles. The quantiles $q_i$ are defined by:</p>
+<p><strong>Outliers</strong>:</p>
+<ul>
+<li><strong>Outliers</strong> refer to specific dimensions in the matrix where the values are consistently much larger than others. These outliers might be critical for model performance and require higher precision for accurate representation.</li>
+<li>For example, in a matrix $ A_{f16} \in \mathbb{R}^{s \times h} $, outliers might occur in some columns across almost all sequences but are limited to a small set of feature dimensions.</li>
+</ul>
+</li>
+<li>
+<p><strong>Mixed-Precision Decomposition</strong>:
+The matrix is decomposed into two parts:</p>
+<ul>
+<li><strong>High-precision part (FP16)</strong>: The outlier dimensions are processed with higher precision.</li>
+<li><strong>Low-precision part (Int8)</strong>: The rest of the dimensions are quantized into Int8 for efficiency.</li>
+</ul>
+<p>Mathematically:
+$$
+C_{f16} \approx \sum_{h \in O} X^h_{f16} \cdot W^h_{f16} + S \cdot \sum_{h \notin O} X_{i8}^h \cdot W_{i8}^h
+$$
+where:</p>
+<ul>
+<li>$ O $ is the set of outlier dimensions.</li>
+<li>The first term computes matrix multiplication for outlier features in FP16 precision.</li>
+<li>The second term computes matrix multiplication for regular features in Int8 precision.</li>
+<li>$ S $ is the scaling factor for dequantizing the Int8 results.</li>
+</ul>
+</li>
+<li>
+<p><strong>Outlier Identification</strong>:
+Outliers are identified based on a threshold $ \alpha $. If any value in a specific feature dimension exceeds $ \alpha $, that dimension is considered an outlier and handled with higher precision.</p>
+</li>
+</ol>
+<h2 id="nf4-quantization">NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#nf4-quantization">#</a></h2>
+<p><strong>NF4 Quantization</strong> is a specialized technique optimized for data with a zero-centered normal distribution, such as neural network weights. It builds on <strong>Quantile Quantization (QQ)</strong>, which distributes values uniformly across bins to minimize information loss. However, computing exact quantiles is computationally expensive. To address this, <strong>Fixed Distribution Quantization</strong> leverages the known normal distribution of weights, allowing NF4 to efficiently estimate quantiles. This method, introduced in <strong>QLoRA</strong>, is particularly effective in fine-tuning large language models, offering strong performance while reducing computational costs and memory usage.</p>
+<h3 id="nf4-implementation-details">NF4 implementation details<a hidden class="anchor" aria-hidden="true" href="#nf4-implementation-details">#</a></h3>
+<p>NF4 quantization aims to efficiently represent neural network weights, which are assumed to be normally distributed, using only 4 bits per weight. This means we have 16 possible quantization levels ($ 2^4 = 16 $) to represent the continuous range of weight values. The challenge is to choose these 16 levels $ q_j $ within the interval $[-1, 1]$ (This is just a hyperparamater chosen by the QLoRA Authors) in a way that minimizes the error introduced by quantization.</p>
+<p><strong>Why Use Quantiles of the Normal Distribution?</strong></p>
+<p>Since the weights are normally distributed, it&rsquo;s logical to choose quantization levels that align with the properties of the normal distribution. Specifically, we use the quantiles of the standard normal distribution to determine the $ q_j $ values. This approach ensures that each quantization level represents an equal portion of the probability mass of the distribution, effectively minimizing the quantization error across the range where data points are most likely to occur.</p>
+<p>When working with quantiles near the extremes (close to 0 or 1), the inverse cumulative distribution function (CDF) of the normal distribution approaches negative or positive infinity. To avoid infinite quantile values at the tails, we introduce a small positive value $ \delta $ to slightly offset the extreme probabilities.</p>
+<h3 id="calculate-quantization-levels"><strong>Calculate Quantization Levels</strong><a hidden class="anchor" aria-hidden="true" href="#calculate-quantization-levels">#</a></h3>
+<ol>
+<li><strong>Set $ \delta $:</strong></li>
+</ol>
 <p>$$
-q_i = \frac{1}{2} \left( Q_X \left( \frac{i}{2^k + 1} \right) + Q_X \left( \frac{i + 1}{2^k + 1} \right) \right)
+\delta = \frac{1}{2} \left( \frac{1}{32} + \frac{1}{30} \right)
 $$</p>
-<p>where $Q_X(\cdot)$ is the quantile function (inverse cumulative distribution function) of the standard normal distribution $N(0, 1)$. This step gives us the quantile boundaries for the theoretical normal distribution.</p>
-</li>
-<li>
-<p><strong>Normalize Values</strong>:
-These quantiles are then normalized into the target range $[-1, 1]$. The input tensor&rsquo;s values are rescaled accordingly by dividing by their absolute maximum value, ensuring that the quantization bins match the transformed distribution of the input tensor.</p>
-</li>
-<li>
-<p><strong>Quantize the Input Tensor</strong>:
-Rescale the standard deviation $\sigma$ of the input tensor to match that of the data type (which fits within the range $[-1, 1]$). The quantized values can now be represented in the desired 4-bit format. The quantization bins derived from the estimated quantiles ensure that the representation is information-theoretically optimal for zero-centered normal data.</p>
-</li>
-</ol>
-<h3 id="addressing-zero-representation">Addressing Zero Representation<a hidden class="anchor" aria-hidden="true" href="#addressing-zero-representation">#</a></h3>
-<p>A common problem with symmetric quantization schemes is the lack of an exact zero representation, which is crucial for efficient padding and zero-valued elements. To solve this:</p>
 <ul>
-<li>NF4 creates an <strong>asymmetric data type</strong> by separately estimating the quantiles for the negative and positive parts of the distribution:
+<li><strong>Purpose:</strong> $ \delta $ is a small probability value that helps in determining the extreme quantiles. (This is a hyper-paramater set in the Bits and Bytes Implementation of NF4)</li>
+</ul>
+<ol start="2">
+<li>
+<p><strong>Compute Evenly Spaced Probabilities:</strong></p>
 <ul>
-<li>For the negative part, calculate quantiles for $2^{k-1}$ bins.</li>
-<li>For the positive part, calculate quantiles for $2^{k-1} + 1$ bins.</li>
+<li>
+<p><strong>Lower Half ($ p_1, \ldots, p_8 $):</strong></p>
+<ul>
+<li>$ p_1 = \delta $</li>
+<li>$ p_8 = \frac{1}{2} $</li>
+<li><strong>Evenly spaced</strong> between $ \delta $ and $ \frac{1}{2} $.</li>
 </ul>
 </li>
-<li>The quantiles are then unified by removing one of the duplicate zeros that appear in both sets.</li>
+<li>
+<p><strong>Upper Half ($ r_9, \ldots, r_{16} $):</strong></p>
+<ul>
+<li>$ r_8 = \frac{1}{2} $ (Note: $ r_8 $ is unused as $ q_8 $ is explicitly set to 0.)</li>
+<li>$ r_{16} = 1 - \delta $</li>
+<li><strong>Evenly spaced</strong> between $ \frac{1}{2} $ and $ 1 - \delta $.</li>
 </ul>
-<p>This results in an asymmetric, information-theoretically optimal data type called <strong>NormalFloat $NFk$</strong>, which ensures zero-centered representation with minimal error.</p>
-<h3 id="double-quantization-dq">Double Quantization (DQ)<a hidden class="anchor" aria-hidden="true" href="#double-quantization-dq">#</a></h3>
-<p>To further reduce memory usage, <strong>Double Quantization</strong> (DQ) is introduced, which quantizes the quantization constants themselves:</p>
-<ol>
-<li>
-<p><strong>First Quantization</strong>:
-The initial quantization uses 32-bit constants and a block size of 64. This introduces a memory overhead of $32/64 = 0.5$ bits per parameter.</p>
+</li>
+</ul>
 </li>
 <li>
-<p><strong>Second Quantization</strong>:
-The 32-bit quantization constants $c_{FP32}^2$ are treated as inputs for a second quantization. An 8-bit float representation is used with a block size of 256, yielding new quantized constants $c_{FP8}^2$ and another set of quantization constants $c_{FP32}^1$.</p>
-</li>
+<p><strong>Find Quantiles Using the Gaussian CDF ($ \Phi $):</strong></p>
+<ul>
 <li>
-<p><strong>Memory Reduction Calculation</strong>:
-By employing 8-bit floats and symmetric quantization (centered around zero), the memory footprint per parameter is reduced from:</p>
+<p><strong>Lower Half Quantiles ($ \tilde{q}_1, \ldots, \tilde{q}_8 $):</strong></p>
 <p>$$
-\frac{32}{64} = 0.5 \text{ bits} \rightarrow \frac{8}{64} + \frac{32}{(64 \cdot 256)} = 0.127 \text{ bits}
+\tilde{q}_i = \Phi^{-1}(p_i) \quad \text{for } i = 1, \ldots, 8
 $$</p>
-<p>This represents a reduction of $0.373$ bits per parameter.</p>
+</li>
+<li>
+<p><strong>Upper Half Quantiles ($ \tilde{q}_9, \ldots, \tilde{q}_{16} $):</strong></p>
+<p>$$
+\tilde{q}_i = \Phi^{-1}(r_i) \quad \text{for } i = 9, \ldots, 16
+$$</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Normalize Quantization Levels to $[-1, 1]$:</strong></p>
+<p>$$
+q_i = \frac{\tilde{q}_i}{\max_{k} |\tilde{q}_k|}
+$$</p>
+<ul>
+<li><strong>Result:</strong> The final quantization levels $ q_1 = -1 $, $ q_8 = 0 $, and $ q_{16} = 1 $, with other $ q_j $ values distributed according to the normal distribution&rsquo;s quantiles.</li>
+</ul>
 </li>
 </ol>
-<h3 id="summary">Summary<a hidden class="anchor" aria-hidden="true" href="#summary">#</a></h3>
-<p><strong>NF4 Quantization</strong>:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> torch
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> scipy.stats <span style="color:#f92672">import</span> norm
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 1: Calculate δ (small probability value for extreme quantiles)</span>
+</span></span><span style="display:flex;"><span>delta <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">32</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">30</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 2: Compute lower half quantiles (p1 to p8)</span>
+</span></span><span style="display:flex;"><span>p <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(delta, <span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">8</span>))<span style="color:#f92672">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 3: Compute upper half quantiles (r9 to r16)</span>
+</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(<span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> delta, <span style="color:#ae81ff">9</span>))<span style="color:#f92672">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 4: Combine and sort quantiles</span>
+</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> list(set(p <span style="color:#f92672">+</span> r))
+</span></span><span style="display:flex;"><span>q_tild<span style="color:#f92672">.</span>sort()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 5: Normalize quantiles to the range [-1, 1]</span>
+</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>Tensor(q_tild)
+</span></span><span style="display:flex;"><span>q <span style="color:#f92672">=</span> q_tild <span style="color:#f92672">/</span> q_tild<span style="color:#f92672">.</span>max()
+</span></span></code></pre></div><pre tabindex="0"><code>tensor([-1.0000, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0910,  0.0000,
+         0.0796,  0.1609,  0.2461,  0.3379,  0.4407,  0.5626,  0.7230,  1.0000])
+</code></pre><p>Now that we have done the qunatile qunatization, lets look how do we qunaitze a block of weights</p>
+<h4 id="step-1-calculate-the-absolute-maximum-absmax"><strong>Step 1: Calculate the Absolute Maximum (absmax)</strong><a hidden class="anchor" aria-hidden="true" href="#step-1-calculate-the-absolute-maximum-absmax">#</a></h4>
+<p>For a given block of $ B $ values $ w_1, w_2, \ldots, w_B $ from the matrix $ W $:</p>
+<p>$$
+M = \max_{i} |w_i|
+$$</p>
 <ul>
-<li>Optimally quantizes zero-centered normal distributions using an information-theoretically optimal 4-bit format.</li>
-<li>Utilizes quantile estimation, normalization to $[-1, 1]$, and asymmetric binning to minimize quantization error.</li>
-<li>Incorporates <strong>Double Quantization</strong> to reduce memory usage for quantization constants, leveraging a two-tier quantization approach.</li>
+<li><strong>Purpose:</strong> This scaling factor $ M $ ensures that all values in the block are normalized within $[-1, 1]$ when divided by $ M $.</li>
 </ul>
-<p>By aligning the quantization bins with the natural distribution of neural network weights, NF4 quantization achieves a highly efficient and compact representation, maintaining performance while reducing memory requirements.</p>
-<p>Based on your images, here&rsquo;s a detailed blog post draft using the same structure and flow:</p>
-<hr>
-<h3 id="nf4-quantization-a-specialized-quantization-technique-for-deep-learning"><strong>NF4 Quantization: A Specialized Quantization Technique for Deep Learning</strong><a hidden class="anchor" aria-hidden="true" href="#nf4-quantization-a-specialized-quantization-technique-for-deep-learning">#</a></h3>
-<hr>
-<p><strong>NF4 Quantization</strong> is an specialized quantization technique that is designed to be information-theoretically optimal for data that follows a zero-centered normal distribution. This is particularly useful for neural network weights, which often have such distributions. NF4 builds upon the concept of <strong>Quantile Quantization (QQ)</strong>.</p>
-<p>It was introduced by Tim Detmers, in the QLoRa, and is one of the most common Datatype for PFET techniques like QLoRa and Adapters.
-NF4 quantization is a powerful technique used in cutting-edge PEFT methods, particularly in QLoRA. Introduced by Dettmers et al. in their QLoRA paper, it has proven highly effective for the efficient fine-tuning of large language models, offering significant performance improvements with reduced computational costs.</p>
-<h3 id="understanding-the-basis-quantile-quantization"><strong>Understanding the Basis: Quantile Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#understanding-the-basis-quantile-quantization">#</a></h3>
-<ul>
-<li><strong>Quantile Quantization</strong> aims to assign an equal number of values from the input tensor to each quantization bin.</li>
-<li><strong>Why Quantile Quantization is Considered Optimal</strong>: QQ minimizes information loss by distributing the data uniformly across all bins. This approach ensures that the quantization error is spread evenly across the range of data values.</li>
-</ul>
-<p>However, computing exact quantiles is <strong>computationally expensive</strong> (It works by estimating the Quantiles of the input tensors throught the emperical CDF). Therefore, quantile approximation algorithms like SRAM quantiles are often used.</p>
-<ul>
-<li><strong>The Downside of Quantile Approximation</strong>: Approximation can result in large quantization errors, especially for outliers, which can be critical in certain applications.</li>
-</ul>
-<h3 id="fixed-distribution-quantization-addressing-the-challenges"><strong>Fixed Distribution Quantization: Addressing the Challenges</strong><a hidden class="anchor" aria-hidden="true" href="#fixed-distribution-quantization-addressing-the-challenges">#</a></h3>
-<p>To mitigate the side effects of quantile approximation, we use <strong>Fixed Distribution Quantization</strong>.</p>
-<ul>
-<li><strong>How Fixed Distribution Quantization Helps</strong>: When input tensors come from a known or fixed distribution, quantile estimation becomes computationally feasible. It provides a constant for quantization that can be more accurately estimated.</li>
-</ul>
-<h3 id="applying-nf4-quantization"><strong>Applying NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#applying-nf4-quantization">#</a></h3>
-<p>Typically, neural network (NN) weights have a zero-centered normal distribution $ N(0, \sigma) $ with some standard deviation $ \sigma $.</p>
-<p>To utilize NF4 quantization:</p>
+<h4 id="step-2-determine-quantization-indices"><strong>Step 2: Determine Quantization Indices</strong><a hidden class="anchor" aria-hidden="true" href="#step-2-determine-quantization-indices">#</a></h4>
+<p>Each value $ w_i $ in the block is quantized as follows:</p>
 <ol>
-<li>
-<p><strong>Normalization</strong>: All weights are scaled to a fixed distribution range, typically set to $[-1, 1]$ for simplicity.</p>
-<ul>
-<li>The weights are converted to this range by normalizing them using their standard deviation $ \sigma $.</li>
-<li>This process effectively transforms all distributions to a standard normal form $ N(0, 1) $.</li>
-</ul>
-</li>
-<li>
-<p><strong>Quantization with NF4</strong>: After normalization, the weights are quantized using a special 4-bit datatype, NF4, that minimizes quantization errors for normally distributed data.</p>
-</li>
+<li><strong>Scale the Value:</strong></li>
 </ol>
-<h3 id="steps-for-nf4-quantization-1"><strong>Steps for NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#steps-for-nf4-quantization-1">#</a></h3>
-<ol>
-<li><strong>Estimate Quantiles</strong>:
-<ul>
-<li>For a 4-bit datatype, determine $ 2^k + 1 = 17 $ quantiles.</li>
-<li>These quantiles, $ q_i $, are defined to distribute the data optimally.</li>
-</ul>
-</li>
+<p>$$
+w&rsquo;_i = \frac{w_i}{M}
+$$</p>
+<p>Now, $ w&rsquo;_i \in [-1, 1] $.</p>
+<ol start="2">
+<li><strong>Map to Nearest Quantization Level:</strong></li>
 </ol>
-<h4 id="quick-sidebar-understanding-quantiles-in-probability-distributions"><strong>Quick Sidebar: Understanding Quantiles in Probability Distributions</strong><a hidden class="anchor" aria-hidden="true" href="#quick-sidebar-understanding-quantiles-in-probability-distributions">#</a></h4>
-<p><strong>Quantiles</strong> are values that divide a dataset or probability distribution into intervals with equal probabilities.</p>
+<p>$$
+c_i = \arg\min_{j} |q_j - w&rsquo;_i|
+$$</p>
 <ul>
-<li>Common quantiles include:
+<li><strong>$ q_j $:</strong> The set of 16 quantization levels within $[-1, 1]$.</li>
+<li><strong>$ c_i $:</strong> The index (from 1 to 16) of the nearest quantization level to $ w&rsquo;_i $.</li>
+</ul>
+<h4 id="step-3-store-quantization-data"><strong>Step 3: Store Quantization Data</strong><a hidden class="anchor" aria-hidden="true" href="#step-3-store-quantization-data">#</a></h4>
+<p>For each block:</p>
 <ul>
-<li><strong>Quartiles</strong>: 4 equal parts.</li>
-<li><strong>Deciles</strong>: 10 equal parts.</li>
+<li><strong>Store $ M $:</strong> The scaling factor.</li>
+<li><strong>Store $ c_1, c_2, \ldots, c_B $:</strong> The quantization indices for each value in the block.</li>
 </ul>
-</li>
-</ul>
-<h3 id="why-use-nf4-quantization"><strong>Why Use NF4 Quantization?</strong><a hidden class="anchor" aria-hidden="true" href="#why-use-nf4-quantization">#</a></h3>
-<p>NF4 quantization offers several advantages:</p>
-<ul>
-<li><strong>Information-Theoretically Optimal</strong>: Especially effective for data with a zero-centered normal distribution.</li>
-<li><strong>Minimized Quantization Error</strong>: Reduces errors that could impact model performance, particularly for neural network weights.</li>
-<li><strong>Computational Efficiency</strong>: Provides a balance between maintaining model accuracy and computational feasibility.</li>
-</ul>
-<h3 id="comparing-nf4-with-other-quantization-methods"><strong>Comparing NF4 with Other Quantization Methods</strong><a hidden class="anchor" aria-hidden="true" href="#comparing-nf4-with-other-quantization-methods">#</a></h3>
-<ul>
-<li><strong>Uniform Quantization</strong>: Divides the data range into equal intervals without considering the data distribution, leading to potential information loss.</li>
-<li><strong>Fixed-Point and Linear Quantization</strong>: These methods do not account for the underlying distribution, making them less optimal compared to NF4 for normally distributed data.</li>
-</ul>
-<h3 id="applications-of-nf4-quantization"><strong>Applications of NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#applications-of-nf4-quantization">#</a></h3>
-<p>NF4 quantization is especially useful in scenarios where neural network weights are normally distributed, such as in deep learning models. Benefits include:</p>
-<ul>
-<li><strong>Memory Efficiency</strong>: Reduces the memory footprint of models.</li>
-<li><strong>Faster Inference</strong>: Optimizes performance on hardware with limited precision.</li>
-<li><strong>Maintained Accuracy</strong>: Keeps the model’s performance close to that of higher-precision representations.</li>
-</ul>
-<h3 id="conclusion"><strong>Conclusion</strong><a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h3>
-<p>NF4 quantization is a powerful technique for optimizing neural networks with normally distributed weights. It offers an information-theoretically optimal way to quantize data while balancing computational cost and model accuracy. As deep learning continues to evolve, methods like NF4 quantization will play a critical role in deploying efficient and accurate AI models.</p>
-<hr>
-<p>Feel free to adjust or add sections based on your audience&rsquo;s technical level or specific interests!</p>
-<h3 id="exact-qunantile-calculations">Exact Qunantile Calculations<a hidden class="anchor" aria-hidden="true" href="#exact-qunantile-calculations">#</a></h3>
-<p>This section is optional (Read only if you want to know exactly how these Quantiles are calculated)</p>
-<p>We will use, 2 bit qunatization for this explanation, the 4 bit quantization is exactly the same process, just some more Quantile calculations. First we will assuse we have out weights uniformly distributed instead of a normal distributions,(just to get out intuitions right.)</p>
-<h4 id="case-1-uniform-distribution">Case 1: Uniform Distribution<a hidden class="anchor" aria-hidden="true" href="#case-1-uniform-distribution">#</a></h4>
-<p>So the assumptions here are that our data is evenly distributed between [-1,1], so we have 2 bits to represet them, so instead of naively representing them as [-1,-0.5], [-0.5,1],[1,0.5],[0.5,1] (this would be information theoriticall suboptimal), we can use the our 4 representation as 4 partitions, and qunatize our continious distribution this way, [-1,-0.6],[-0.6,-0.2],[-0.2,0.2],[0.2,0.6],[0.6,1],
-where each bit represents the partition.</p>
-<p>we can use the Formulas to arrive at the same qunatiles.</p>
-<table>
-<thead>
-<tr>
-<th>Quantization Method</th>
-<th>On the fly quantization</th>
-<th>CPU</th>
-<th>CUDA GPU</th>
-<th>RoCm GPU (AMD)</th>
-<th>Metal (Apple Silicon)</th>
-<th>torch.compile() support</th>
-<th>Number of bits</th>
-<th>Supports fine-tuning (through PEFT)</th>
-<th>Serializable with 🤗 transformers</th>
-<th>🤗 transformers support</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>AQLM</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>1 / 2</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-</tr>
-<tr>
-<td>AWQ</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>?</td>
-<td>4</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-</tr>
-<tr>
-<td>bitsandbytes</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>EETQ</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>?</td>
-<td>8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>GGUF / GGML</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>1 - 8</td>
-<td>See GGUF section</td>
-<td>See GGUF section</td>
-<td>See GGUF section</td>
-<td></td>
-</tr>
-<tr>
-<td>GPTQ</td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>2 - 3 - 4 - 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>HQQ</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>1 - 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>Quanto</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>2 / 4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>FBGEMM_FP8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:green">●</span></td>
-<td>8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-<tr>
-<td>torchao</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:red">●</span></td>
-<td><span style="color:red">●</span></td>
-<td>partial support (int4 weight only)</td>
-<td>4 / 8</td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td><span style="color:green">●</span></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<p><strong>NF4 Quantization Explained</strong></p>
-<p><strong>Introduction</strong></p>
-<p>NF4 quantization (NormalFloat 4-bit quantization) is a specialized quantization technique designed to efficiently compress neural network weights that follow a zero-centered normal (Gaussian) distribution. It leverages the statistical properties of normal distributions to minimize quantization error by allocating quantization levels based on the quantiles of the distribution.</p>
-<hr>
-<h3 id="understanding-quantile-quantization"><strong>Understanding Quantile Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#understanding-quantile-quantization">#</a></h3>
-<p><strong>Quantile Quantization</strong> aims to distribute data points evenly across quantization bins, ensuring that each bin contains an equal number of values. This approach is considered information-theoretically optimal for data following a known distribution, as it minimizes the average quantization error.</p>
-<hr>
-<h3 id="nf4-quantization-steps"><strong>NF4 Quantization Steps</strong><a hidden class="anchor" aria-hidden="true" href="#nf4-quantization-steps">#</a></h3>
-<ol>
-<li>
-<p><strong>Normalization of Weights</strong></p>
-<ul>
-<li><strong>Purpose</strong>: Transform the neural network weights to a standard normal distribution $ N(0, 1) $ to match the quantization levels.</li>
-<li><strong>Method</strong>: Divide each weight $ w_i $ by the standard deviation $ \sigma $ of the weights in the tensor.
-$$
-w_i&rsquo; = \frac{w_i}{\sigma}
-$$</li>
-</ul>
-</li>
-<li>
-<p><strong>Determining Quantization Levels</strong></p>
-<ul>
-<li><strong>Number of Levels</strong>: For 4-bit quantization, $ k = 4 $, resulting in $ 2^k = 16 $ quantization levels.</li>
-<li><strong>Computing Quantiles</strong>:
-<ul>
-<li>Calculate the cumulative probabilities $ p_i $ corresponding to the quantization levels.</li>
-<li>Avoid the infinite tails by setting a small offset $ \delta $. A common choice is:
-$$
-\delta = \frac{1}{2(2^k + 1)}
-$$</li>
-<li>For NF4 ($ k = 4 $):
-$$
-\delta = \frac{1}{2(16 + 1)} = \frac{1}{34} \approx 0.0294
-$$</li>
-<li>Compute the cumulative probabilities:
-$$
-p_i = \delta + \left( \frac{i - 1}{2^k - 1} \right) \times (1 - 2\delta), \quad i = 1, 2, &hellip;, 16
-$$</li>
-</ul>
-</li>
-<li><strong>Calculating Quantiles</strong>:
-<ul>
-<li>Use the inverse cumulative distribution function (quantile function) $ \Phi^{-1} $ of the standard normal distribution:
-$$
-q_i = \Phi^{-1}(p_i)
-$$</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Normalizing Quantization Levels</strong></p>
-<ul>
-<li><strong>Normalization</strong>: Scale the quantiles to the desired range, typically $[-1, 1]$.
-$$
-q_i&rsquo; = \frac{q_i}{|q_{\text{max}}|}
-$$
-where $ q_{\text{max}} = \max(|q_1|, |q_{16}|) $.</li>
-</ul>
-</li>
-<li>
-<p><strong>Quantizing the Weights</strong></p>
-<ul>
-<li><strong>Process</strong>:
-<ul>
-<li>For each normalized weight $ w_i&rsquo; $, find the nearest quantization level $ q_j&rsquo; $.</li>
-<li>Assign the quantization index $ c_i $ corresponding to $ q_j&rsquo; $:
-$$
-c_i = \arg\min_j |w_i&rsquo; - q_j&rsquo;|
-$$</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Storing Scaling Factors</strong></p>
-<ul>
-<li><strong>Block-wise Quantization</strong>: Divide the weight tensor into blocks (e.g., of size 64).</li>
-<li><strong>Scaling Factor</strong>: For each block, store the absolute maximum value $ M $ to rescale the quantized weights during dequantization.</li>
-</ul>
-</li>
-<li>
-<p><strong>Dequantization</strong></p>
-<ul>
-<li><strong>Reconstruction</strong>:
-$$
-w_i \approx q_{c_i}&rsquo; \times M \times \sigma
-$$
-where $ M $ is the block&rsquo;s scaling factor, and $ \sigma $ is the standard deviation used during normalization.</li>
-</ul>
-</li>
-</ol>
-<hr>
-<h3 id="calculating-exact-quantiles-for-3-bit-quantization"><strong>Calculating Exact Quantiles for 3-bit Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#calculating-exact-quantiles-for-3-bit-quantization">#</a></h3>
-<p>For <strong>3-bit quantization</strong>, $ k = 3 $, resulting in $ 2^k = 8 $ quantization levels.</p>
-<p><strong>Steps:</strong></p>
-<ol>
-<li>
-<p><strong>Set the Offset $ \delta $</strong></p>
-<ul>
-<li>Calculate $ \delta $:
-$$
-\delta = \frac{1}{2(2^k + 1)} = \frac{1}{2(8 + 1)} = \frac{1}{18} \approx 0.0556
-$$</li>
-</ul>
-</li>
-<li>
-<p><strong>Compute Cumulative Probabilities $ p_i $</strong></p>
-<ul>
-<li>
-<p>For $ i = 1 $ to $ 8 $:
-$$
-p_i = \delta + \left( \frac{i - 1}{2^k - 1} \right) \times (1 - 2\delta)
-$$
-Since $ 1 - 2\delta = 1 - \frac{2}{18} = \frac{8}{9} \approx 0.8889 $.</p>
-</li>
-<li>
-<p>Compute $ p_i $:</p>
-<ul>
-<li>$ p_1 = 0.0556 + 0 \times 0.8889 = 0.0556 $</li>
-<li>$ p_2 = 0.0556 + \frac{1}{7} \times 0.8889 \approx 0.1825 $</li>
-<li>$ p_3 = 0.0556 + \frac{2}{7} \times 0.8889 \approx 0.3095 $</li>
-<li>$ p_4 = 0.0556 + \frac{3}{7} \times 0.8889 \approx 0.4365 $</li>
-<li>$ p_5 = 0.0556 + \frac{4}{7} \times 0.8889 \approx 0.5635 $</li>
-<li>$ p_6 = 0.0556 + \frac{5}{7} \times 0.8889 \approx 0.6905 $</li>
-<li>$ p_7 = 0.0556 + \frac{6}{7} \times 0.8889 \approx 0.8175 $</li>
-<li>$ p_8 = 0.0556 + \frac{7}{7} \times 0.8889 = 0.9444 $</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Calculate Quantiles $ q_i $</strong></p>
-<ul>
-<li>Use $ q_i = \Phi^{-1}(p_i) $:
-<ul>
-<li>$ q_1 = \Phi^{-1}(0.0556) \approx -1.5932 $</li>
-<li>$ q_2 = \Phi^{-1}(0.1825) \approx -0.9022 $</li>
-<li>$ q_3 = \Phi^{-1}(0.3095) \approx -0.4966 $</li>
-<li>$ q_4 = \Phi^{-1}(0.4365) \approx -0.1606 $</li>
-<li>$ q_5 = \Phi^{-1}(0.5635) \approx 0.1606 $</li>
-<li>$ q_6 = \Phi^{-1}(0.6905) \approx 0.4966 $</li>
-<li>$ q_7 = \Phi^{-1}(0.8175) \approx 0.9022 $</li>
-<li>$ q_8 = \Phi^{-1}(0.9444) \approx 1.5932 $</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Normalize Quantiles to $[-1, 1]$</strong></p>
-<ul>
-<li>Divide each $ q_i $ by $ q_{\text{max}} = 1.5932 $:
-$$
-q_i&rsquo; = \frac{q_i}{1.5932}
-$$
-<ul>
-<li>$ q_1&rsquo; = -1 $</li>
-<li>$ q_2&rsquo; = -0.5665 $</li>
-<li>$ q_3&rsquo; = -0.3119 $</li>
-<li>$ q_4&rsquo; = -0.1008 $</li>
-<li>$ q_5&rsquo; = 0.1008 $</li>
-<li>$ q_6&rsquo; = 0.3119 $</li>
-<li>$ q_7&rsquo; = 0.5665 $</li>
-<li>$ q_8&rsquo; = 1 $</li>
-</ul>
-</li>
-</ul>
-</li>
-</ol>
-<hr>
-<h3 id="example-of-nf4-quantization"><strong>Example of NF4 Quantization</strong><a hidden class="anchor" aria-hidden="true" href="#example-of-nf4-quantization">#</a></h3>
-<p><strong>Given:</strong></p>
-<ul>
-<li>A block of weights: $ w = [-2.0, -1.5, -0.5, 0.0, 0.5, 1.5, 2.0] $</li>
-</ul>
-<p><strong>Steps:</strong></p>
-<ol>
-<li>
-<p><strong>Normalization</strong></p>
-<ul>
-<li>Compute the standard deviation $ \sigma $ of $ w $:
-$$
-\sigma = \text{std}(w) \approx 1.29099
-$$</li>
-<li>Normalize weights:
-$$
-w_i&rsquo; = \frac{w_i}{\sigma}
-$$
-<ul>
-<li>$ w&rsquo; = [-1.5492, -1.1619, -0.3873, 0.0, 0.3873, 1.1619, 1.5492] $</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Map to Quantization Levels</strong></p>
-<ul>
-<li>Use the normalized quantization levels from the previous step.</li>
-<li>For each $ w_i&rsquo; $, find the nearest $ q_j&rsquo; $:
-<ul>
-<li>$ w_1&rsquo; = -1.5492 $ maps to $ q_1&rsquo; = -1 $</li>
-<li>$ w_2&rsquo; = -1.1619 $ maps to $ q_1&rsquo; = -1 $</li>
-<li>$ w_3&rsquo; = -0.3873 $ maps to $ q_3&rsquo; = -0.3119 $</li>
-<li>$ w_4&rsquo; = 0.0 $ maps to $ q_5&rsquo; = 0.1008 $</li>
-<li>$ w_5&rsquo; = 0.3873 $ maps to $ q_6&rsquo; = 0.3119 $</li>
-<li>$ w_6&rsquo; = 1.1619 $ maps to $ q_8&rsquo; = 1 $</li>
-<li>$ w_7&rsquo; = 1.5492 $ maps to $ q_8&rsquo; = 1 $</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Assign Quantization Indices</strong></p>
-<ul>
-<li>Store the indices $ c_i $ corresponding to $ q_j&rsquo; $.</li>
-</ul>
-</li>
-<li>
-<p><strong>Dequantization</strong></p>
-<ul>
-<li>Multiply the quantized values by $ \sigma $ to approximate the original weights:
-$$
-w_i \approx q_{c_i}&rsquo; \times \sigma
-$$
-<ul>
-<li>For example, for $ w_3 $:
-$$
-w_3 \approx (-0.3119) \times 1.29099 \approx -0.4029
-$$</li>
-</ul>
-</li>
-</ul>
-</li>
-</ol>
-<p><strong>Result:</strong></p>
-<ul>
-<li>Original Weights: $ [-2.0, -1.5, -0.5, 0.0, 0.5, 1.5, 2.0] $</li>
-<li>Quantized Weights: $ [-1.0, -1.0, -0.3119, 0.1008, 0.3119, 1.0, 1.0] \times \sigma $</li>
-<li>Approximate Weights after Dequantization:
-$$
-[-1.5932, -1.5932, -0.4029, 0.1300, 0.4029, 1.5932, 1.5932]
-$$</li>
-</ul>
-<p><strong>Note:</strong> The dequantized weights are close approximations of the original weights, demonstrating the effectiveness of NF4 quantization.</p>
-<hr>
-<h3 id="summary-1"><strong>Summary</strong><a hidden class="anchor" aria-hidden="true" href="#summary-1">#</a></h3>
-<ul>
-<li><strong>NF4 Quantization</strong> efficiently compresses normally distributed neural network weights by mapping them to quantization levels derived from the quantiles of the standard normal distribution.</li>
-<li><strong>Quantiles</strong> are calculated using the inverse CDF of the standard normal distribution at evenly spaced cumulative probabilities adjusted with a small offset $ \delta $.</li>
-<li><strong>Normalization</strong> ensures that both the weights and quantization levels are in the same range, typically $[-1, 1]$.</li>
-<li><strong>Quantization and Dequantization</strong> involve mapping weights to the nearest quantization levels and reconstructing approximate weights using stored scaling factors.</li>
-</ul>
-<hr>
-<p>By leveraging the statistical properties of normal distributions, NF4 quantization minimizes quantization errors and maintains the performance of neural networks while significantly reducing memory requirements.</p>
-<p>Here’s a refined version for your blog:</p>
-<hr>
-<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia starting with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
-<p>As shown in the diagram, Nvidia GPUs convert FP32 tensors into TF32 tensors for matrix multiplication, then accumulate the results back in FP32. This process significantly speeds up calculations compared to performing them entirely in FP32. TF32 retains the 8-bit exponent of FP32 but reduces the mantissa to 10 bits, striking a balance between precision and speed.</p>
-<p>With dedicated hardware support for TF32, deep learning workloads see substantial performance improvements without much compromise in accuracy. TF32 is particularly useful for training large neural networks, as it enables faster computation while maintaining nearly the same numerical stability as FP32.</p>
-<hr>
-<p>This rephrasing clarifies the role and benefits of TF32 in deep learning and the context of its use in Nvidia GPUs.</p>
-<p>Here’s the revised version with an explanation of the figure:</p>
-<hr>
-<h3 id="tf32-tensorfloat-32">TF32 (TensorFloat 32)<a hidden class="anchor" aria-hidden="true" href="#tf32-tensorfloat-32">#</a></h3>
-<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
-<p>From the Ampere architecture onwards, all calculations involving FP32 matrices are done as shown in the figure. When performing matrix multiplications, the GPU automatically converts FP32 matrices into TF32 precision. The actual multiplication is done using TF32, which retains FP32’s 8-bit exponent but reduces the mantissa to 10 bits. Once the operation is complete, the results are accumulated back into FP32 format for higher precision in the final outcome.</p>
-<p>This process leverages TF32 for speed during calculations, while maintaining the precision of FP32 for the final result. Essentially, it balances the need for faster computation with the demand for precision in neural network training.</p>
-<hr>
-<p>This version focuses on explaining the role of TF32 in FP32 matrix operations and ties it directly to the figure you provided.</p>
-<h3 id="bf16-1">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16-1">#</a></h3>
-<p>BF16, also known as Brain Float 16, was developed by Google Brain and became popular around 2019. It’s now one of the most widely used formats for training and fine-tuning LLMs. The main advantage of BF16 is that it retains the same number of exponent bits as FP32, making it easier to load a model in 16-bit precision and proceed with fine-tuning without running into &ldquo;NaN&rdquo; errors.</p>
-<p>While BF16 sacrifices some precision compared to FP32, research has shown that the difference in performance when training or fine-tuning models on BF16 vs. FP32 is minimal. Given the tradeoff between slightly reduced precision and the substantial reduction in model size, using BF16 is often well worth it for modern deep learning tasks.</p>
-<p>Let&rsquo;s break down the equation step by step and clarify each part.</p>
-<h3 id="mixed-precision-decomposition-equation">Mixed-Precision Decomposition Equation:<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition-equation">#</a></h3>
-<p>[
-C_{f16} \approx \sum_{h \in O} A^h_{f16} \cdot B^h_{f16} + S \cdot \sum_{h \notin O} Q(A^h_{i8}) \cdot Q(B^h_{i8})
-]</p>
-<h4 id="what-does-each-symbol-represent">What Does Each Symbol Represent?<a hidden class="anchor" aria-hidden="true" href="#what-does-each-symbol-represent">#</a></h4>
-<ol>
-<li>
-<p><strong>( C_{f16} )</strong>:</p>
-<ul>
-<li>This is the final result matrix after performing matrix multiplication, but in <strong>FP16 (16-bit floating point)</strong> precision. It is the combination of high-precision and low-precision matrix multiplication results.</li>
-</ul>
-</li>
-<li>
-<p><strong>( A^h_{f16}, B^h_{f16} )</strong>:</p>
-<ul>
-<li>These are parts of the <strong>input matrix</strong> ( A ) and the <strong>weight matrix</strong> ( B ), but only for the <strong>outlier dimensions</strong>. The superscript ( h \in O ) refers to the outlier feature dimensions where the values are large, and ( A^h_{f16} ) and ( B^h_{f16} ) remain in <strong>FP16 precision</strong> because these are important for model performance.</li>
-</ul>
-</li>
-<li>
-<p><strong>( Q(A^h_{i8}), Q(B^h_{i8}) )</strong>:</p>
-<ul>
-<li>These are the <strong>quantized</strong> (converted from FP16 to Int8) versions of matrices ( A ) and ( B ), but for the non-outlier dimensions. The superscript ( h \notin O ) refers to the feature dimensions that are <strong>not outliers</strong>, so they are quantized into Int8 precision.</li>
-</ul>
-</li>
-<li>
-<p><strong>( O )</strong>:</p>
-<ul>
-<li>( O ) is the set of <strong>outlier dimensions</strong>, i.e., feature dimensions where the values are large and can&rsquo;t be accurately represented in Int8 without losing important information.</li>
-</ul>
-</li>
-<li>
-<p><strong>( S )</strong>:</p>
-<ul>
-<li>( S ) is a <strong>scaling factor</strong> that denormalizes the quantized matrices to maintain accuracy. After performing Int8 matrix multiplication, we multiply the result by ( S ) to scale it back to the original FP16 range.</li>
-</ul>
-</li>
-</ol>
-<h3 id="breaking-down-the-equation">Breaking Down the Equation:<a hidden class="anchor" aria-hidden="true" href="#breaking-down-the-equation">#</a></h3>
-<p>[
-C_{f16} \approx \sum_{h \in O} A^h_{f16} \cdot B^h_{f16}
-]</p>
-<ul>
-<li>This part represents the matrix multiplication of the <strong>outlier dimensions</strong>.</li>
-<li>Outliers are important because they have large values, so they are kept in <strong>FP16 precision</strong> to maintain accuracy.</li>
-<li>The summation ( \sum_{h \in O} ) goes over all the <strong>outlier dimensions</strong> ( h ), multiplying the corresponding parts of the matrices ( A^h_{f16} ) and ( B^h_{f16} ).</li>
-</ul>
-<p>[</p>
-<ul>
-<li>S \cdot \sum_{h \notin O} Q(A^h_{i8}) \cdot Q(B^h_{i8})
-]</li>
-</ul>
-<ul>
-<li>This part represents the matrix multiplication of the <strong>non-outlier dimensions</strong>.</li>
-<li>Since the values in these dimensions are smaller, they can be quantized into <strong>Int8</strong> to save memory.</li>
-<li>The summation ( \sum_{h \notin O} ) goes over the <strong>non-outlier dimensions</strong> ( h ), multiplying the quantized parts of matrices ( Q(A^h_{i8}) ) and ( Q(B^h_{i8}) ).</li>
-<li>After the matrix multiplication, the result is scaled back to the FP16 range by multiplying it with the <strong>scaling factor</strong> ( S ).</li>
-</ul>
-<h3 id="in-summary">In Summary:<a hidden class="anchor" aria-hidden="true" href="#in-summary">#</a></h3>
-<ul>
-<li><strong>Outlier dimensions</strong> are handled in <strong>FP16</strong> precision to preserve accuracy because their large values are critical.</li>
-<li><strong>Non-outlier dimensions</strong> are quantized to <strong>Int8</strong> to save memory, and the result is scaled back using ( S ) after multiplication.</li>
-<li>The final result, ( C_{f16} ), is a combination of both the high-precision (FP16) and low-precision (Int8) parts.</li>
-</ul>
-<p>This approach balances <strong>precision</strong> (for outliers) and <strong>efficiency</strong> (for non-outliers), allowing large models to be more memory-efficient while maintaining performance.</p>
+<p><strong>Dequantization:</strong> To reconstruct the original values (approximately):</p>
+<p>$$
+w_i \approx c_i \times M
+$$</p>
+<h2 id="code-implementation-for-nf4-and-llmint8">Code Implementation for NF4 and LLM.int8()<a hidden class="anchor" aria-hidden="true" href="#code-implementation-for-nf4-and-llmint8">#</a></h2>
+<p>a simple function for model loading</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">load_model</span>(model_name, quantization_config<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>, dtype<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
+</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> AutoModelForCausalLM<span style="color:#f92672">.</span>from_pretrained(
+</span></span><span style="display:flex;"><span>        model_name,
+</span></span><span style="display:flex;"><span>        quantization_config<span style="color:#f92672">=</span>quantization_config,
+</span></span><span style="display:flex;"><span>        device_map<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;auto&#34;</span>,
+</span></span><span style="display:flex;"><span>        torch_dtype<span style="color:#f92672">=</span>dtype,
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># for memory-usage calculation logic please refer to my github</span>
+</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> memory_used
+</span></span></code></pre></div><p>How to load model in LLM.int8() and NF4</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 8-bit quantization</span>
+</span></span><span style="display:flex;"><span>quantization_config_8bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
+</span></span><span style="display:flex;"><span>    load_in_8bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    llm_int8_threshold<span style="color:#f92672">=</span><span style="color:#ae81ff">6.0</span>,
+</span></span><span style="display:flex;"><span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4-bit quantization</span>
+</span></span><span style="display:flex;"><span>quantization_config_4bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
+</span></span><span style="display:flex;"><span>    load_in_4bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
+</span></span><span style="display:flex;"><span>    bnb_4bit_quant_type<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;nf4&#34;</span>,
+</span></span><span style="display:flex;"><span>    bnb_4bit_compute_dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16,
+</span></span><span style="display:flex;"><span>    bnb_4bit_use_double_quant<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>)
+</span></span></code></pre></div><p>Load and compare the models, using GPT2 for simplicity.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
+</span></span><span style="display:flex;"><span>    model_name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gpt2&#34;</span>
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    memory_without_quant_fp32 <span style="color:#f92672">=</span> load_model(model_name)
+</span></span><span style="display:flex;"><span>    memory_without_quant_bf16 <span style="color:#f92672">=</span> load_model(model_name, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span><span style="display:flex;"><span>    memory_with_8bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_8bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span><span style="display:flex;"><span>    memory_with_4bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_4bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
+</span></span></code></pre></div><pre tabindex="0"><code>GPU Memory Usage Comparison:
+Without quantization (FP32): 1029.47 MB
+Without quantization (BF16): 523.49 MB
+With 8-bit quantization (BF16 compute): 370.99 MB
+With 4-bit quantization (BF16 compute): 272.46 MB
+
+Memory Savings (compared to FP32):
+BF16 saved: 505.98 MB
+BF16 reduction percentage: 49.15%
+8-bit quantization saved: 658.48 MB
+8-bit reduction percentage: 63.96%
+4-bit quantization saved: 757.01 MB
+4-bit reduction percentage: 73.53%
+</code></pre><h2 id="some-experiments">some experiments<a hidden class="anchor" aria-hidden="true" href="#some-experiments">#</a></h2>
+<p>Below are results of some of the experiments that i ran, for the code refer to my github.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Summary:
+</span></span><span style="display:flex;"><span>FP32: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">50.08</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">97.20</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span>BF16: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">83.37</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">8</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">19.37</span> tokens<span style="color:#f92672">/</span>s
+</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">53.75</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">54.28</span> tokens<span style="color:#f92672">/</span>s
+</span></span></code></pre></div><p>Remarks
+The throughput really took a hit with the LLM.int8() implementation, cause this might not be optimized, the close to 40% decrease from the FP32, to 4 Bit for the through-put needs can be explainede as the, because even thoght the model weights are storred in 8 bits, and my GPU supports 8 bit calculations, the calculations are performed in 16bit, as set up by us <code>bnb_4bit_compute_dtype=torch.bfloat16</code>, the through put gets a hit causse of this qunatizing and dequnatizing process.</p>
+<p>so you might rightly ask<strong>why are we doing calculaitons in 16bit</strong>, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.</p>
 
 
   </div>
