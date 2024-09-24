@@ -535,15 +535,16 @@ While vector-wise quantization works well for most situations, **outliers**—sp
 **NF4 Quantization** is a specialized technique optimized for data with a zero-centered normal distribution, such as neural network weights. It builds on **Quantile Quantization (QQ)**, which distributes values uniformly across bins to minimize information loss. However, computing exact quantiles is computationally expensive. To address this, **Fixed Distribution Quantization** leverages the known normal distribution of weights, allowing NF4 to efficiently estimate quantiles. This method, introduced in **QLoRA**, is particularly effective in fine-tuning large language models, offering strong performance while reducing computational costs and memory usage.
 
 
-
 ### NF4 implementation details
-The NF4 datatype is used to quantize values in the interval $[-1, 1]$. Since NF4 is a 4-bit code, it consists of 16 values, $q_1, \dots, q_{16} \in [-1, 1]$.
+NF4 quantization aims to efficiently represent neural network weights, which are assumed to be normally distributed, using only 4 bits per weight. This means we have 16 possible quantization levels ($ 2^4 = 16 $) to represent the continuous range of weight values. The challenge is to choose these 16 levels $ q_j $ within the interval $[-1, 1]$ (This is just a hyperparamater chosen by the QLoRA Authors) in a way that minimizes the error introduced by quantization.
 
-### **4. Designing the Quantization Levels $ q_j $**
+**Why Use Quantiles of the Normal Distribution?**
 
-Determining the optimal set of 16 quantization levels is crucial for minimizing quantization error. NF4 leverages the properties of the normal distribution to design these levels, based on the observation that neural network parameters are approximately normally distributed.
+Since the weights are normally distributed, it's logical to choose quantization levels that align with the properties of the normal distribution. Specifically, we use the quantiles of the standard normal distribution to determine the $ q_j $ values. This approach ensures that each quantization level represents an equal portion of the probability mass of the distribution, effectively minimizing the quantization error across the range where data points are most likely to occur.
 
-#### **Step 4: Calculate Quantization Levels**
+When working with quantiles near the extremes (close to 0 or 1), the inverse cumulative distribution function (CDF) of the normal distribution approaches negative or positive infinity. To avoid infinite quantile values at the tails, we introduce a small positive value $ \delta $ to slightly offset the extreme probabilities.
+
+### **Calculate Quantization Levels**
 
 1. **Set $ \delta $:**
 
