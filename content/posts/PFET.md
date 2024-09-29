@@ -6,36 +6,36 @@ draft: false
 
 ### Motivation for PEFT
 
-Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, "Why did you buy Twitter?" The model responds as Elon Musk would.
+Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, "Why did you buy Twitter?" The model responds as Elon Musk would.
 
 Now there are primarily three approaches to solving this:
-1. Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk's interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency, another issue is of the context length. LLMs have a limited context length and we might have more data that can fit into the context length of the model.
+1. Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk's interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.
 
-2. Full Fine-Tuning: Fine-tune your pre-trained model (and sometimes your instruction-tuned model as well), updating all the parameters of the model. While full fine-tuning can yield accurate results, it is a very expensive task. The more concerning issue is scalability and serving the model. It would be an enormous and wasteful undertaking for a company to fine-tune its model for all possible personas.
+2. Full Fine-Tuning: Fine-tune your pre-trained model, updating all the parameters of the model. While full fine-tuning can yield accurate results,but it is a very expensive task. The more concerning issue is scalability and serving the model, It would be an enormous and wasteful undertaking for a company to store hundreds of different finetuned models for all possible personas.
 
-3. This is where technique like PFET fitin. Instead of updating all the model's parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.
+3. This is where technique like PFET fit in. Instead of updating all the model's parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.
 
 ### Categorization of PFET Algorithms
 
-This is an acitive area of research in NLP right now, There are dosens of Papers comming out on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in mind so as not to get overwelmed by these different techniques.
+This is an acitive area of research in NLP right now, There are dozens of excellent Papers comming out every year, on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in place to understand how these techniques fit into the broader landscape, so as not to get overwelmed by these different techniques.
 
-So PFET can be broadly classified into four:
+PFET can be broadly classified into four:
 
-1. Additive Fine-tuning
-   1. a. Adapter-based Fine-tuning
-   2. b. Soft Prompt-based Fine-tuning
+1. **Additive Fine-tuning:** Modifies the model architecture by adding new trainable modules or parameters.
 
-2. Selective Fine-tuning
+2. **Selective Fine-tuning:** Makes only a subset of the model's parameters trainable during the fine-tuning process.
 
-3. Reparameterized Fine-tuning
-   3. a. Low-rank Decomposition
-   3. b. LoRA Derivatives
+3. **Reparameterized Fine-tuning:** Constructs a low-dimensional reparameterization of the original model parameters for training, then transforms it back for inference.
 
-4. Hybrid Fine-tuning
+4. **Hybrid Fine-tuning:** Combines advantages from different PEFT methods to create a unified PEFT model.
 
-One colud argue for a fourth kind like, Hybrid Finetung which incorporates elemts of more than one type, for now lets just work with four.
-
-##### fig 4 from, Different types of PFET
+<div style="text-align: center;">
+  <img src="/images/PEFT/survey_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 
 ### Background
 
