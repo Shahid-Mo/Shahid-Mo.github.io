@@ -17,13 +17,6 @@
 At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary.</description>
     </item>
     <item>
-      <title>Draft: Quantization in LLMS (Part 1): LLM.int8(), NF4</title>
-      <link>http://localhost:1313/posts/draft_quant/</link>
-      <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
-      <guid>http://localhost:1313/posts/draft_quant/</guid>
-      <description>Mixed-Precision Decomposition: This technique applies to all model sizes and involves quantizing only the weights that fall within a defined threshold, typically $[-6, 6]$. Any outliers exceeding this range are preserved in higher precision formats like FP16 or FP32. This approach ensures that critical outlier weights—responsible for much of the model&amp;rsquo;s performance—are maintained at higher precision, avoiding the accuracy loss that would occur if they were forced into lower precision formats.</description>
-    </item>
-    <item>
       <title>From Retrieval to RAG (Part - 1)</title>
       <link>http://localhost:1313/posts/from-retrieval-to-rag-part1/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
@@ -37,7 +30,18 @@ Quantization Aware Training (QAT): This involves training the model with reduced
       <link>http://localhost:1313/posts/pfet/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/pfet/</guid>
-      <description>Prompt Tuning Prefix Tuning LoRA</description>
+      <description>Motivation for PEFT Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, &amp;ldquo;Why did you buy Twitter?&amp;rdquo; The model responds as Elon Musk would.
+Now there are primarily three approaches to solving this:
+Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&amp;rsquo;s interviews and tweets) as context, and then tag on your question.</description>
+    </item>
+    <item>
+      <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>
+      <link>http://localhost:1313/posts/draft_quant/</link>
+      <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/draft_quant/</guid>
+      <description>Introduction to Quantization Whether you&amp;rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
+Quantization can be broadly categorized into two main approaches:
+Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.</description>
     </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>

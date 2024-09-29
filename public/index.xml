@@ -30,7 +30,9 @@ Quantization Aware Training (QAT): This involves training the model with reduced
       <link>http://localhost:1313/posts/pfet/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/pfet/</guid>
-      <description>Prompt Tuning Prefix Tuning LoRA</description>
+      <description>Motivation for PEFT Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, &amp;ldquo;Why did you buy Twitter?&amp;rdquo; The model responds as Elon Musk would.
+Now there are primarily three approaches to solving this:
+Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&amp;rsquo;s interviews and tweets) as context, and then tag on your question.</description>
     </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>
