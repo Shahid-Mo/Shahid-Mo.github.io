@@ -38,11 +38,11 @@
       <guid>http://localhost:1313/posts/pfet/</guid>
       <description>&lt;h1 id=&#34;sara-now-has-access-to-push&#34;&gt;sara now has access to push&lt;/h1&gt;
 &lt;h3 id=&#34;motivation-for-peft&#34;&gt;Motivation for PEFT&lt;/h3&gt;
-&lt;p&gt;Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, &amp;ldquo;Why did you buy Twitter?&amp;rdquo; The model responds as Elon Musk would.&lt;/p&gt;
+&lt;p&gt;Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, &amp;ldquo;Why did you buy Twitter?&amp;rdquo; The model responds as Elon Musk would.&lt;/p&gt;
 &lt;p&gt;Now there are primarily three approaches to solving this:&lt;/p&gt;
 &lt;ol&gt;
 &lt;li&gt;
-&lt;p&gt;Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&amp;rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency, another issue is of the context length. LLMs have a limited context length and we might have more data that can fit into the context length of the model.&lt;/p&gt;</description>
+&lt;p&gt;Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&amp;rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.&lt;/p&gt;</description>
     </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>

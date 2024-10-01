@@ -9,11 +9,11 @@
 <meta name="keywords" content="">
 <meta name="description" content="sara now has access to push
 Motivation for PEFT
-Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.
+Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.
 Now there are primarily three approaches to solving this:
 
 
-Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency, another issue is of the context length. LLMs have a limited context length and we might have more data that can fit into the context length of the model.">
+Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/pfet/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
@@ -145,44 +145,43 @@ Context-based approach: Take an LLM and provide it with extensive data about the
   </header> 
   <div class="post-content"><h1 id="sara-now-has-access-to-push">sara now has access to push<a hidden class="anchor" aria-hidden="true" href="#sara-now-has-access-to-push">#</a></h1>
 <h3 id="motivation-for-peft">Motivation for PEFT<a hidden class="anchor" aria-hidden="true" href="#motivation-for-peft">#</a></h3>
-<p>Consider a company like character.ai, which provides different personas for users. For instance, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.</p>
+<p>Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.</p>
 <p>Now there are primarily three approaches to solving this:</p>
 <ol>
 <li>
-<p>Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency, another issue is of the context length. LLMs have a limited context length and we might have more data that can fit into the context length of the model.</p>
+<p>Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.</p>
 </li>
 <li>
-<p>Full Fine-Tuning: Fine-tune your pre-trained model (and sometimes your instruction-tuned model as well), updating all the parameters of the model. While full fine-tuning can yield accurate results, it is a very expensive task. The more concerning issue is scalability and serving the model. It would be an enormous and wasteful undertaking for a company to fine-tune its model for all possible personas.</p>
+<p>Full Fine-Tuning: Fine-tune your pre-trained model, updating all the parameters of the model. While full fine-tuning can yield accurate results,but it is a very expensive task. The more concerning issue is scalability and serving the model, It would be an enormous and wasteful undertaking for a company to store hundreds of different finetuned models for all possible personas.</p>
 </li>
 <li>
-<p>This is where technique like PFET fitin. Instead of updating all the model&rsquo;s parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.</p>
+<p>This is where technique like PFET fit in. Instead of updating all the model&rsquo;s parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.</p>
 </li>
 </ol>
 <h3 id="categorization-of-pfet-algorithms">Categorization of PFET Algorithms<a hidden class="anchor" aria-hidden="true" href="#categorization-of-pfet-algorithms">#</a></h3>
-<p>This is an acitive area of research in NLP right now, There are dosens of Papers comming out on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in mind so as not to get overwelmed by these different techniques.</p>
-<p>So PFET can be broadly classified into four:</p>
+<p>This is an acitive area of research in NLP right now, There are dozens of excellent Papers comming out every year, on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in place to understand how these techniques fit into the broader landscape, so as not to get overwelmed by these different techniques.</p>
+<p>PFET can be broadly classified into four:</p>
 <ol>
 <li>
-<p>Additive Fine-tuning</p>
-<ol>
-<li>a. Adapter-based Fine-tuning</li>
-<li>b. Soft Prompt-based Fine-tuning</li>
-</ol>
+<p><strong>Additive Fine-tuning:</strong> Modifies the model architecture by adding new trainable modules or parameters.</p>
 </li>
 <li>
-<p>Selective Fine-tuning</p>
+<p><strong>Selective Fine-tuning:</strong> Makes only a subset of the model&rsquo;s parameters trainable during the fine-tuning process.</p>
 </li>
 <li>
-<p>Reparameterized Fine-tuning
-3. a. Low-rank Decomposition
-3. b. LoRA Derivatives</p>
+<p><strong>Reparameterized Fine-tuning:</strong> Constructs a low-dimensional reparameterization of the original model parameters for training, then transforms it back for inference.</p>
 </li>
 <li>
-<p>Hybrid Fine-tuning</p>
+<p><strong>Hybrid Fine-tuning:</strong> Combines advantages from different PEFT methods to create a unified PEFT model.</p>
 </li>
 </ol>
-<p>One colud argue for a fourth kind like, Hybrid Finetung which incorporates elemts of more than one type, for now lets just work with four.</p>
-<h5 id="fig-4-from-different-types-of-pfet">fig 4 from, Different types of PFET<a hidden class="anchor" aria-hidden="true" href="#fig-4-from-different-types-of-pfet">#</a></h5>
+<div style="text-align: center;">
+  <img src="/images/PEFT/survey_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 <h3 id="background">Background<a hidden class="anchor" aria-hidden="true" href="#background">#</a></h3>
 <p>The topics of PFET are not that mathemaically complex, or &hellip;
 But understanding the minute details of LLMs is quite essential so i highly recommed reading the GPT2 architecture paper</p>
