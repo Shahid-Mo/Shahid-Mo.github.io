@@ -4,22 +4,20 @@ date: 2024-09-11
 draft: false
 ---
 
-# sara now has access to push
-
-### Motivation for PEFT
+# Motivation for PEFT
 
 Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, "Why did you buy Twitter?" The model responds as Elon Musk would.
 
 Now there are primarily three approaches to solving this:
-1. Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk's interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.
+1. **Context-based approach:** Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk's interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.
 
-2. Full Fine-Tuning: Fine-tune your pre-trained model, updating all the parameters of the model. While full fine-tuning can yield accurate results,but it is a very expensive task. The more concerning issue is scalability and serving the model, It would be an enormous and wasteful undertaking for a company to store hundreds of different finetuned models for all possible personas.
+2. **Full Fine-Tuning:** Fine-tune your pre-trained model, updating all the parameters of the model. While full fine-tuning can yield accurate results,but it is a very expensive task. The more concerning issue is scalability and serving the model, It would be an enormous and wasteful undertaking for a company to store hundreds of different finetuned models for all possible personas.
 
-3. This is where technique like PFET fit in. Instead of updating all the model's parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.
+3. This is where technique like **PFET** fit in. Instead of updating all the model's parameters, PFET keeps the majority of the pre-trained parameters fixed and only adjusts a small subset of the parameters or adds a few new ones. This approach significantly reduces the computational cost and storage requirements, making it feasible to scale and serve models for numerous tasks or personas efficiently.
 
 ### Categorization of PFET Algorithms
 
-This is an acitive area of research in NLP right now, There are dozens of excellent Papers comming out every year, on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in place to understand how these techniques fit into the broader landscape, so as not to get overwelmed by these different techniques.
+This is an acitive area of research in NLP right now, There are dozens of excellent Papers comming out every year, on various PFET techniques with each with its unique name (to stand out, i guess?), So it is important to have a framework in place to understand how these techniques fit into the broader landscape, so as not to get overwelmed.
 
 PFET can be broadly classified into four:
 

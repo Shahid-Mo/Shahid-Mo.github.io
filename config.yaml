@@ -8,8 +8,26 @@ params:
   comments: true
   defaultTheme: auto
   homeInfoParams:
-    Title: "Welcome to TensorTunes"
-    Content: "Exploring the harmony of mathematics and music through the lens of machine learning and signal processing."
+    Title: "Welcome to TensorTunes 🎶"
+    Content: |
+      "If you can't explain it simply, you don't understand it well enough." — Albert Einstein
+      
+      Exploring the harmony of mathematics and music through the lens of machine learning and signal processing. 🎵
+
+      TensorTunes is where I document my journey through different signal processing techniques and how they relate to machine learning models. 🧑‍💻✨
+
+      Join me as I explore various methods to create soundscapes using AI and learn how mathematical models influence the way we perceive audio. 🎧🤖
+  socialIcons:
+  - name: "GitHub"
+    url: "https://github.com/Shahid-Mo"
+    icon: "github" # this will use the GitHub icon
+  - name: "Twitter"
+    url: "https://x.com/Shahid_mo22"
+    icon: "twitter" # this will use the Twitter icon
+  - name: "LinkedIn"
+    url: "https://www.linkedin.com/in/shahid-mo/"
+    icon: "linkedin" # this will use the LinkedIn icon
+
 
 menu:
   main:
