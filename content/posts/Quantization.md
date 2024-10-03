@@ -36,10 +36,10 @@ This is where quantization can help. By loading the model in 8-bit, 4-bit, or ev
 If you're unfamiliar with terms like FP32 or 8-bit precision mentioned earlier, don’t worry—we’ll cover them in the next section.
 
 <div style="text-align: center;">
-  <img src="/images/quant_p1/fp32_fp16_bf16.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/quant_p1/fp32_fp16_bf16.png" alt="Comparison of 32-bit, 16-bit, and bfloat16 floating-point formats." style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  Comparison of 32-bit, 16-bit, and bfloat16 floating-point formats.
+  <a href="https://mlabonne.github.io/blog/posts/Introduction_to_Weight_Quantization.html" style="color: rgba(0, 0, 0, 0.6);">(Maxime Labonne)</a>
 </p>
 </div>
 
@@ -735,4 +735,9 @@ The throughput really took a hit with the LLM.int8() implementation, cause this 
 
 so you might rightly ask**why are we doing calculaitons in 16bit**, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.
 
+-------------------------------
+
+## References:
+
+[1] https://mlabonne.github.io/blog/posts/Introduction_to_Weight_Quantization.html
 
