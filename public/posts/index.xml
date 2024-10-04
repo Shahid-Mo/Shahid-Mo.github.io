@@ -13,8 +13,7 @@
       <link>http://localhost:1313/posts/decoding-from-language-models/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/decoding-from-language-models/</guid>
-      <description>A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&amp;lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
-At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary.</description>
+      <description>A quick refresher on Autoregressive text generation Figure 1: Comparison of FP8 and BF16 formats. Source: Smith et al. (2023) Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&amp;lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.</description>
     </item>
     <item>
       <title>From Retrieval to RAG (Part - 1)</title>

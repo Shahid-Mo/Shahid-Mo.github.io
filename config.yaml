@@ -10,13 +10,14 @@ params:
   homeInfoParams:
     Title: "Welcome to TensorTunes 🎶"
     Content: |
-      "If you can't explain it simply, you don't understand it well enough." — Albert Einstein
+      Hi, I’m **Shahid**, currently pursuing my master's in Artificial Intelligence at the **University at Buffalo** 🎓 (graduating December 2024). 
+
+      This blog is where I compile my notes on **Large Language Models (LLMs)** 🤖, drawn from papers, videos, and other resources.
+
+      Inspired by **Albert Einstein’s** words, *"If you can't explain it simply, you don't understand it well enough,"* I break down complex concepts to refine my understanding 🧠.
+
+      I’m also actively seeking **full-time opportunities** to apply these skills in real-world applications 💼.
       
-      Exploring the harmony of mathematics and music through the lens of machine learning and signal processing. 🎵
-
-      TensorTunes is where I document my journey through different signal processing techniques and how they relate to machine learning models. 🧑‍💻✨
-
-      Join me as I explore various methods to create soundscapes using AI and learn how mathematical models influence the way we perceive audio. 🎧🤖
   socialIcons:
   - name: "GitHub"
     url: "https://github.com/Shahid-Mo"
