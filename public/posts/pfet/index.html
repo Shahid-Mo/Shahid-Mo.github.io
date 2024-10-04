@@ -7,9 +7,12 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Parameter Efficient Fine-tuning of LLMs (PEFT) | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Motivation for PEFT Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.
+<meta name="description" content="Motivation for PEFT
+Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, &ldquo;Why did you buy Twitter?&rdquo; The model responds as Elon Musk would.
 Now there are primarily three approaches to solving this:
-Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question.">
+
+
+Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk&rsquo;s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/pfet/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
