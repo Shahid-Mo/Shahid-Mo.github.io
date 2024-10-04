@@ -184,13 +184,32 @@ While BF16 sacrifices some precision compared to FP32, [research](https://arxiv.
 
 ## TF32 (TensorFloat 32)
 
-<div style="text-align: center;">
-  <img src="/images/quant_p1/FP_16_32_TF32.png" alt="FP16 vs TF32 comparison" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+
+
+<div style="display: flex; justify-content: center; align-items: center;">
+  
+  <!-- First Image -->
+  <div style="text-align: center; margin-right: 20px;">
+    <img src="/images/quant_p1/FP_16_32_TF32.png" alt="Comparison of floating-point formats: FP32, TF32, FP16, and BF16 in terms of range and precision." style="max-width: 100%; height: auto;">
+    <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+      Comparison of floating-point formats: FP32, TF32, FP16, and BF16 in terms of range and precision.  
+      <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf" style="color: rgba(0, 0, 0, 0.6);">(NVIDIA A100 Tensor Core GPU Architecture)</a>
+    </p>
+  </div>
+
+  <!-- Second Image -->
+  <div style="text-align: center;">
+    <img src="/images/quant_p1/TF32_explained.png" alt="Matrix multiplication using TF32 format with FP32 accumulation." style="max-width: 100%; height: auto;">
+    <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+      Matrix multiplication using TF32 format with FP32 accumulation.
+      <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf" style="color: rgba(0, 0, 0, 0.6);">(NVIDIA A100 Tensor Core GPU Architecture)</a>
+    </p>
+  </div>
+
 </div>
+
+---------------------------------------------------------------
+
 
 TF32, or TensorFloat 32, is a special datatype introduced by Nvidia with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.
 
@@ -198,23 +217,18 @@ From the Ampere architecture onwards, all calculations involving FP32 matrices a
 
 This process leverages TF32 for speed during calculations, while maintaining the precision of FP32 for the final result. 
 
-<div style="text-align: center;">
-  <img src="/images/quant_p1/TF32_explained.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
+
 
 ## FP8 (E4M3 and E5M2 Formats)
 
 <div style="text-align: center;">
-  <img src="/images/quant_p1/FP8.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
+  <img src="/images/quant_p1/FP8.png" alt="FP8 formats allocate bits between range and precision for efficient matrix computations" style="display: block; margin: 0 auto;">
   <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  FP8 formats allocate bits between range and precision for efficient matrix computations.
+  <a href="https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf" style="color: rgba(0, 0, 0, 0.6);">(NVIDIA H100 Tensor Core GPU Architecture)</a>
 </p>
 </div>
+
 
 
 FP8 is an emerging precision format designed to accelerate deep learning training and inference beyond the 16-bit formats commonly used today. Introduced in recent research paper *[FP8 Formats for Deep Learning](https://arxiv.org/abs/2209.05433)* from September 2022, FP8 comes with two encoding options: **E4M3** (4-bit exponent, 3-bit mantissa) and **E5M2** (5-bit exponent, 2-bit mantissa). FP8 was introduced as part of Nvidia's Hopper Architecture (H100 GPUs).
@@ -226,10 +240,10 @@ As shown in the figures:
 - **Efficacy of FP8**: The graph below illustrates the training loss (perplexity) across various large models (GPT-3 variants with up to 175 billion parameters), showing that FP8 training closely matches the results achieved with BF16. 
 
 <div style="text-align: center;">
-  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
+  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="Training loss comparison across different floating-point formats and model sizes" style="display: block; margin: 0 auto;">
   <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+ Training loss comparison across different floating-point formats and model sizes. Source: nai milra 
+  <a href="https://arxiv.org/pdf/2209.05433" style="color: rgba(0, 0, 0, 0.6);">(FP8 FORMATS FOR DEEP LEARNING)</a>
 </p>
 </div>
 
@@ -445,10 +459,10 @@ In summary, absmax quantization shrinks a floating-point tensor into the 8-bit r
 Abs Max Quantization works, so shouldn't we just wrap up quantization and move on? Not quite. In November 2022, *[Detmers et al.](https://arxiv.org/abs/2208.07339)* introduced LLM.int8(), a new quantization technique, addressing an important issue: Large language models (LLMs) have started to show impressive emergent behaviors like reasoning, in-context learning, and even few-shot problem solving—abilities that were being compromised by naive quantization methods.
 
 <div style="text-align: center;">
-  <img src="/images/quant_p1/Emergence.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/quant_p1/Emergence.png" alt="Accuracy trends with LLM.int8() showing the impact of outlier features as model size grows" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  Accuracy trends with LLM.int8() showing the impact of outlier features as model size grows. 
+  <a href="https://arxiv.org/pdf/2208.07339" style="color: rgba(0, 0, 0, 0.6);">(LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale)</a>
 </p>
 </div>
 
@@ -462,10 +476,10 @@ LLM.int8() proposes a two-part strategy to address this issue:
 2. **Mixed-Precision Decomposition**: LLM.int8() quantizes only weights within a defined threshold, typically $[-6, 6]$. Outliers exceeding this range are preserved in higher precision formats (FP16 or FP32). This preserves critical outlier weights—crucial for model performance—at higher precision, avoiding accuracy loss from forcing them into lower precision formats. The approach maintains key model behaviors while achieving significant compression for most weights, effectively balancing performance and efficiency across varying model sizes.
 
 <div style="text-align: center;">
-  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/quant_p1/llm_int8.png" alt="Comparison of zero-shot accuracy for various quantization methods as model parameters scale" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  Comparison of zero-shot accuracy for various quantization methods as model parameters scale.
+  <a href="https://arxiv.org/pdf/2208.07339" style="color: rgba(0, 0, 0, 0.6);">(LLM.int8(): 8-bit Matrix Multiplication for Transformers at Scale)</a>
 </p>
 </div>
 
@@ -737,7 +751,84 @@ so you might rightly ask**why are we doing calculaitons in 16bit**, The NF4 data
 
 -------------------------------
 
+## Citation:   
+
+
+
+Cited as:
+
+Mo Shahid. (Oct 2024). "Quantization in LLMS (Part 1): LLM.int8(), NF4". shahid-mo.github.io.
+https://shahid-mo.github.io/posts/quantization/.
+
+
+Or
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Citation Example</title>
+    <style>
+        #citationContainer {
+            background-color: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1></h1>
+    <div id="citationContainer"></div>
+
+    
+      @article: {mo2024quantization,
+           title   = "Quantization in LLMS (Part 1): LLM.int8(), NF4",
+           author  = "Mo Shahid",
+           journal = "shahid-mo.github.io",
+           year    = "2024",
+           month   = "Oct",
+           url     = "https://shahid-mo.github.io/posts/quantization/"
+                }
+            
+      
+
+        
+</body>
+</html>
+
+
 ## References:
 
 [1] https://mlabonne.github.io/blog/posts/Introduction_to_Weight_Quantization.html
+
+[2] https://resources.nvidia.com/en-us-blackwell-architecture
+
+[3] https://images.nvidia.com/aem-dam/Solutions/Data-Center/l4/nvidia-ada-gpu-architecture-whitepaper-v2.1.pdf
+
+[4] https://resources.nvidia.com/en-us-tensor-core/nvidia-tensor-core-gpu-datasheet
+
+[5] https://images.nvidia.com/aem-dam/en-zz/Solutions/data-center/nvidia-ampere-architecture-whitepaper.pdf
+
+[6] https://images.nvidia.com/aem-dam/en-zz/Solutions/design-visualization/technologies/turing-architecture/NVIDIA-Turing-Architecture-Whitepaper.pdf
+
+[7] https://images.nvidia.com/content/technologies/volta/pdf/volta-v100-datasheet-update-us-1165301-r5.pdf
+
+[8] https://resources.nvidia.com/en-us-tensor-core/gtc22-whitepaper-hopper
+
+[9] https://arxiv.org/abs/2209.05433
+
+[10] https://arxiv.org/abs/2208.07339
+
+[11] https://arxiv.org/abs/2305.14314
+
+
+
+
+
+
 
