@@ -29,7 +29,7 @@ $$
 
 This means you would need at least an A100 GPU with 40 GB of VRAM to load just the model weights. For fine-tuning, you would require around 90 GB, or a cluster of GPUs, and about 60 GB for inference.
 
-This is where quantization can help. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 4 GB for inference, and about 12 GB for fine-tuning, which can be done even on a free-tier T4 GPU on Google Colab.
+This is where quantization can help. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 5 GB to load the model, and about 12 GB for fine-tuning, which can be done even on a free-tier T4 GPU on Google Colab.
 
 # Understanding Precision in LLMs
 
@@ -101,11 +101,13 @@ $$
 
 ### 3. Normalize the Binary Representation
 
-To fit the FP32 format, normalize the binary number so that it appears as:
+To fit the FP32 format, we need to **normalize** the binary number. Normalization involves adjusting the binary number so that there is only one non-zero digit to the left of the decimal point. We normalize this by shifting the decimal point one place to the left:
 
 $$
 11.001001000011111101101010100010_{2} = 1.1001001000011111101101010100010_{2} \times 2^1
 $$
+
+This normalized representation is crucial for FP32 because the leading `1` before the decimal point is implicit and not stored, allowing the mantissa(the part after the decimal) to capture more significant digits. The exponent ($2^1$) indicates the scale of the number, while the mantissa captures the precise value.
 
 ### 4. Determine the Sign Bit
 
@@ -117,17 +119,29 @@ $$
 
 ### 5. Calculate the Exponent
 
+In FP32, the exponent is stored using a **biased representation**. **Bias** is a fixed value added to the actual exponent to allow the encoding of both positive and negative exponents without using separate sign bit. For FP32, the bias is **127**.
 
-In FP32, the exponent is stored with a bias of 127. This bias allows FP32 to represent both very large and very small numbers. Using FP32, the largest representable number is approximately $3.4 \times 10^{38}$, while the smallest positive number (close to zero) is around $1.175 \times 10^{-38}$. For $\pi$, the exponent after normalization is:
+**Calculating the Biased Exponent for $\pi$:**
+
+From the normalized form:
 
 $$
-\text{Exponent} = 1 + 127 = 128
+\pi = 1.1001001000011111101101010100010_{2} \times 2^1
 $$
 
-In binary, the exponent is:
+- **Actual Exponent:** $1$
+- **Biased Exponent:** $1 + 127 = 128$
+
+Convert the biased exponent to binary:
 
 $$
 128_{10} = 10000000_{2}
+$$
+
+Thus, the exponent field in FP32 for $\pi$ is:
+
+$$
+\text{Exponent} = 10000000_{2}
 $$
 
 ### 6. Determine the Mantissa
@@ -170,8 +184,6 @@ This reduction in range makes FP16 more limited when storing very large or very 
 - **Practical Solutions**:
    - **Mixed Precision Training**: A common approach is to use FP16 for most computations while keeping certain critical variables, like weights or gradients, in FP32. This balances the memory and speed benefits of FP16 with the numerical stability of FP32.
    - **Gradient Clipping**: Implementing techniques like gradient clipping can help prevent gradients from becoming too large, mitigating the risk of overflow in FP16.
-   - **Loss Scaling**: Adjusting the scale of loss values can help maintain precision during backpropagation, reducing the chances of underflow in FP16.
-
 
 ## BF16
 
@@ -247,17 +259,13 @@ As shown in the figures:
 </p>
 </div>
 
-#### FP8 in Practice
-
-In the paper, FP8 was used for training a wide variety of models, including CNNs, RNNs, and Transformer-based architectures, covering both image and language tasks. No changes were made to the model architectures, optimizer settings, or hyperparameters. FP8 post-training quantization (PTQ) was also evaluated, and it showed that models could be quantized to FP8 without a significant loss in accuracy, a major benefit for deployment.
-
 ### Nvidia is Everywhere!
 
-Let's address the $2.5 trillion elephant in the room. Up until now, I’ve briefly mentioned that the TF32 datatype was introduced with Nvidia’s Ampere architecture, and that FP8 support starts with the H100 GPUs. We've been happily exploring the ins and outs of these different data types, but here’s the catch: You might get super excited about BF16 after reading this post and rush to try it out on a free Colab instance, only to realize the T4 GPUs don’t support BF16.
+Let’s address an important consideration. So far, I’ve mentioned that the TF32 datatype was introduced with Nvidia’s Ampere architecture and that FP8 support starts with the H100 GPUs. While we've been exploring these different data types, here’s something to keep in mind: you might be interested in using BF16 after reading this post, but if you try it on a free Colab instance with T4 GPUs, you'll find that BF16 isn't supported.
 
-Don’t worry—I’ve done the hard work of sifting through Nvidia’s whitepapers so you don’t have to. Here's the deal: you need to know exactly what hardware you’re working with and which data types it supports. This way, you can make an informed decision about which GPU cluster to dedicate your time to and, in the process, help Nvidia grow even richer (they’re truly the ones selling shovels in this AI gold rush). And no, unfortunately, you can’t go running to AMD or Intel for your GPU needs either.
+I’ve reviewed Nvidia’s whitepapers to save you the effort. It’s crucial to know the hardware you’re using and the data types it supports. This knowledge helps you choose the right GPU cluster for your projects. 
 
-Take a look at the chart below, and I’ll follow up with some key observations. The numbers represent FLOPs (or TOPs for INT data types), and the X’s indicate that the datatype isn’t supported by a particular architecture.
+Take a look at the chart below. The numbers represent FLOPs (or TOPs for INT data types), and the X’s indicate that a data type isn't supported by a particular architecture. I’ll follow up with some key observations to help you navigate these choices effectively.
 
 <style>
   table {
@@ -420,10 +428,9 @@ Take a look at the chart below, and I’ll follow up with some key observations.
 </table>
 
 ### Some Observations
-
-* All the values in blue are for sparse matrices.
-* As you can see, TF32 preforamce compared to the FP32 is 30 times.
-* INT4 and INT8 data types were introduce in the Turing architecture for inference.
+- Blank entries indicate supported data types for which I couldn’t find the exact values.
+- Values highlighted in blue represent sparse matrices.
+- INT4 and INT8 data types were introduced with the Turing architecture for inference.
 
 
 # Integer Qunatization
@@ -692,7 +699,8 @@ def load_model(model_name, quantization_config=None, dtype=None):
     # for memory-usage calculation logic please refer to my github
     return memory_used
 ```
-How to load model in LLM.int8() and NF4 
+This function utilizes Hugging Face's `AutoModelForCausalLM` to load a pre-trained model
+**How to load model in LLM.int8() and NF4**
 ```python
 # 8-bit quantization
 quantization_config_8bit = BitsAndBytesConfig(
@@ -708,98 +716,86 @@ quantization_config_4bit = BitsAndBytesConfig(
     bnb_4bit_use_double_quant=True
 )
 ```
-Load and compare the models, using GPT2 for simplicity.
+- **8-bit Quantization (`LLM.int8()`)**
+- `load_in_8bit=True`: Enables 8-bit loading.
+- `llm_int8_threshold=6.0`: Sets the threshold for quantization.
+
+- **4-bit Quantization (NF4)**
+- `load_in_4bit=True`: Enables 4-bit loading.
+- `bnb_4bit_quant_type="nf4"`: Specifies the NF4 quantization type.
+- `bnb_4bit_compute_dtype=torch.bfloat16`: Sets the compute data type to BF16.
+- `bnb_4bit_use_double_quant=True`: Enables double quantization for better efficiency.
+
+### Loading and Comparing Models
+
+To evaluate the impact of quantization, we'll load the GPT-2 model using different configurations and compare their memory usage.
+
+### Implementation
+
 ```python
 def main():
-    model_name = "gpt2"
-    
-    memory_without_quant_fp32 = load_model(model_name)
-    memory_without_quant_bf16 = load_model(model_name, dtype=torch.bfloat16)
-    memory_with_8bit_quant = load_model(model_name, quantization_config_8bit, dtype=torch.bfloat16)
-    memory_with_4bit_quant = load_model(model_name, quantization_config_4bit, dtype=torch.bfloat16)
+model_name = "gpt2"
+
+memory_without_quant_fp32 = load_model(model_name)
+memory_without_quant_bf16 = load_model(model_name, dtype=torch.bfloat16)
+memory_with_8bit_quant = load_model(model_name, quantization_config_8bit, dtype=torch.bfloat16)
+memory_with_4bit_quant = load_model(model_name, quantization_config_4bit, dtype=torch.bfloat16)
 ```
+
+### Memory Usage Comparison
+
+After loading the models, we observe the following GPU memory usage:
 
 ```
 GPU Memory Usage Comparison:
-Without quantization (FP32): 1029.47 MB
-Without quantization (BF16): 523.49 MB
-With 8-bit quantization (BF16 compute): 370.99 MB
-With 4-bit quantization (BF16 compute): 272.46 MB
+- Without quantization (FP32): 1029.47 MB
+- Without quantization (BF16): 523.49 MB
+- With 8-bit quantization (BF16 compute): 370.99 MB
+- With 4-bit quantization (BF16 compute): 272.46 MB
 
 Memory Savings (compared to FP32):
-BF16 saved: 505.98 MB
-BF16 reduction percentage: 49.15%
-8-bit quantization saved: 658.48 MB
-8-bit reduction percentage: 63.96%
-4-bit quantization saved: 757.01 MB
-4-bit reduction percentage: 73.53%
+- BF16 saved: 505.98 MB (49.15%)
+- 8-bit quantization saved: 658.48 MB (63.96%)
+- 4-bit quantization saved: 757.01 MB (73.53%)
 ```
 
-## some experiments
-Below are results of some of the experiments that i ran, for the code refer to my github.
+These results demonstrate significant memory savings with lower-bit quantization, making models more feasible for deployment on hardware with limited memory.
+
+## Experimental Results
+
+Explored the trade-offs between quantization and model performance by running some experiments that measured perplexity and throughput.
+
+### Performance Metrics
+
 ```python
 Summary:
-FP32: Perplexity = 50.08, Throughput = 97.20 tokens/s
-BF16: Perplexity = 51.25, Throughput = 83.37 tokens/s
-8-bit: Perplexity = 51.25, Throughput = 19.37 tokens/s
-4-bit: Perplexity = 53.75, Throughput = 54.28 tokens/s
+- FP32: Perplexity = 50.08, Throughput = 97.20 tokens/s
+- BF16: Perplexity = 51.25, Throughput = 83.37 tokens/s
+- 8-bit: Perplexity = 51.25, Throughput = 19.37 tokens/s
+- 4-bit: Perplexity = 53.75, Throughput = 54.28 tokens/s
 ```
-Remarks
-The throughput really took a hit with the LLM.int8() implementation, cause this might not be optimized, the close to 40% decrease from the FP32, to 4 Bit for the through-put needs can be explainede as the, because even thoght the model weights are storred in 8 bits, and my GPU supports 8 bit calculations, the calculations are performed in 16bit, as set up by us ```bnb_4bit_compute_dtype=torch.bfloat16```, the through put gets a hit causse of this qunatizing and dequnatizing process. 
 
-so you might rightly ask**why are we doing calculaitons in 16bit**, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.
+- **Perplexity:** A lower value indicates better model performance.
+
+- **Throughput:** Measures the number of tokens processed per second. 
+
+## Remarks
+
+The experiments showed that quantization, especially with LLM.int8(), can save a lot of memory. But there are some trade-offs, like reduced throughput and a slight bump in perplexity:
+
+- **Throughput Impact:** Using LLM.int8() caused throughput to drop by about 40% compared to FP32. This slowdown mainly happens because of the extra steps involved in quantizing and dequantizing the data. Even though the model weights are stored in lower precision, the computations still run in 16-bit (`torch.bfloat16`), which adds some overhead.
+
+- **Why 16-bit Calculations?** The NF4 data type was originally developed for QLoRA, which involves fine-tuning models that can’t be done in 4-bit integer precision. However, you can still benefit from 4-bit quantization during inference using specialized libraries (more on those in future posts).
+
+- **Perplexity Considerations:** Running inference in lower precision can slightly impact performance. The increase in perplexity means that while the model remains pretty effective, there's a minor dip in its ability to generate accurate responses. In most cases, though, this difference isn’t significant enough to noticeably affect practical applications.
+
+## Conclusion
+
+Quantization techniques like LLM.int8() and NF4 are game-changers for optimizing large language models. They make these hefty models more efficient and easier to deploy, especially on hardware with limited resources. By understanding how different data types, hardware capabilities, and quantization methods work together, you can make smart choices that balance performance with resource use. 
 
 -------------------------------
 
-## Citation:   
 
-
-
-Cited as:
-
-Mo Shahid. (Oct 2024). "Quantization in LLMS (Part 1): LLM.int8(), NF4". shahid-mo.github.io.
-https://shahid-mo.github.io/posts/quantization/.
-
-
-Or
-
-
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blog Citation Example</title>
-    <style>
-        #citationContainer {
-            background-color: #f0f0f0;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: monospace;
-            white-space: pre-wrap;
-        }
-    </style>
-</head>
-<body>
-    <h1></h1>
-    <div id="citationContainer"></div>
-
-    
-      @article: {mo2024quantization,
-           title   = "Quantization in LLMS (Part 1): LLM.int8(), NF4",
-           author  = "Mo Shahid",
-           journal = "shahid-mo.github.io",
-           year    = "2024",
-           month   = "Oct",
-           url     = "https://shahid-mo.github.io/posts/quantization/"
-                }
-            
-      
-
-        
-</body>
-</html>
 
 
 ## References:

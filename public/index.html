@@ -2,7 +2,7 @@
 <html lang="en" dir="auto">
 
 <head>
-	<meta name="generator" content="Hugo 0.135.0"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+	<meta name="generator" content="Hugo 0.129.0"><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
@@ -175,75 +175,16 @@
 
 <article class="post-entry"> 
   <header class="entry-header">
-    <h2 class="entry-hint-parent">Deconding From Language Models
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>A quick refresher on Autoregressive text generation Figure 1: Comparison of FP8 and BF16 formats. Source: Smith et al. (2023) Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
-...</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Deconding From Language Models" href="http://localhost:1313/posts/decoding-from-language-models/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">From Retrieval to RAG (Part - 1)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions. Post Training Quantization (PTQ): Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently. In this post (and subsequent ones), we’ll focus on PTQ. It’s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs, making it an excellent first step in your quantization journey.
-...</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to From Retrieval to RAG (Part - 1)" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Parameter Efficient Fine-tuning of LLMs (PEFT)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Motivation for PEFT Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, “Why did you buy Twitter?” The model responds as Elon Musk would.
-Now there are primarily three approaches to solving this:
-Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk’s interviews and tweets) as context, and then tag on your question. This method is not the most elegant or efficient way to approach the problem and may struggle with persona consistency. Another issue is of the context length, LLMs have a limited context length and we might have more data that can fit into the context length of the model.
-...</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Parameter Efficient Fine-tuning of LLMs (PEFT)" href="http://localhost:1313/posts/pfet/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
     <h2 class="entry-hint-parent">Quantization in LLMS (Part 1): LLM.int8(), NF4
     </h2>
   </header>
   <div class="entry-content">
     <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
 Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions. Post Training Quantization (PTQ): Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently. In this post (and subsequent ones on this topic), we’ll focus on PTQ. It’s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs.
-...</p>
+Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions....</p>
   </div>
   <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
   <a class="entry-link" aria-label="post link to Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/quantization/"></a>
-</article>
-
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Quantization in LLMS Part 2: GPTQ (A Mathematical View)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction
-Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.
-The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy. GPTQ builds upon previous methods like Optimal Brain Quantization (OBQ) but introduces significant modifications to make it scalable to models with billions of parameters.
-...</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-08-01 09:51:17 -0400 -0400'>August 1, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Quantization in LLMS Part 2: GPTQ (A Mathematical View)" href="http://localhost:1313/posts/gptq/"></a>
 </article>
     </main>
     

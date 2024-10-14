@@ -1,31 +1,26 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=44271&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
 <title>From Retrieval to RAG (Part - 1) | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Introduction to Quantization
-Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
+<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
 Quantization can be broadly categorized into two main approaches:
-
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.
-Post Training Quantization (PTQ): Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently.
-
-In this post (and subsequent ones), we&rsquo;ll focus on PTQ. It&rsquo;s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs, making it an excellent first step in your quantization journey.">
+Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/">
+<link rel="canonical" href="http://localhost:44271/posts/from-retrieval-to-rag-part1/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:1313/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:44271/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:44271/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:44271/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:44271/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:44271/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/">
+<link rel="alternate" hreflang="en" href="http://localhost:44271/posts/from-retrieval-to-rag-part1/">
 <noscript>
     <style>
         #theme-toggle,
@@ -94,7 +89,7 @@ In this post (and subsequent ones), we&rsquo;ll focus on PTQ. It&rsquo;s often a
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:44271/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -120,12 +115,12 @@ In this post (and subsequent ones), we&rsquo;ll focus on PTQ. It&rsquo;s often a
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:1313/posts/" title="Posts">
+                <a href="http://localhost:44271/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:1313/tags/" title="Tags">
+                <a href="http://localhost:44271/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -352,130 +347,130 @@ Becaue of the difference between the exponent in FP32 and FP16, you might enount
 <p>Here’s the table formatted in Markdown for your blog, which you can directly use if your blog platform supports Markdown syntax:</p>
 <h3 id="gpu-performance-table">GPU Performance Table<a hidden class="anchor" aria-hidden="true" href="#gpu-performance-table">#</a></h3>
 <table>
-  <thead>
-      <tr>
-          <th style="text-align: left">GPU</th>
-          <th style="text-align: left">P100</th>
-          <th style="text-align: left">V100</th>
-          <th style="text-align: left">T4</th>
-          <th style="text-align: left">A100</th>
-          <th style="text-align: left">H100</th>
-          <th style="text-align: left">L40</th>
-          <th style="text-align: left">B100</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td style="text-align: left"><strong>VRAM</strong></td>
-          <td style="text-align: left">16GB</td>
-          <td style="text-align: left">32GB</td>
-          <td style="text-align: left">16GB</td>
-          <td style="text-align: left">40GB*</td>
-          <td style="text-align: left">80GB</td>
-          <td style="text-align: left">48GB</td>
-          <td style="text-align: left">192GB</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>Architecture</strong></td>
-          <td style="text-align: left">Pascal</td>
-          <td style="text-align: left">Volta</td>
-          <td style="text-align: left">Turing</td>
-          <td style="text-align: left">Ampere</td>
-          <td style="text-align: left">Hopper</td>
-          <td style="text-align: left">Ada Lovelace</td>
-          <td style="text-align: left">Blackwell</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>Release Date</strong></td>
-          <td style="text-align: left">Apr-16</td>
-          <td style="text-align: left">May-17</td>
-          <td style="text-align: left">Sep-18</td>
-          <td style="text-align: left">May-20</td>
-          <td style="text-align: left">Mar-22</td>
-          <td style="text-align: left">Sep-22</td>
-          <td style="text-align: left">Mar-24</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>FP32</strong></td>
-          <td style="text-align: left">10.6</td>
-          <td style="text-align: left">8.2</td>
-          <td style="text-align: left">8.1</td>
-          <td style="text-align: left">19.5</td>
-          <td style="text-align: left">67</td>
-          <td style="text-align: left">90.5</td>
-          <td style="text-align: left">60</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>TF32</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">312</td>
-          <td style="text-align: left">989</td>
-          <td style="text-align: left">181</td>
-          <td style="text-align: left">1800</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>FP16</strong></td>
-          <td style="text-align: left"></td>
-          <td style="text-align: left">130</td>
-          <td style="text-align: left">65</td>
-          <td style="text-align: left">624</td>
-          <td style="text-align: left">1979</td>
-          <td style="text-align: left">362</td>
-          <td style="text-align: left">3500</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>BF16</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">624</td>
-          <td style="text-align: left">1979</td>
-          <td style="text-align: left">362</td>
-          <td style="text-align: left">3500</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>INT8</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">130</td>
-          <td style="text-align: left">1248</td>
-          <td style="text-align: left">3958</td>
-          <td style="text-align: left">724</td>
-          <td style="text-align: left">7000</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>INT4</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">260</td>
-          <td style="text-align: left">2496</td>
-          <td style="text-align: left"></td>
-          <td style="text-align: left">1448</td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>FP8</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">3958</td>
-          <td style="text-align: left">724</td>
-          <td style="text-align: left">7000</td>
-      </tr>
-      <tr>
-          <td style="text-align: left"><strong>FP4</strong></td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">X</td>
-          <td style="text-align: left">14000</td>
-      </tr>
-  </tbody>
+<thead>
+<tr>
+<th>GPU</th>
+<th>P100</th>
+<th>V100</th>
+<th>T4</th>
+<th>A100</th>
+<th>H100</th>
+<th>L40</th>
+<th>B100</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VRAM</strong></td>
+<td>16GB</td>
+<td>32GB</td>
+<td>16GB</td>
+<td>40GB*</td>
+<td>80GB</td>
+<td>48GB</td>
+<td>192GB</td>
+</tr>
+<tr>
+<td><strong>Architecture</strong></td>
+<td>Pascal</td>
+<td>Volta</td>
+<td>Turing</td>
+<td>Ampere</td>
+<td>Hopper</td>
+<td>Ada Lovelace</td>
+<td>Blackwell</td>
+</tr>
+<tr>
+<td><strong>Release Date</strong></td>
+<td>Apr-16</td>
+<td>May-17</td>
+<td>Sep-18</td>
+<td>May-20</td>
+<td>Mar-22</td>
+<td>Sep-22</td>
+<td>Mar-24</td>
+</tr>
+<tr>
+<td><strong>FP32</strong></td>
+<td>10.6</td>
+<td>8.2</td>
+<td>8.1</td>
+<td>19.5</td>
+<td>67</td>
+<td>90.5</td>
+<td>60</td>
+</tr>
+<tr>
+<td><strong>TF32</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>312</td>
+<td>989</td>
+<td>181</td>
+<td>1800</td>
+</tr>
+<tr>
+<td><strong>FP16</strong></td>
+<td></td>
+<td>130</td>
+<td>65</td>
+<td>624</td>
+<td>1979</td>
+<td>362</td>
+<td>3500</td>
+</tr>
+<tr>
+<td><strong>BF16</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>624</td>
+<td>1979</td>
+<td>362</td>
+<td>3500</td>
+</tr>
+<tr>
+<td><strong>INT8</strong></td>
+<td>X</td>
+<td>X</td>
+<td>130</td>
+<td>1248</td>
+<td>3958</td>
+<td>724</td>
+<td>7000</td>
+</tr>
+<tr>
+<td><strong>INT4</strong></td>
+<td>X</td>
+<td>X</td>
+<td>260</td>
+<td>2496</td>
+<td></td>
+<td>1448</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>FP8</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>3958</td>
+<td>724</td>
+<td>7000</td>
+</tr>
+<tr>
+<td><strong>FP4</strong></td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>X</td>
+<td>14000</td>
+</tr>
+</tbody>
 </table>
 <h3 id="how-to-use-this-table-in-your-blog">How to Use This Table in Your Blog<a hidden class="anchor" aria-hidden="true" href="#how-to-use-this-table-in-your-blog">#</a></h3>
 <ul>
@@ -1156,153 +1151,153 @@ NF4 quantization is a powerful technique used in cutting-edge PEFT methods, part
 where each bit represents the partition.</p>
 <p>we can use the Formulas to arrive at the same qunatiles.</p>
 <table>
-  <thead>
-      <tr>
-          <th style="text-align: left">Quantization Method</th>
-          <th style="text-align: left">On the fly quantization</th>
-          <th style="text-align: left">CPU</th>
-          <th style="text-align: left">CUDA GPU</th>
-          <th style="text-align: left">RoCm GPU (AMD)</th>
-          <th style="text-align: left">Metal (Apple Silicon)</th>
-          <th style="text-align: left">torch.compile() support</th>
-          <th style="text-align: left">Number of bits</th>
-          <th style="text-align: left">Supports fine-tuning (through PEFT)</th>
-          <th style="text-align: left">Serializable with 🤗 transformers</th>
-          <th style="text-align: left">🤗 transformers support</th>
-      </tr>
-  </thead>
-  <tbody>
-      <tr>
-          <td style="text-align: left">AQLM</td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left">1 / 2</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">AWQ</td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">?</td>
-          <td style="text-align: left">4</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">bitsandbytes</td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left">4 / 8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">EETQ</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">?</td>
-          <td style="text-align: left">8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">GGUF / GGML</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left">1 - 8</td>
-          <td style="text-align: left">See GGUF section</td>
-          <td style="text-align: left">See GGUF section</td>
-          <td style="text-align: left">See GGUF section</td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">GPTQ</td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">2 - 3 - 4 - 8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">HQQ</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">1 - 8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">Quanto</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">2 / 4 / 8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">FBGEMM_FP8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left">8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-      <tr>
-          <td style="text-align: left">torchao</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left"><span style="color:red">●</span></td>
-          <td style="text-align: left">partial support (int4 weight only)</td>
-          <td style="text-align: left">4 / 8</td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"><span style="color:green">●</span></td>
-          <td style="text-align: left"></td>
-      </tr>
-  </tbody>
+<thead>
+<tr>
+<th>Quantization Method</th>
+<th>On the fly quantization</th>
+<th>CPU</th>
+<th>CUDA GPU</th>
+<th>RoCm GPU (AMD)</th>
+<th>Metal (Apple Silicon)</th>
+<th>torch.compile() support</th>
+<th>Number of bits</th>
+<th>Supports fine-tuning (through PEFT)</th>
+<th>Serializable with 🤗 transformers</th>
+<th>🤗 transformers support</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AQLM</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>1 / 2</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+</tr>
+<tr>
+<td>AWQ</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>?</td>
+<td>4</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+</tr>
+<tr>
+<td>bitsandbytes</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>EETQ</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>?</td>
+<td>8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>GGUF / GGML</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>1 - 8</td>
+<td>See GGUF section</td>
+<td>See GGUF section</td>
+<td>See GGUF section</td>
+<td></td>
+</tr>
+<tr>
+<td>GPTQ</td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>2 - 3 - 4 - 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>HQQ</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>1 - 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>Quanto</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>2 / 4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>FBGEMM_FP8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:green">●</span></td>
+<td>8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+<tr>
+<td>torchao</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:red">●</span></td>
+<td><span style="color:red">●</span></td>
+<td>partial support (int4 weight only)</td>
+<td>4 / 8</td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td><span style="color:green">●</span></td>
+<td></td>
+</tr>
+</tbody>
 </table>
 <p><strong>NF4 Quantization Explained</strong></p>
 <p><strong>Introduction</strong></p>
@@ -1576,7 +1571,7 @@ $$</li>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:44271/">TensorTunes</a></span> · 
 
     <span>
         Powered by

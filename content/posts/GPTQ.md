@@ -1,7 +1,7 @@
 +++
 title = 'Quantization in LLMS Part 2: GPTQ (A Mathematical View)'
 date = 2024-08-01T09:51:17-04:00
-draft = false
+draft = true
 math = true
 +++
 

@@ -1,7 +1,7 @@
 ---
 title: "Deconding From Language Models"
 date: 2024-09-11
-draft: false
+draft: true
 ---
 
 ## A quick refresher on Autoregressive text generation
