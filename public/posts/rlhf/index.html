@@ -5,11 +5,12 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Posts | TensorTunes</title>
+<title>RLHF for Dummies | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Posts - TensorTunes">
+<meta name="description" content="Motivation SFT RLHF Mathematics Linked IN, I am a huge fan of Reinforcement Learning, I believe it lead to the LLM revolution that we are living in today, without rlhf and Instruction Tuning LLM would still be giveing answers like below, so lets take a journey of RLHF.
+This post is not going to be about Instruction Tuning, (The field of SFT/Instruction tuning is moving rapidly and i would like to do a dedicated post on that.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:1313/posts/">
+<link rel="canonical" href="http://localhost:1313/posts/rlhf/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://localhost:1313/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
@@ -18,8 +19,7 @@
 <link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/posts/index.xml">
-<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/rlhf/">
 <noscript>
     <style>
         #theme-toggle,
@@ -73,7 +73,7 @@
 </script>
 </head>
 
-<body class="list" id="top">
+<body class="" id="top">
 <script>
     if (localStorage.getItem("pref-theme") === "dark") {
         document.body.classList.add('dark');
@@ -115,7 +115,7 @@
         <ul id="menu">
             <li>
                 <a href="http://localhost:1313/posts/" title="Posts">
-                    <span class="active">Posts</span>
+                    <span>Posts</span>
                 </a>
             </li>
             <li>
@@ -126,38 +126,134 @@
         </ul>
     </nav>
 </header>
-<main class="main"> 
-<header class="page-header">
-  <h1>
-    Posts
-  </h1>
-</header>
+<main class="main">
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Where Did All the Memory Go?
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>CUDA error: out of memory
-If you’ve ever tried to train a deep learning model, the dreaded CUDA error: out of memory is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered about how memory gets allocated during training?? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-10-21 00:00:00 +0000 UTC'>October 21, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Where Did All the Memory Go?" href="http://localhost:1313/posts/where_v3/"></a>
-</article>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      RLHF for Dummies
+    </h1>
+    <div class="post-meta"><span title='2024-10-12 00:00:00 +0000 UTC'>October 12, 2024</span>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Quantization in LLMS (Part 1): LLM.int8(), NF4
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions....</p>
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#first-from-umass" aria-label="First from UMASS">First from UMASS</a><ul>
+                        
+                <li>
+                    <a href="#rlhf-aligning-language-modesl-to-follow-human-prefrence" aria-label="RLHF Aligning Language modesl to follow human prefrence.">RLHF Aligning Language modesl to follow human prefrence.</a></li></ul>
+                </li>
+                <li>
+                    <a href="#the-real-stuff" aria-label="The real stuff">The real stuff</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#motivation" aria-label="Motivation">Motivation</a></li>
+                <li>
+                    <a href="#instruction-finetuning" aria-label="Instruction Finetuning">Instruction Finetuning</a></li></ul>
+                    
+                <li>
+                    <a href="#rlhf" aria-label="RLHF">RLHF</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><ol>
+<li>Motivation</li>
+<li>SFT</li>
+<li>RLHF Mathematics</li>
+</ol>
+<p>Linked IN,
+I am a huge fan of Reinforcement Learning, I believe it lead to the LLM revolution that we are living in today, without rlhf and Instruction Tuning LLM would still be giveing answers like below, so lets take a journey of RLHF.</p>
+<p>This post is not going to be about Instruction Tuning, (The field of SFT/Instruction tuning is moving rapidly and i would like to do a dedicated post on that.)</p>
+<p>Now with the disclamer out of the way, lets step into the merky waters of RLHF.</p>
+<p>Will incorporate the NYU lecture by the open ai guy later.</p>
+<h1 id="first-from-umass">First from UMASS<a hidden class="anchor" aria-hidden="true" href="#first-from-umass">#</a></h1>
+<p>Before we begin what SFT and what instruction tuning and RLHF do, lets first take a look at the difference between just a pretrained model and an SFT + RLHF model is, (i feel people who think, language modesl are smart and have great abilities, i highly recomened use just a pretrained Language model, you will appreciate how dumb they are, almost 95% of the training is done, only 5% of how to answer a questions such that humans will like is taught during sft and rlhf, so &hellip;.) The beow image is from the GPT 3 family of models, in which you can clearly see,</p>
+<div style="text-align: center;">
+  <img src="/images/rlhf/rlhf_instruct_gpt.png" alt="Comparison of 32-bit, 16-bit, and bfloat16 floating-point formats." style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Comparison of 32-bit, 16-bit, and bfloat16 floating-point formats.
+  <a href="https://mlabonne.github.io/blog/posts/Introduction_to_Weight_Quantization.html" style="color: rgba(0, 0, 0, 0.6);">(Maxime Labonne)</a>
+</p>
+</div>
+<p>0:39
+an example of what we are talking about here so this
+0:46
+um prompt here what is the purpose of the list C in the code below and you have this snippet of code here
+0:54
+um if you can see this and so last time we talked about these huge scale language
+0:59
+models and how they&rsquo;re so capable of doing things but this is a completion of
+1:04
+this prefix from gpt3 um as you can see it uh decides to
+1:11
+generate multiple choices uh and basically trying to convert this this
+1:17
+prefix into uh some kind of exam question right this is not the intended
+1:23
+Behavior the person inputting this prefix into the model wanted an actual answer not multiple choices for someone
+1:31
+else to answer right and so uh you see this much more broadly
+1:36
+with many different types of prompts so for example you might want your model to
+1:42
+you know not output harmful text in response to a particular prompt or not output misleading
+1:49
+um text or non-factual text or many different kinds of undesirable properties but as we know these models
+1:56
+are trained on to predict the next word on the internet and there&rsquo;s many undesirable things in there and also the
+2:03
+model learns weird things like this where it thinks that a likely continuation to this prefix is just to
+2:10
+make a multiple choice question which is clearly not what we want so um the purpose of this is just to
+2:18
+demonstrate that next word prediction on a large data set can only get you so far
+2:23
+because you&rsquo;re learning like what is most likely based on what I&rsquo;ve seen in
+2:29
+my data but maybe we want to change the behavior of the language model based on you know what humans actually find
+2:36
+useful so after applying some of the techniques that we&rsquo;ll talk about in this class we see that the generated sample
+2:46
+from this model is much better right it&rsquo;s actually explaining what this list C is doing instead of something
+2:54
+completely useless like this so um this is kind of the high level motivation here</p>
+<h2 id="rlhf-aligning-language-modesl-to-follow-human-prefrence">RLHF Aligning Language modesl to follow human prefrence.<a hidden class="anchor" aria-hidden="true" href="#rlhf-aligning-language-modesl-to-follow-human-prefrence">#</a></h2>
+<h1 id="the-real-stuff">The real stuff<a hidden class="anchor" aria-hidden="true" href="#the-real-stuff">#</a></h1>
+<p>spring 2023 Umass Lecture</p>
+<h3 id="motivation">Motivation<a hidden class="anchor" aria-hidden="true" href="#motivation">#</a></h3>
+<h3 id="instruction-finetuning">Instruction Finetuning<a hidden class="anchor" aria-hidden="true" href="#instruction-finetuning">#</a></h3>
+<p>Limitations of Instruction Finetuning.</p>
+<ol>
+<li>Expensive to collect ground truth data</li>
+<li>open ended tasks have no right answer</li>
+</ol>
+<h2 id="rlhf">RLHF<a hidden class="anchor" aria-hidden="true" href="#rlhf">#</a></h2>
+<p>Alignment of LLMs with human intent</p>
+<ol>
+<li>start with a large pre trained model</li>
+<li>Instruction Finetuning</li>
+</ol>
+
+
   </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/quantization/"></a>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer>
 </article>
     </main>
     

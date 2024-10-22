@@ -65,11 +65,17 @@ The fundamental idea of beam search is to explore multiple hypotheses simultaneo
 
 1. **Starting Beam:**
 
-   At the initial step $ t = 0 $, we start with the beam containing just the start token $\langle s \rangle$:
+  At time step $ t = 0 $, we start with the beam containing only the start-of-sequence token, denoted as $ \langle s \rangle $. Each sequence in the beam is paired with its cumulative log probability.
 
-   $$
-   \text{Beam}_0 = \{(\langle s \rangle, 0)\}
-   $$
+  $$
+  \text{Beam}_0 = \lbrace{ \left( \langle s \rangle, \log P(\langle s \rangle) \right) }\rbrace
+  $$
+
+  Since $ \langle s \rangle $ is the starting token, we often initialize its log probability to zero:
+
+  $$
+  \text{Beam}_0 = \lbrace{ \left( \langle s \rangle, 0 \right) } \rbrace
+  $$
 
 2. **Expanding Sequences:**
 
@@ -78,10 +84,12 @@ The fundamental idea of beam search is to explore multiple hypotheses simultaneo
    $$
    Y_{1:t} = Y_{1:t-1} \oplus \hat{y_t}
    $$
-
+   
+   Here, $ \oplus $ denotes the concatenation of the existing sequence with the new token.
 3. **Computing Log Probabilities:**
 
-   For each new candidate sequence $ Y_{1:t} $, we compute the total log probability:
+   For each new candidate sequence $ Y_{1:t} $, we calculate the cumulative log probability. The log probability is used instead of the actual probability to prevent numerical underflow and to turn the product of probabilities into a sum, which is computationally more stable.
+
 
    $$
    \log P(Y_{1:t}) = \log P(\hat{y_t} \mid Y_{1:t-1}) + \log P(Y_{1:t-1})
@@ -112,8 +120,12 @@ The fundamental idea of beam search is to explore multiple hypotheses simultaneo
     Repeat steps 2-5 until a stopping condition is met (e.g., maximum length reached or end token generated).
 
 7. **Final Output:**
+  After the iteration stops, we select the sequence with the highest cumulative log probability from the final beam.
 
-    Select the highest-scoring complete sequence from the final beam.
+  $$
+  Y^\ast = \arg\max_{Y \in \text{Beam}_T} \log P(Y)
+  $$
+
 
 Beam Search with an Example of K =2
 
@@ -180,6 +192,13 @@ Open-ended text generation often leads to repetitive outputs. For example, when 
 This issue, known as self-amplification, persists even with larger models. For instance, models with 175 billion parameters still suffer from repetition when generating the most likely string. Increasing scale alone does not resolve this problem.
 To mitigate repetition, one approach is n-gram blocking, which prevents the same n-gram from appearing twice. For example, if n is set to three, and the text contains "I am happy," the next time "I am" appears, "happy" would be set to zero probability, preventing the repetition of this trigram. However, n-gram blocking has limitations, as it can eliminate necessary repetitions, such as a person's name appearing multiple times.
 
+<div style="text-align: center;">
+  <img src="/images/Decoding/issues_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
 
 Finally, let's discuss whether generating the most likely string is reasonable for open-ended text generation. The answer is probably no, as it doesn't align well with human patterns. In this graph, the orange curve represents human-generated text, while the blue curve shows machine-generated text using beam search. You can observe that human speech exhibits a lot of uncertainty, evident from the fluctuations in probabilities. For some words, humans are very certain, while for others, they are less sure. In contrast, the model distribution is always very confident, consistently assigning a probability of one to the sequence. This clear mismatch between the two distributions suggests that searching for the most likely string may not be the appropriate decoding objective.
 
@@ -274,7 +293,7 @@ Epsilon sampling involves setting a threshold for lower bound probabilities. Ess
 
 ### Temperature Scaling
 
-Another hyperparameter that we can tune to affect decoding is the temperature parameter $$ \tau $$. Recall that at each time step, the model computes a score for each word, and we use the softmax function to convert these scores into a probability distribution:
+Another hyperparameter that we can tune to affect decoding is the temperature parameter $ \tau $. Recall that at each time step, the model computes a score for each word, and we use the softmax function to convert these scores into a probability distribution:
 
 $$
 P_t(y_t = w) = \frac{\exp(S_w)}{\sum_{w' \in V} \exp(S_{w'})}
@@ -302,16 +321,16 @@ Temperature is a hyperparameter for decoding, similar to $ k $ in top-k sampling
 </p>
 </div>
 
-## Some other sampling methods
+## Some other sampling methods (edit)
 
-So all the decoding methods we discussed so far are standard decoding methods, just like any other area of NLP, this is an acitvely researched field. Next i am going to present some more advanced decoding methods that have popped up over the past few years that i think are relly and are being used to import the decoding enven more.
+So all the decoding methods we discussed so far are standard decoding methods. But, just like any other area of NLP, this is an acitvely researched field. Next i am going to present some more advanced decoding methods that have popped up over the past few years that i think are relly and are being used to import the decoding enven more.
 Cool and the second one is the one people suspect is used by Open AI for faster inference on their massive models like GPT4.
 
 ### Contrastive Decoding
 
 The idea is to incorporate additional information during the decoding process of language models by utilizing another another model. If you've experimented with relatively small language models like GPT-2 small, you may have noticed that they often degenerate into repeating the same sequence or provide incorrect outputs when asked factual questions. These issues are less prevalent in larger models trained on more extensive data.
 
-The question arises: can we use the shortcomings of the smaller model to enhance the performance of the larger model? The approach is based on the intuition that if the smaller model assigns a low probability to a certain answer while the larger model assigns a high probability, it's likely because the larger model has learned something the smaller model hasn't. Therefore, we modify the probability distribution from the larger model to favor outputs that it considers highly likely and the weaker model considers unlikely.
+The question arises: can we use the shortcomings of the smaller model to enhance the performance of the larger model? The approach is based on the intuition that if the smaller model assigns a low probability to a certain answer while the larger model assigns a high probability, it's likely because the larger model has learned something the smaller model hasn't. Therefore, we modify the probability distribution of the larger model to favor outputs that it considers highly likely and the weaker model considers unlikely.
 
 <div style="text-align: center;">
   <img src="/images/Decoding/contrastive.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
@@ -325,7 +344,9 @@ For example, consider the input: **"Barack Obama was born in Hawaii. He was born
 
 By employing **contrastive decoding**, we take the outputs from our expert (larger) model and subtract the probabilities assigned by the weaker (smaller) model. This process emphasizes outputs that the stronger model deems probable but the weaker model does not, likely because these are facts known to the larger model but not the smaller one. In this example, we might obtain the actual year Barack Obama was born—a fact the larger model knows and the smaller model doesn't.
 
-This method is part of a broader class of techniques that use external information to improve decoding by adjusting the probability distribution at each step. These techniques offer alternative sampling strategies before delving into search-based methods.
+This method is part of a broader class of techniques that use external information to improve decoding by adjusting the probability distribution at each step.
+
+Lets look at a few questions that i had when i read this for the first time...
 
 **Does this approach improve upon standard methods?** Generally, yes. Both the expert and weak models might assign high probabilities to degenerate cases like repetitive sequences because they're easy patterns to learn. However, genuinely valuable outputs that only the expert model can produce tend to have low probabilities under the weak model. By subtracting the weak model's probabilities, we filter out these less desirable behaviors, retaining the high-quality outputs.
 
@@ -333,553 +354,164 @@ This method is part of a broader class of techniques that use external informati
 
 **How weak should the weak predictor be?** The paper doesn't suggest a significant disparity between the two models used. For instance, they experimented with GPT-2 XL and GPT-2 small, which differ in parameter counts and data but aren't drastically different in capability. The key is to choose a weak model that's not so similar to the expert that it subtracts useful information, nor so weak that it lacks any valuable insights about the task. The optimal choice may vary depending on the specific task at hand.
 
-**Is this method applicable during inference?** Yes, this technique is used during inference and doesn't require retraining the models. Everything discussed can be directly applied during the decoding process to enhance output quality.
+**Could highly plausible tokens receive low contrastive scores if both models assign them similar probabilities, potentially causing the model to overlook good continuations?** 
 
-**Contrastive Decoding: Mathematical Details Explained**
+Yes, highly plausible tokens can receive low contrastive scores when both the expert and amateur models assign them similar probabilities, which might cause the model to overlook good continuations. To prevent this, the authors implement an **adaptive plausibility constraint** that ensures only tokens deemed sufficiently probable by the expert model are considered. By filtering out less probable tokens and having the amateur model adjust the scores of the remaining candidates, the approach maintains high-quality and distinctive continuations without discarding promising tokens.
 
-**1. Problem Statement**
+## Speculative Decoding
 
-In open-ended language generation, we aim to generate fluent and coherent text continuations given a prompt. Formally, we have:
+In the realm of large language models, generating text efficiently without compromising quality is a significant challenge. **Speculative decoding** emerges as a powerful technique to speed up the inference process by leveraging a faster approximation model alongside the target model. This post delves into the mathematical underpinnings of speculative decoding, illustrates it with a detailed example, and discusses its advantages and practical considerations.
 
-- **Prompt (Prefix)**: A sequence of tokens $ x_{pre} = x_1, x_2, \dots, x_n $.
-- **Continuation**: A sequence of tokens $ x_{cont} = x_{n+1}, x_{n+2}, \dots, x_{n+m} $ that we want to generate.
+---
 
-We use a pre-trained autoregressive language model (LM) to generate the continuation by predicting one token at a time, conditioned on all previous tokens:
+### Understanding Speculative Decoding
 
-$$
-p_{LM}(x_{cont} \mid x_{pre}) = \prod_{i=n+1}^{n+m} p_{LM}(x_i \mid x_{<i})
-$$
+Speculative decoding accelerates text generation by using a lightweight approximation model to generate multiple candidate tokens in parallel, and then evaluating these candidates with the accurate but slower target model. By accepting tokens that are probable under the target model and adjusting the distribution when necessary, we ensure that the final output matches the target model's output distribution without the computational overhead of evaluating every token sequentially with the target model.
 
-where $ x_{<i} = x_1, x_2, \dots, x_{i-1} $ represents the context up to token $ x_i $.
+The key components of speculative decoding are:
 
-We introduce two types of language models:
+- **Target Model ($ M_p $)**: The accurate language model providing the true probability distribution $ p(x_t | x_{<t}) $.
+- **Approximation Model ($ M_q $)**: A faster, less accurate model approximating $ M_p $, providing $ q(x_t | x_{<t}) $.
+- **Prefix ($ x_{<t} $)**: The sequence of tokens generated so far.
+- **Completion Parameter ($ \gamma $)**: The number of speculative tokens generated.
 
-- **Expert LM ($ p_{EXPERT} $)**: A larger, more capable model (e.g., GPT-2 XL).
-- **Amateur LM ($ p_{AMA} $)**: A smaller, less capable model (e.g., GPT-2 small).
+---
 
-**2. Contrastive Decoding Objective**
+## The Speculative Decoding Algorithm
 
-The core idea of contrastive decoding is to leverage the strengths of the expert LM while mitigating common errors by comparing its predictions with those of the amateur LM. We define the **contrastive objective** as:
+The speculative decoding process combines outputs from both the approximation model $ M_q $ and the target model $ M_p $ in a single decoding step.
 
-$$
-L_{CD}(x_{cont}; x_{pre}) = \log p_{EXPERT}(x_{cont} \mid x_{pre}) - \log p_{AMA}(x_{cont} \mid x_{pre})
-$$
+**Step 1: Sampling Guesses from the Approximation Model**
 
-This objective rewards continuations that the expert LM deems likely but the amateur LM does not. By subtracting the amateur's log-probabilities, we penalize patterns that are common mistakes of smaller models, such as repetitions or incoherence.
+We begin by using the approximation model $ M_q $ to generate $ \gamma $ speculative tokens. For each speculative token, we compute the probability distribution $ q_i(x) $ based on the current prefix and sample a token $ x_i $ from this distribution. This process is autoregressive, meaning each token is generated based on the prefix plus any previously generated speculative tokens.
 
-**3. Challenges with the Contrastive Objective**
+**Step 2: Evaluating with the Target Model**
 
-While the contrastive objective helps highlight the expert LM's strengths, it can introduce two issues:
+In parallel, we use the target model $ M_p $ to compute the true probability distributions $ p_i(x) $ for each extended prefix resulting from the tokens sampled by $ M_q $. This allows us to assess the likelihood of the speculative tokens under the target model.
 
-- **False Positives**: Implausible tokens may receive high contrastive scores if the amateur LM assigns them very low probabilities, even if the expert LM also considers them unlikely.
-- **False Negatives**: Highly plausible tokens may receive low contrastive scores if both models assign them similar probabilities, potentially causing the model to overlook good continuations.
+**Step 3: Determining Acceptance of Speculative Tokens**
 
-**4. Adaptive Plausibility Constraint**
+For each speculative token $ x_i $, we determine whether to accept it based on an acceptance criterion. We calculate the acceptance probability $ a_i = \min\left(1, \frac{p_i(x_i)}{q_i(x_i)}\right) $ and generate a random number $ r_i $ from a uniform distribution between 0 and 1. If $ r_i \leq a_i $, we accept the token. We continue this process sequentially; if a token is rejected, we stop accepting further speculative tokens because their contexts include the rejected token.
 
-To address these challenges, we introduce an **adaptive plausibility constraint**. This constraint ensures that we only consider tokens that the expert LM deems sufficiently probable.
+**Step 4: Adjusting the Distribution if Needed**
 
-**Definition**:
+If we reject a token or reach the end of the speculative tokens, we adjust the probability distribution for sampling the next token from the target model. We compute an adjusted distribution $ p'(x) = \text{normalize}(\max(0, p_{n+1}(x) - q_{n+1}(x))) $, where $ n $ is the number of accepted speculative tokens. This adjustment ensures that we account for the probability mass not covered by the accepted speculative tokens.
 
-$$
-\hat{head}(x_i) = \lbrace { x \in V : p\_{EXPERT}(x | x\_{<i}) \geq \alpha \cdot \max\_{x' \in V} p\_{EXPERT}(x' | x\_{<i}) } \rbrace
-$$
+**Step 5: Generating the Next Token**
 
-- **$ V $**: The vocabulary of possible tokens.
-- **$ \alpha \in [0, 1] $**: A hyperparameter that controls the cutoff threshold.
-  - **$ \alpha $ close to 1**: Only the most probable tokens are included.
-  - **$ \alpha $ close to 0**: A wider range of tokens is included.
+Finally, we sample the next token $ t $ from the adjusted distribution $ p'(x) $ using the target model $ M_p $. We then construct the new prefix by concatenating the accepted speculative tokens $ x_1, ..., x_n $ and the new token $ t $.
 
-**Purpose**:
-
-- **Prevent False Positives**: Excludes tokens that the expert LM considers implausible, even if they have high contrastive scores.
-- **Prevent False Negatives**: Ensures that highly probable tokens (according to the expert LM) are not discarded due to low contrastive scores.
-
-**5. Full Contrastive Decoding Method**
-
-Combining the contrastive objective with the adaptive plausibility constraint, we define the **token-level contrastive score** for each candidate token $ x_i $:
-
-$$
-CD\_score(x_i; x_{<i}) = 
-\begin{cases} 
-\log \dfrac{p_{EXPERT}(x_i \mid x_{<i})}{p_{AMA}(x_i \mid x_{<i})}, & \text{if } x_i \in \hat{head}(x_i) \\
--\infty, & \text{otherwise}
-\end{cases}
-$$
-
-- **Interpretation**:
-  - If a token $ x_i $ is within the plausible set $ \hat{head}(x_i) $, we compute its contrastive score.
-  - If not, the token is assigned a score of $ -\infty $, effectively eliminating it from consideration.
-
-**Sequence-Level Objective**:
-
-The overall objective for the continuation $ x_{cont} $ becomes:
-
-$$
-L_{CD}(x_{cont}; x_{pre}) = \sum_{i=n+1}^{n+m} CD\_score(x_i; x_{<i})
-$$
-
-**Decoding Process**:
-
-1. **At Each Time Step $ i $**:
-   - **Compute $ p_{EXPERT}(x \mid x_{<i}) $**: Obtain the expert LM's next-token probabilities.
-   - **Apply Plausibility Constraint**:
-     - Form $ \hat{head}(x_i) $ by selecting tokens satisfying the constraint.
-   - **Compute $ CD\_score(x_i; x_{<i}) $** for tokens in $ \hat{head}(x_i) $.
-
-2. **Beam Search**:
-   - Use beam search to explore possible continuations.
-   - At each step, expand beams by selecting tokens with the highest $ CD\_score $.
-   - Discard beams that end with tokens not in $ \hat{head}(x_i) $.
-
-**6. Practical Considerations**
-
-**Choice of $ \alpha $ in Plausibility Constraint**:
-
-- A balance is necessary:
-  - **High $ \alpha $**: May be too restrictive, potentially missing good continuations.
-  - **Low $ \alpha $**: May allow less plausible tokens, reintroducing false positives.
-- Typically, $ \alpha $ is set to a value like 0.1, allowing for a reasonable diversity of plausible tokens.
-
-**Beam Width**:
-
-- Determines the number of candidate continuations explored.
-- Larger beam widths increase computational cost but can improve the quality of the generated text.
-
-**7. Selection of the Amateur LM**
-
-The amateur LM should be chosen carefully to maximize the effectiveness of contrastive decoding.
-
-**Factors to Consider**:
-
-- **Model Size**:
-  - A smaller model within the same family as the expert LM.
-  - Example: If the expert is GPT-2 XL, the amateur might be GPT-2 small.
-- **Temperature Adjustment**:
-  - Adjust the **temperature parameter $ \tau $** of the amateur LM to control the sharpness of its probability distribution.
-    - **High $ \tau $** (>1): Flattens the distribution, making the amateur less confident.
-    - **Low $ \tau $** (<1): Sharpens the distribution, emphasizing the amateur's mistakes.
-- **Context Window**:
-  - Limit the amateur LM's context to a smaller window (e.g., only the last few tokens), reducing its ability to maintain long-term coherence.
-  
-**8. Example Walkthrough**
-
-Let's illustrate how contrastive decoding works with an example:
-
-- **Given Prompt**: "Barack Obama was born in Hawaii. He was born in"
-- **Expert LM Predictions**:
-  - High probabilities for tokens like "1961", "August", "Honolulu".
-- **Amateur LM Predictions**:
-  - May assign high probabilities to repetitive patterns like "Hawaii", "the".
-
-**Steps**:
-
-1. **Compute $ p_{EXPERT}(x_i \mid x_{<i}) $** and $ p_{AMA}(x_i \mid x_{<i}) $** for all tokens.
-2. **Apply Plausibility Constraint**:
-   - Identify tokens where $ p_{EXPERT}(x_i \mid x_{<i}) $ is within $ \alpha $ of the maximum probability.
-3. **Calculate $ CD\_score(x_i; x_{<i}) $**:
-   - For plausible tokens, compute the contrastive score.
-   - Tokens like "1961" may have high contrastive scores because they are plausible under the expert LM and not favored by the amateur LM.
-4. **Select Next Token**:
-   - Choose the token with the highest $ CD\_score $.
-   - This leads to selecting informative and coherent continuations.
-
-**9. Advantages of Contrastive Decoding**
-
-- **Reduces Repetition**: Penalizes repetitive patterns commonly produced by smaller models.
-- **Enhances Coherence**: Highlights the expert LM's ability to maintain context and generate coherent text.
-- **Balances Creativity and Plausibility**: Generates text that is both plausible (as judged by the expert LM) and original (differing from the amateur LM's tendencies).
-
-**10. Summary**
-
-Contrastive decoding effectively combines the strengths of a large language model with the corrective influence of a smaller model to generate high-quality text. By mathematically defining a contrastive objective and applying an adaptive plausibility constraint, we can navigate the trade-offs between plausibility and originality, resulting in more coherent and fluent language generation.
-
-**Key Equations**:
-
-- **Contrastive Objective**:
-
-  $$
-  L_{CD}(x_{cont}; x_{pre}) = \log p_{EXPERT}(x_{cont} \mid x_{pre}) - \log p_{AMA}(x_{cont} \mid x_{pre})
-  $$
-
-- **Adaptive Plausibility Constraint**:
-
-$$
-\hat{head}(x_i) = \lbrace { x \in V : p\_{EXPERT}(x | x\_{<i}) \geq \alpha \cdot \max\_{x' \in V} p\_{EXPERT}(x' | x\_{<i}) } \rbrace
-$$
-
-- **Token-Level Contrastive Score**:
-
-  $$
-  CD\_score(x_i; x_{<i}) = 
-  \begin{cases} 
-  \log \dfrac{p_{EXPERT}(x_i \mid x_{<i})}{p_{AMA}(x_i \mid x_{<i})}, & \text{if } x_i \in \hat{head}(x_i) \\
-  -\infty, & \text{otherwise}
-  \end{cases}
-  $$
-
-By understanding and applying these mathematical formulations, we can implement contrastive decoding to enhance language generation tasks effectively.
-
-# Speculative Decoding
-
-This is the decoding stratergy that people suspect that Open AI uses for its GPT class of Models.
-
-# Speculative Decoding: A Detailed Explanation
-
-## 2. Speculative Decoding
-
-Speculative decoding is a technique designed to accelerate the inference process of large language models by leveraging a more efficient approximation model alongside the target model. This method allows us to generate multiple tokens in parallel, potentially reducing the computation time while maintaining the quality of the generated text.
-
-### 2.1 Overview
-
-**Definitions:**
-
-- **Target Model ($ M_p $)**: The primary language model we aim to accelerate. It provides the true probability distribution $ p(x_t | x_{<t}) $ for the next token $ x_t $ given the previous tokens $ x_{<t} $.
-- **Approximation Model ($ M_q $)**: A more efficient but less accurate model that approximates $ M_p $. It provides the distribution $ q(x_t | x_{<t}) $.
-- **Prefix ($ x_{<t} $)**: The sequence of tokens generated so far, serving as the context for predicting the next token.
-- **Completion Parameter ($ \gamma $)**: A positive integer indicating the number of speculative completions generated by $ M_q $.
-
-**Core Idea:**
-
-1. **Speculative Generation with $ M_q $:**
-   - Use $ M_q $ to generate $ \gamma $ possible continuations (tokens) from the current prefix. This is done autoregressively, meaning each subsequent token is generated based on the prefix plus the previously generated tokens.
-
-2. **Parallel Evaluation with $ M_p $:**
-   - Run $ M_p $ to compute the true probability distributions for the generated tokens from $ M_q $. This is done in parallel to save time.
-
-3. **Acceptance and Adjustment:**
-   - **Acceptance Criterion:** If a token generated by $ M_q $ has a probability under $ M_p $ that is at least as high as under $ M_q $, it's accepted.
-   - **Rejection and Resampling:** If not, the token is rejected with a certain probability, and a new token is sampled from an adjusted distribution derived from $ M_p $.
-
-**Benefits:**
-
-- **Efficiency:** By potentially accepting multiple tokens at once, we reduce the number of sequential computations required by $ M_p $.
-- **Guaranteed Quality:** The method ensures that the final output distribution matches that of $ M_p $, maintaining the quality of the generated text.
-
-### 2.2 Standardized Sampling
-
-**Sampling Methods:**
-
-- **Argmax Sampling:** Select the token with the highest probability.
-- **Top-k Sampling:** Consider only the top $ k $ tokens with the highest probabilities.
-- **Nucleus (Top-p) Sampling:** Consider the smallest set of tokens whose cumulative probability exceeds a threshold $ p $.
-- **Temperature Scaling:** Adjust the probabilities by scaling logits before applying softmax.
-
-**Standardization:**
-
-All these sampling methods can be unified under the framework of sampling from an adjusted probability distribution. This standardization allows us to:
-
-- Treat different sampling methods uniformly.
-- Apply the speculative decoding technique regardless of the sampling strategy used.
-- Simplify the theoretical analysis and implementation.
-
-### 2.3 Speculative Sampling
-
-**Objective:** To sample a token $ x $ from the target distribution $ p(x) $ using the approximation distribution $ q(x) $.
-
-**Procedure:**
-
-1. **Initial Sampling:**
-   - Sample $ x \sim q(x) $.
-
-2. **Acceptance Criterion:**
-   - **If $ q(x) \leq p(x) $:** Accept $ x $ with certainty.
-   - **If $ q(x) > p(x) $:** Accept $ x $ with probability $ \frac{p(x)}{q(x)} $.
-
-3. **Rejection and Resampling:**
-   - If $ x $ is rejected, sample a new token from the adjusted distribution:
-     $$
-     p'(x) = \text{normalize}(\max(0, p(x) - q(x)))
-     $$
-   - This adjustment ensures that the overall sampling process is unbiased and that $ x $ is ultimately drawn from $ p(x) $.
-
-**Theoretical Justification:**
-
-- The acceptance-rejection mechanism preserves the target distribution $ p(x) $.
-- The adjusted distribution $ p'(x) $ accounts for the probability mass not covered by $ q(x) $.
-
-**Algorithm Overview:**
-
-- **Generate Guesses:** Use $ M_q $ to produce $ \gamma $ candidate tokens.
-- **Evaluate with $ M_p $:** Compute the probabilities of these tokens under $ M_p $.
-- **Acceptance Check:** Use an acceptance-rejection test for each token.
-- **Adjustment:** If a token is rejected, adjust the distribution accordingly and sample from $ M_p $.
-
-## Algorithm 1: SpeculativeDecodingStep
-
-**Purpose:** To generate one or more tokens in a single decoding step, combining outputs from $ M_q $ and $ M_p $.
-
-**Inputs:**
-
-- **$ M_p $:** Target model.
-- **$ M_q $:** Approximation model.
-- **$ \text{prefix} $:** Current sequence of tokens.
-
-**Steps:**
-
-### Step 1: Sample $ \gamma $ Guesses from $ M_q $
-
-**Process:**
-
-For $ i = 1 $ to $ \gamma $:
-
-1. **Compute $ q_i(x) $:**
-   - Run $ M_q $ on $ \text{prefix} + [x_1, ..., x_{i-1}] $ to get the probability distribution for the next token.
-2. **Sample $ x_i $ from $ q_i(x) $:**
-   - Use the computed distribution to sample the next token $ x_i $.
-
-**Explanation:**
-
-- **Autoregressive Generation:** Each token $ x_i $ is generated based on all previous tokens, including those just generated.
-- **Parallelization Potential:** This step can be efficiently computed due to $ M_q $ being more lightweight than $ M_p $.
-
-### Step 2: Run $ M_p $ in Parallel
-
-**Process:**
-
-- **Compute Distributions:**
-  - Run $ M_p $ on $ \text{prefix} $ and each extended prefix to get $ p_1(x), ..., p_{\gamma + 1}(x) $.
-    - $ p_1(x) $: Distribution after $ \text{prefix} $.
-    - $ p_2(x) $: Distribution after $ \text{prefix} + [x_1] $.
-    - Continue up to $ p_{\gamma + 1}(x) $ after all $ \gamma $ tokens.
-
-**Explanation:**
-
-- **Parallel Computation:** Since the prefixes differ only by the added tokens from $ M_q $, $ M_p $ can process them simultaneously.
-- **Preparation for Acceptance Check:** These distributions are needed to determine whether to accept the tokens sampled from $ M_q $.
-
-### Step 3: Determine the Number of Accepted Guesses
-
-**Process:**
-
-1. **Generate Random Numbers:**
-   - For each $ i $, sample $ r_i \sim U(0,1) $, where $ U(0,1) $ denotes the uniform distribution between 0 and 1.
-
-2. **Acceptance Check:**
-   - For each $ i $ from 1 to $ \gamma $, check if:
-     $$
-     r_i \leq \frac{p_i(x_i)}{q_i(x_i)}
-     $$
-   - If the condition is met, $ x_i $ is accepted.
-
-3. **Determine $ n $:**
-   - $ n $ is the number of tokens accepted.
-   - If a token fails the acceptance check, we stop accepting further tokens.
-   - If all tokens pass, $ n = \gamma $.
-
-**Explanation:**
-
-- **Acceptance Probability:** The ratio $ \frac{p_i(x_i)}{q_i(x_i)} $ represents the likelihood that $ x_i $ is a good sample under $ M_p $ given it was sampled from $ q_i(x) $.
-- **Sequential Acceptance:** Once a token is rejected, subsequent tokens are not considered because their contexts include the rejected token.
-
-### Step 4: Adjust the Distribution from $ M_p $ if Needed
-
-**Process:**
-
-1. **Set $ p'(x) $:**
-   - $ p'(x) = p_{n+1}(x) $, the distribution from $ M_p $ after the last accepted token.
-
-2. **Adjust the Distribution:**
-   - Compute:
-     $$
-     p'(x) = \text{normalize}(\max(0, p'(x) - q_{n+1}(x)))
-     $$
-   - This step subtracts the influence of $ q_{n+1}(x) $ to adjust for tokens not accepted.
-
-**Explanation:**
-
-- **Purpose of Adjustment:** Ensures that the probability mass attributed to the rejected tokens in $ q_{n+1}(x) $ doesn't bias the sampling from $ p'(x) $.
-- **Normalization:** Necessary to make $ p'(x) $ a valid probability distribution after the subtraction.
-
-### Step 5: Return One Token from $ M_p $ and $ n $ Tokens from $ M_q $
-
-**Process:**
-
-1. **Sample Next Token $ t $:**
-   - Sample $ t $ from the adjusted distribution $ p'(x) $.
-
-2. **Construct New Prefix:**
-   - Concatenate the accepted tokens $ x_1, ..., x_n $ and the new token $ t $ to the prefix.
-   - Return:
-     $$
-     \text{prefix} + [x_1, ..., x_n, t]
-     $$
-
-**Explanation:**
-
-- **Final Output:** The sequence includes tokens from $ M_q $ (if accepted) and a token from $ M_p $.
-- **Guarantee of Correctness:** Despite using $ M_q $, the acceptance-rejection mechanism ensures the overall distribution matches that of $ M_p $.
+---
 
 ## Detailed Example
 
-Let's walk through the algorithm step by step with a concrete example.
+To illustrate the speculative decoding algorithm, let's walk through a concrete example.
 
 **Assumptions:**
 
-- **$ M_p $:** A large, accurate language model.
-- **$ M_q $:** A smaller, faster approximation of $ M_p $.
-- **Prefix:** The current text is "The quick brown".
-- **Vocabulary:** Contains words like "fox", "dog", "cat", etc.
+- **Target Model ($ M_p $)**: An accurate but slower language model.
+- **Approximation Model ($ M_q $)**: A faster, less accurate model.
+- **Prefix**: "The quick brown".
+- **Vocabulary**: Includes words like "fox", "dog", "cat", "jumps", etc.
 - **Completion Parameter ($ \gamma $)**: Set to 2.
 
-### Step 1: Sample Guesses from $ M_q $
+**Step 1: Sampling Guesses from $ M_q $**
 
-**Iteration 1 ($ i = 1 $):**
+*Iteration 1 ($ i = 1 $)*
 
-- **Compute $ q_1(x) $:**
-  - Run $ M_q $ on "The quick brown".
-  - Suppose $ q_1(fox) = 0.6 $, $ q_1(dog) = 0.3 $, $ q_1(cat) = 0.1 $.
+We run $ M_q $ on the prefix "The quick brown" to compute $ q_1(x) $. Suppose $ q_1(\text{fox}) = 0.6 $, $ q_1(\text{dog}) = 0.3 $, and $ q_1(\text{cat}) = 0.1 $. We sample $ x_1 $ from $ q_1(x) $, and let's say we get $ x_1 = \text{fox} $.
 
-- **Sample $ x_1 $:**
-  - Let's say we sample $ x_1 = fox $.
+*Iteration 2 ($ i = 2 $)*
 
-**Iteration 2 ($ i = 2 $):**
+Next, we run $ M_q $ on the extended prefix "The quick brown fox" to compute $ q_2(x) $. Suppose $ q_2(\text{jumps}) = 0.5 $, $ q_2(\text{sleeps}) = 0.3 $, and $ q_2(\text{runs}) = 0.2 $. We sample $ x_2 $ from $ q_2(x) $, and let's say we get $ x_2 = \text{jumps} $.
 
-- **Compute $ q_2(x) $:**
-  - Run $ M_q $ on "The quick brown fox".
-  - Suppose $ q_2(jumps) = 0.5 $, $ q_2(sleeps) = 0.3 $, $ q_2(runs) = 0.2 $.
+**Step 2: Evaluating with $ M_p $**
 
-- **Sample $ x_2 $:**
-  - Let's say we sample $ x_2 = jumps $.
+We compute the true probability distributions using $ M_p $:
 
-### Step 2: Run $ M_p $ in Parallel
+- $ p_1(x) $ for the prefix "The quick brown": Suppose $ p_1(\text{fox}) = 0.7 $, $ p_1(\text{dog}) = 0.2 $, $ p_1(\text{cat}) = 0.1 $.
+- $ p_2(x) $ for the prefix "The quick brown fox": Suppose $ p_2(\text{jumps}) = 0.6 $, $ p_2(\text{sleeps}) = 0.2 $, $ p_2(\text{runs}) = 0.2 $.
+- $ p_3(x) $ for the prefix "The quick brown fox jumps": Suppose $ p_3(\text{over}) = 0.8 $, $ p_3(\text{high}) = 0.1 $, $ p_3(\text{quickly}) = 0.1 $.
 
-**Compute $ p_1(x) $:**
+**Step 3: Determining Acceptance**
 
-- Run $ M_p $ on "The quick brown".
-- Suppose $ p_1(fox) = 0.7 $, $ p_1(dog) = 0.2 $, $ p_1(cat) = 0.1 $.
+*For $ x_1 = \text{fox} $:*
 
-**Compute $ p_2(x) $:**
+We calculate the acceptance probability $ a_1 = \min\left(1, \frac{p_1(\text{fox})}{q_1(\text{fox})}\right) = \min\left(1, \frac{0.7}{0.6}\right) = 1 $. We generate a random number $ r_1 $, say $ r_1 = 0.5 $. Since $ r_1 \leq a_1 $, we accept $ x_1 = \text{fox} $.
 
-- Run $ M_p $ on "The quick brown fox".
-- Suppose $ p_2(jumps) = 0.6 $, $ p_2(sleeps) = 0.2 $, $ p_2(runs) = 0.2 $.
+*For $ x_2 = \text{jumps} $:*
 
-**Compute $ p_3(x) $:**
+We calculate $ a_2 = \min\left(1, \frac{p_2(\text{jumps})}{q_2(\text{jumps})}\right) = \min\left(1, \frac{0.6}{0.5}\right) = 1 $. We generate $ r_2 = 0.8 $. Since $ r_2 \leq a_2 $, we accept $ x_2 = \text{jumps} $.
 
-- Run $ M_p $ on "The quick brown fox jumps".
-- Suppose $ p_3(over) = 0.8 $, $ p_3(high) = 0.1 $, $ p_3(quickly) = 0.1 $.
+We have accepted both speculative tokens, so $ n = 2 $.
 
-### Step 3: Determine Acceptance
+**Step 4: Adjusting the Distribution**
 
-**For $ x_1 = fox $:**
+Since we have accepted all speculative tokens, we adjust the distribution for the next token. We set $ p'(x) = p_3(x) $ and compute $ q_3(x) $ using $ M_q $ on the prefix "The quick brown fox jumps". Suppose $ q_3(\text{over}) = 0.7 $, $ q_3(\text{high}) = 0.2 $, and $ q_3(\text{quickly}) = 0.1 $.
 
-- **Calculate Acceptance Probability:**
-  - $ a_1 = \frac{p_1(fox)}{q_1(fox)} = \frac{0.7}{0.6} \approx 1.17 $.
-  - Since $ a_1 > 1 $, set $ a_1 = 1 $ (probability cannot exceed 1).
+We adjust $ p'(x) $ by subtracting $ q_3(x) $ and normalizing:
 
-- **Sample $ r_1 \sim U(0,1) $:**
-  - Let's say $ r_1 = 0.5 $.
+- $ p'(\text{over}) = \max(0, 0.8 - 0.7) = 0.1 $
+- $ p'(\text{high}) = \max(0, 0.1 - 0.2) = 0 $
+- $ p'(\text{quickly}) = \max(0, 0.1 - 0.1) = 0 $
 
-- **Acceptance Check:**
-  - $ r_1 \leq a_1 $ (0.5 ≤ 1), so accept $ x_1 = fox $.
+After normalization (since total mass is 0.1), we have $ p'(\text{over}) = 1.0 $.
 
-**For $ x_2 = jumps $:**
+**Step 5: Generating the Next Token**
 
-- **Calculate Acceptance Probability:**
-  - $ a_2 = \frac{p_2(jumps)}{q_2(jumps)} = \frac{0.6}{0.5} = 1.2 $.
-  - Again, set $ a_2 = 1 $.
+We sample $ t $ from $ p'(x) $, which must be "over" since $ p'(\text{over}) = 1.0 $. We construct the new prefix by adding the accepted tokens and the new token: "The quick brown **fox jumps over**".
 
-- **Sample $ r_2 \sim U(0,1) $:**
-  - Let's say $ r_2 = 0.8 $.
+---
 
-- **Acceptance Check:**
-  - $ r_2 \leq a_2 $ (0.8 ≤ 1), so accept $ x_2 = jumps $.
+## Theoretical Justification
 
-**Determine $ n $:**
+Speculative decoding uses an acceptance-rejection sampling mechanism to correct for discrepancies between the approximation model $ M_q $ and the target model $ M_p $. By accepting samples from $ M_q $ with a probability proportional to $ \frac{p(x)}{q(x)} $, we ensure that the accepted tokens follow the target distribution $ p(x) $.
 
-- Both tokens are accepted, so $ n = 2 $.
+When tokens are rejected, we adjust the distribution for the next token to account for the probability mass not covered by $ M_q $. This adjustment ensures that the final output aligns with the target model's distribution, preserving the quality of the generated text.
 
-### Step 4: Adjust the Distribution from $ M_p $
-
-**Set $ p'(x) = p_3(x) $:**
-
-- $ p_3(x) $ is the distribution after "The quick brown fox jumps".
-
-**Adjust $ p'(x) $:**
-
-- Compute $ q_3(x) $ from $ M_q $ on "The quick brown fox jumps":
-  - Suppose $ q_3(over) = 0.7 $, $ q_3(high) = 0.2 $, $ q_3(quickly) = 0.1 $.
-
-- Adjust $ p'(x) = \text{normalize}(\max(0, p_3(x) - q_3(x))) $:
-  - Subtract $ q_3(x) $ from $ p_3(x) $:
-    - $ p'(over) = 0.8 - 0.7 = 0.1 $
-    - $ p'(high) = 0.1 - 0.2 = 0 $ (set to 0 since negative)
-    - $ p'(quickly) = 0.1 - 0.1 = 0 $
-  - Normalize $ p' $:
-    - Total probability mass: 0.1
-    - $ p'(over) = 1.0 $
-
-### Step 5: Return Tokens
-
-**Sample Next Token $ t $:**
-
-- Sample $ t $ from $ p'(x) $:
-  - Since $ p'(over) = 1.0 $, $ t = over $.
-
-**Construct New Prefix:**
-
-- Return:
-  - $ \text{prefix} + [fox, jumps, over] $
-  - "The quick brown fox jumps over"
-
-**Final Output:**
-
-- The algorithm successfully generated three tokens in one step, accelerating the decoding process while ensuring that the output aligns with $ M_p $.
-
-## Theoretical Underpinnings
-
-### Acceptance-Rejection Sampling
-
-- **Purpose:** To ensure that samples drawn from $ q(x) $ match the target distribution $ p(x) $.
-- **Mechanism:** By accepting samples with probability $ \frac{p(x)}{q(x)} $, we correct for any discrepancies between $ q(x) $ and $ p(x) $.
-- **Guarantee:** Over many samples, the distribution of accepted tokens converges to $ p(x) $.
-
-### Adjusted Distribution $ p'(x) $
-
-- **Why Subtract $ q(x) $:** To remove the probability mass of tokens already considered (and possibly rejected) from $ q(x) ).
-- **Normalization:** Ensures the adjusted distribution is valid (sums to 1).
-- **Result:** The adjusted distribution represents the remaining "uncounted" probability mass in $ p(x) $.
+---
 
 ## Practical Considerations
 
-### Choice of $ \gamma $
+**Choosing the Completion Parameter ($ \gamma $)**
 
-- **Trade-off:** A larger $ \gamma $ increases the chance of accepting more tokens but also increases computational overhead.
-- **Optimal $ \gamma $:** Depends on the balance between the speed of $ M_q $ and the acceptance rate.
-- **Guidelines:** Choose $ \gamma $ based on empirical performance and resource constraints.
+There is a trade-off in selecting $ \gamma $. A larger $ \gamma $ increases the chance of accepting more tokens, potentially accelerating the decoding process, but it also adds computational overhead due to the increased number of computations required by $ M_p $ and $ M_q $. It's important to balance $ \gamma $ based on model performance and available resources.
 
-### Quality of $ M_q $
+**Quality of the Approximation Model**
 
-- **Approximation Accuracy:** The closer $ q(x) $ is to $ p(x) $, the higher the acceptance rate.
-- **Efficiency vs. Accuracy:** $ M_q $ should be significantly faster than $ M_p $ while providing a reasonable approximation.
+The effectiveness of speculative decoding depends on the approximation quality of $ M_q $. A closer match between $ q(x) $ and $ p(x) $ leads to higher acceptance rates, improving efficiency. However, $ M_q $ must be significantly faster than $ M_p $ to justify its use.
 
-### Computational Resources
+**Computational Resources**
 
-- **Parallel Processing:** Requires sufficient computational resources to run $ M_p $ on multiple prefixes simultaneously.
-- **Memory Usage:** Increased memory consumption due to multiple instances of $ M_p $ and $ M_q $.
+Speculative decoding requires hardware capable of parallel processing to run $ M_p $ on multiple prefixes simultaneously. This may increase memory usage and computational demands, which should be considered when implementing this technique.
 
-### Implementation Tips
+**Implementation Tips**
 
-- **Batch Processing:** Utilize batch computations to process multiple tokens efficiently.
-- **Caching:** Cache computations where possible to avoid redundant calculations.
-- **Numerical Stability:** Ensure calculations of $ \frac{p(x)}{q(x)} $ are numerically stable to avoid division by zero or overflow.
+- Utilize batch processing to optimize computations.
+- Cache repeated computations when possible to reduce redundancy.
+- Handle calculations carefully to prevent numerical instability, such as division by zero or overflow errors.
+
+---
 
 ## Advantages and Limitations
 
-### Advantages
+**Advantages**
 
-- **Speed:** Potentially reduces the number of sequential steps required by $ M_p $, accelerating the generation process.
-- **Flexibility:** Compatible with various sampling methods and can be adapted to different models.
-- **Quality Preservation:** Maintains the quality of outputs as they are ultimately drawn from $ M_p $.
+Speculative decoding reduces the number of sequential steps required by $ M_p $, accelerating the inference process. The technique is flexible, compatible with various sampling methods, and can be adapted to different models. Importantly, the final outputs align with the target model's distribution, maintaining text generation quality.
 
-### Limitations
+**Limitations**
 
-- **Complexity:** Adds complexity to the decoding process, requiring careful implementation.
-- **Resource Intensive:** May require more computational resources due to parallel computations.
-- **Dependent on $ M_q $:** Effectiveness is tied to the quality of the approximation model.
+The algorithm adds complexity to the decoding process, requiring careful implementation. There may be increased computational resource requirements due to parallel computations. Additionally, the effectiveness of speculative decoding relies on the approximation quality of $ M_q $; if $ M_q $ is not a good approximation of $ M_p $, the acceptance rate may be low, reducing the efficiency gains.
+
+---
 
 ## Conclusion
 
-Speculative decoding offers a powerful method to accelerate language model inference by intelligently combining a faster approximation model with the target model. By carefully accepting or rejecting tokens from the approximation model based on the target model's evaluations, we can generate multiple tokens in parallel without compromising the integrity of the final output distribution. This approach is particularly valuable when working with large models where inference speed is a critical concern.
+Speculative decoding offers an innovative approach to speeding up language model inference without sacrificing output quality. By combining a fast approximation model with an acceptance-rejection mechanism, we can generate multiple tokens in parallel, significantly accelerating the decoding process. This technique is particularly beneficial when working with large models where inference speed is a bottleneck.
+
+---
+
+*Note: This post simplifies complex mathematical concepts for clarity. For a deeper mathematical understanding, refer to the original research papers on speculative decoding and sampling methods in language models.*
 
 ---
 

@@ -6,8 +6,16 @@
     <description>Recent content in Posts on TensorTunes</description>
     <generator>Hugo -- 0.129.0</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 11 Sep 2024 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 21 Oct 2024 00:00:00 +0000</lastBuildDate>
     <atom:link href="http://localhost:1313/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Where Did All the Memory Go?</title>
+      <link>http://localhost:1313/posts/where_v3/</link>
+      <pubDate>Mon, 21 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/where_v3/</guid>
+      <description>CUDA error: out of memory
+If you&amp;rsquo;ve ever tried to train a deep learning model, the dreaded CUDA error: out of memory is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered about how memory gets allocated during training?? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models.</description>
+    </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>
       <link>http://localhost:1313/posts/quantization/</link>

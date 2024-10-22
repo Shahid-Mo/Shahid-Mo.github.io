@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <html lang="en" dir="auto">
 
-<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=42943&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Quantization in LLMS (Part 1): LLM.int8(), NF4 | TensorTunes</title>
+<title>Test | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Introduction to Quantization Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.">
+<meta name="description" content="In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,
+as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.
+The topics i would like to cover are as follows
+DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallelism Memory efficient pipeline parallelism Where Did all the memory go?">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:42943/posts/draft_quant/">
+<link rel="canonical" href="http://localhost:1313/posts/draft_quant/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
-<link rel="icon" href="http://localhost:42943/favicon.ico">
-<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:42943/favicon-16x16.png">
-<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:42943/favicon-32x32.png">
-<link rel="apple-touch-icon" href="http://localhost:42943/apple-touch-icon.png">
-<link rel="mask-icon" href="http://localhost:42943/safari-pinned-tab.svg">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" hreflang="en" href="http://localhost:42943/posts/draft_quant/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/draft_quant/">
 <noscript>
     <style>
         #theme-toggle,
@@ -89,7 +90,7 @@ Quantization Aware Training (QAT): This involves training the model with reduced
 <header class="header">
     <nav class="nav">
         <div class="logo">
-            <a href="http://localhost:42943/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
             <div class="logo-switches">
                 <button id="theme-toggle" accesskey="t" title="(Alt + T)">
                     <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
@@ -115,12 +116,12 @@ Quantization Aware Training (QAT): This involves training the model with reduced
         </div>
         <ul id="menu">
             <li>
-                <a href="http://localhost:42943/posts/" title="Posts">
+                <a href="http://localhost:1313/posts/" title="Posts">
                     <span>Posts</span>
                 </a>
             </li>
             <li>
-                <a href="http://localhost:42943/tags/" title="Tags">
+                <a href="http://localhost:1313/tags/" title="Tags">
                     <span>Tags</span>
                 </a>
             </li>
@@ -133,658 +134,739 @@ Quantization Aware Training (QAT): This involves training the model with reduced
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Quantization in LLMS (Part 1): LLM.int8(), NF4
+      Test
     </h1>
-    <div class="post-meta"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span>
+    <div class="post-meta"><span title='2024-10-16 00:00:00 +0000 UTC'>October 16, 2024</span>
 
 </div>
-  </header> 
-  <div class="post-content"><h1 id="introduction-to-quantization">Introduction to Quantization<a hidden class="anchor" aria-hidden="true" href="#introduction-to-quantization">#</a></h1>
-<p>Whether you&rsquo;re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, <strong>quantization</strong> is a key technique to understand.</p>
-<p>Quantization can be broadly categorized into two main approaches:</p>
-<ul>
-<li><strong>Quantization Aware Training (QAT):</strong> This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions.</li>
-<li><strong>Post Training Quantization (PTQ):</strong> Applied after a model has already been trained, PTQ reduces model size and inference cost without needing to retrain, making it especially useful for deploying models efficiently.</li>
-</ul>
-<p>In this post (and subsequent ones on this topic), we&rsquo;ll focus on PTQ. It&rsquo;s often a simpler starting point for quantization, providing a good balance between performance and implementation complexity. PTQ is particularly useful for deploying models to edge devices or serving them at lower hardware costs.</p>
-<h1 id="why-quantization">Why Quantization?<a hidden class="anchor" aria-hidden="true" href="#why-quantization">#</a></h1>
-<p>The costs of training large language models (LLMs) are already high, but inference costs—running the model to generate responses—can far exceed training costs, especially when deploying at scale. For instance, inference costs for models like ChatGPT can surpass training costs within just a week. Quantization helps reduce these costs by enabling models to operate in lower precision, such as FP16 or even INT4, without significant performance loss.</p>
-<p>Let&rsquo;s look at an example: suppose you want to run the LLaMA 3.1 8B model. What kind of memory and GPU would you need? If you load the model from Hugging Face, it will automatically be loaded in full precision (FP32). So, just to load the model weights, you would need:</p>
-<p>$$
-8 \times 10^9 \text{ parameters} \times 4 \text{ bytes per parameter} \div 1024^3 \text{ for GB } \approx 30 \text{ GB}
-$$</p>
-<p>This means you would need at least an A100 GPU with 40 GB of VRAM to load just the model weights. For fine-tuning, you would require around 90 GB, or a cluster of GPUs, and about 60 GB for inference.</p>
-<p>This is where quantization can help. By loading the model in 8-bit, 4-bit, or even 2-bit precision, you can reduce your memory requirements by a factor of up to 16. If you load the same model in NF4 format (4 bits per parameter), you would need just around 4 GB for inference, and about 12 GB for fine-tuning, which can be done even on a free-tier T4 GPU on Google Colab.</p>
-<h1 id="understanding-precision-in-llms">Understanding Precision in LLMs<a hidden class="anchor" aria-hidden="true" href="#understanding-precision-in-llms">#</a></h1>
-<p>If you&rsquo;re unfamiliar with terms like FP32 or 8-bit precision mentioned earlier, don’t worry—we’ll cover them in the next section.</p>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/fp32_fp16_bf16.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<h2 id="starting-with-fp32">Starting with FP32<a hidden class="anchor" aria-hidden="true" href="#starting-with-fp32">#</a></h2>
-<p>FP32 (32-bit floating point) is the most common datatype used to train deep learning models. If you don’t specify the datatype of tensors in PyTorch, FP32 is the default.</p>
-<p>To understand how FP32 works and why it&rsquo;s often preferred, let’s consider a simple example: representing the value of $\pi$ (pi) to 10 decimal places.</p>
-<h3 id="precision-in-deep-learning-models">Precision in Deep Learning Models<a hidden class="anchor" aria-hidden="true" href="#precision-in-deep-learning-models">#</a></h3>
-<p>Let&rsquo;s assume we want to represent $\pi$ with the first 10 decimal places:</p>
-<p>$$
-\pi \approx 3.1415926535
-$$</p>
-<p>While this example is simple, it illustrates the inner workings of different data types like BF16 and FP16 — and later, we’ll discuss FP8, supported by the latest NVIDIA H100 GPUs and similar hardware.</p>
-<h3 id="how-to-convert-a-decimal-representation-to-fp32">How to Convert a Decimal Representation to FP32<a hidden class="anchor" aria-hidden="true" href="#how-to-convert-a-decimal-representation-to-fp32">#</a></h3>
-<p>To convert the decimal value of $\pi$ (3.1415926535) into its FP32 (single-precision floating-point) representation, follow these steps:</p>
-<h3 id="1-understand-the-fp32-structure">1. Understand the FP32 Structure<a hidden class="anchor" aria-hidden="true" href="#1-understand-the-fp32-structure">#</a></h3>
-<p>FP32 is composed of 32 bits, divided into three parts:</p>
-<ul>
-<li><strong>Sign bit (1 bit):</strong> Indicates whether the number is positive or negative.</li>
-<li><strong>Exponent (8 bits):</strong> Encodes the exponent using a biased format.</li>
-<li><strong>Mantissa (23 bits):</strong> Represents the significant digits of the number.</li>
-</ul>
-<h3 id="2-convert-pi-to-binary">2. Convert $\pi$ to Binary<a hidden class="anchor" aria-hidden="true" href="#2-convert-pi-to-binary">#</a></h3>
-<p>We start by converting the decimal value of $\pi$ into its binary equivalent.</p>
-<p><strong>Convert the Integer Part:</strong></p>
-<p>The integer part of $\pi$ is 3. In binary:</p>
-<p>$$
-3_{10} = 11_{2}
-$$</p>
-<p><strong>Convert the Fractional Part:</strong></p>
-<p>To convert the fractional part (0.1415926535) to binary:</p>
-<ul>
-<li>Multiply by 2 and record the integer part repeatedly:
-<ul>
-<li>$0.1415926535 \times 2 = 0.283185307 \rightarrow 0$</li>
-<li>$0.283185307 \times 2 = 0.566370614 \rightarrow 0$</li>
-<li>$0.566370614 \times 2 = 1.132741228 \rightarrow 1$</li>
-<li>$0.132741228 \times 2 = 0.265482456 \rightarrow 0$</li>
-<li>$0.265482456 \times 2 = 0.530964912 \rightarrow 0$</li>
-<li>Continue this process to generate more bits.</li>
-</ul>
-</li>
-</ul>
-<p>The binary representation of $\pi$, up to a reasonable precision, is approximately:</p>
-<p>$$
-\pi \approx 11.001001000011111101101010100010_{2}
-$$</p>
-<h3 id="3-normalize-the-binary-representation">3. Normalize the Binary Representation<a hidden class="anchor" aria-hidden="true" href="#3-normalize-the-binary-representation">#</a></h3>
-<p>To fit the FP32 format, normalize the binary number so that it appears as:</p>
-<p>$$
-11.001001000011111101101010100010_{2} = 1.1001001000011111101101010100010_{2} \times 2^1
-$$</p>
-<h3 id="4-determine-the-sign-bit">4. Determine the Sign Bit<a hidden class="anchor" aria-hidden="true" href="#4-determine-the-sign-bit">#</a></h3>
-<p>Since $\pi$ is positive, the sign bit is:</p>
-<p>$$
-\text{Sign bit} = 0
-$$</p>
-<h3 id="5-calculate-the-exponent">5. Calculate the Exponent<a hidden class="anchor" aria-hidden="true" href="#5-calculate-the-exponent">#</a></h3>
-<p>In FP32, the exponent is stored with a bias of 127. This bias allows FP32 to represent both very large and very small numbers. Using FP32, the largest representable number is approximately $3.4 \times 10^{38}$, while the smallest positive number (close to zero) is around $1.175 \times 10^{-38}$. For $\pi$, the exponent after normalization is:</p>
-<p>$$
-\text{Exponent} = 1 + 127 = 128
-$$</p>
-<p>In binary, the exponent is:</p>
-<p>$$
-128_{10} = 10000000_{2}
-$$</p>
-<h3 id="6-determine-the-mantissa">6. Determine the Mantissa<a hidden class="anchor" aria-hidden="true" href="#6-determine-the-mantissa">#</a></h3>
-<p>The mantissa consists of the significant digits after the leading 1:</p>
-<p>$$
-\text{Mantissa} = 10010010000111111011010_{2}
-$$</p>
-<p>Only the first 23 bits are kept; the rest are truncated, resulting in a small loss of precision. FP32 typically provides about 7 to 8 decimal places of precision. If more precision is needed, FP64 (double-precision) could be used, but for deep learning, FP32 is often more than sufficient.</p>
-<h3 id="7-combine-the-components">7. Combine the Components<a hidden class="anchor" aria-hidden="true" href="#7-combine-the-components">#</a></h3>
-<p>Now, combine the sign bit, exponent, and mantissa to form the final FP32 representation:</p>
-<ul>
-<li><strong>Sign bit:</strong> 0</li>
-<li><strong>Exponent:</strong> 10000000</li>
-<li><strong>Mantissa:</strong> 10010010000111111011010</li>
-</ul>
-<p>Thus, the FP32 representation of $\pi$ is:</p>
-<p>$$
-\text{FP32} = 0\ 10000000\ 10010010000111111011010_{2}
-$$</p>
-<p>This is the IEEE 754 standard representation of $\pi$ in FP32 format.</p>
-<h2 id="fp16">FP16<a hidden class="anchor" aria-hidden="true" href="#fp16">#</a></h2>
-<p>The FP16 format uses fewer exponent and mantissa bits compared to FP32, This reduction results in a smaller range of values that can be represented. Specifically, in <strong>FP32</strong>, the largest representable number is approximately <strong>$3.4 \times 10^{38}$</strong>, while the smallest positive normal number is <strong>$1.175 \times 10^{-38}$</strong></p>
-<p>In contrast, <strong>FP16</strong> reduces these limits: the largest representable number is approximately <strong>$6.55 \times 10^{4}$</strong>, while the smallest positive normal number is <strong>$6.10352 \times 10^{-5}$</strong>.</p>
-<p>This reduction in range makes FP16 more limited when storing very large or very small values, which can affect the stability of models when when using FP16 for training.</p>
-<p><strong>Implications for Model Training and Fine-Tuning</strong>:</p>
-<ul>
-<li>
-<p><strong>Loading FP32 Models in FP16</strong>: Simply converting an FP32 model to FP16 to fit it onto a GPU can lead to issues. The reduced range means that large weights or activations from the FP32 model might exceed FP16’s maximum representable value, causing overflow and resulting in &ldquo;NaN&rdquo; (Not a Number) errors during training.</p>
-</li>
-<li>
-<p><strong>Practical Solutions</strong>:</p>
-<ul>
-<li><strong>Mixed Precision Training</strong>: A common approach is to use FP16 for most computations while keeping certain critical variables, like weights or gradients, in FP32. This balances the memory and speed benefits of FP16 with the numerical stability of FP32.</li>
-<li><strong>Gradient Clipping</strong>: Implementing techniques like gradient clipping can help prevent gradients from becoming too large, mitigating the risk of overflow in FP16.</li>
-<li><strong>Loss Scaling</strong>: Adjusting the scale of loss values can help maintain precision during backpropagation, reducing the chances of underflow in FP16.</li>
-</ul>
-</li>
-</ul>
-<h2 id="bf16">BF16<a hidden class="anchor" aria-hidden="true" href="#bf16">#</a></h2>
-<p>BF16, also known as Brain Float 16, was developed by Google Brain and became popular around 2019. It’s now one of the most widely used formats for training and fine-tuning LLMs. The main advantage of BF16 is that it retains the same number of exponent bits as FP32, making it easier to load a model in 16-bit precision and proceed with fine-tuning without running into &ldquo;NaN&rdquo; errors.</p>
-<p>While BF16 sacrifices some precision compared to FP32, <a href="https://arxiv.org/abs/1905.12322">research</a> has shown that the difference in performance when training or fine-tuning models on BF16 vs FP32 is minimal across different domains. Given the tradeoff between slightly reduced precision and the substantial reduction in model size, using BF16 is often well worth it for modern deep learning tasks.</p>
-<h2 id="more-data-types">More Data Types<a hidden class="anchor" aria-hidden="true" href="#more-data-types">#</a></h2>
-<h2 id="tf32-tensorfloat-32">TF32 (TensorFloat 32)<a hidden class="anchor" aria-hidden="true" href="#tf32-tensorfloat-32">#</a></h2>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/FP_16_32_TF32.png" alt="FP16 vs TF32 comparison" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>TF32, or TensorFloat 32, is a special datatype introduced by Nvidia with the Ampere architecture (e.g., RTX 30 and A100 series) in 2020. Unlike FP16, which you can explicitly declare in PyTorch, TF32 is not directly accessible as a datatype in the framework. Instead, it is a precision format used specifically by the CUDA cores of the GPU for certain operations, particularly matrix multiplications.</p>
-<p>From the Ampere architecture onwards, all calculations involving FP32 matrices are done as shown in the figure. When performing matrix multiplications, the GPU automatically converts FP32 matrices into TF32 precision. The actual multiplication is done using TF32, which retains FP32’s 8-bit exponent but reduces the mantissa to 10 bits. Once the operation is complete, the results are accumulated back into FP32 format for higher precision in the final outcome.</p>
-<p>This process leverages TF32 for speed during calculations, while maintaining the precision of FP32 for the final result.</p>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/TF32_explained.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<h2 id="fp8-e4m3-and-e5m2-formats">FP8 (E4M3 and E5M2 Formats)<a hidden class="anchor" aria-hidden="true" href="#fp8-e4m3-and-e5m2-formats">#</a></h2>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/FP8.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>FP8 is an emerging precision format designed to accelerate deep learning training and inference beyond the 16-bit formats commonly used today. Introduced in recent research paper <em><a href="https://arxiv.org/abs/2209.05433">FP8 Formats for Deep Learning</a></em> from September 2022, FP8 comes with two encoding options: <strong>E4M3</strong> (4-bit exponent, 3-bit mantissa) and <strong>E5M2</strong> (5-bit exponent, 2-bit mantissa). FP8 was introduced as part of Nvidia&rsquo;s Hopper Architecture (H100 GPUs).</p>
-<p>The main advantage of FP8 is its ability to drastically reduce memory and compute requirements while maintaining comparable performance to higher precision formats like FP16 and BF16. The flexibility between the E4M3 and E5M2 formats allows FP8 to allocate an additional bit either to range or precision, depending on the task requirements.</p>
-<p>As shown in the figures:</p>
-<ul>
-<li><strong>FP8 calculations</strong>: Input matrices are converted to FP8, multiplied, and then accumulated in a higher precision format (FP16 or FP32). This allows for efficient computation while retaining enough precision in the final result.</li>
-<li><strong>Efficacy of FP8</strong>: The graph below illustrates the training loss (perplexity) across various large models (GPT-3 variants with up to 175 billion parameters), showing that FP8 training closely matches the results achieved with BF16.</li>
-</ul>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="FP8 vs BF16 comparison" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<h4 id="fp8-in-practice">FP8 in Practice<a hidden class="anchor" aria-hidden="true" href="#fp8-in-practice">#</a></h4>
-<p>In the paper, FP8 was used for training a wide variety of models, including CNNs, RNNs, and Transformer-based architectures, covering both image and language tasks. No changes were made to the model architectures, optimizer settings, or hyperparameters. FP8 post-training quantization (PTQ) was also evaluated, and it showed that models could be quantized to FP8 without a significant loss in accuracy, a major benefit for deployment.</p>
-<h3 id="nvidia-is-everywhere">Nvidia is Everywhere!<a hidden class="anchor" aria-hidden="true" href="#nvidia-is-everywhere">#</a></h3>
-<p>Let&rsquo;s address the $2.5 trillion elephant in the room. Up until now, I’ve briefly mentioned that the TF32 datatype was introduced with Nvidia’s Ampere architecture, and that FP8 support starts with the H100 GPUs. We&rsquo;ve been happily exploring the ins and outs of these different data types, but here’s the catch: You might get super excited about BF16 after reading this post and rush to try it out on a free Colab instance, only to realize the T4 GPUs don’t support BF16.</p>
-<p>Don’t worry—I’ve done the hard work of sifting through Nvidia’s whitepapers so you don’t have to. Here&rsquo;s the deal: you need to know exactly what hardware you’re working with and which data types it supports. This way, you can make an informed decision about which GPU cluster to dedicate your time to and, in the process, help Nvidia grow even richer (they’re truly the ones selling shovels in this AI gold rush). And no, unfortunately, you can’t go running to AMD or Intel for your GPU needs either.</p>
-<p>Take a look at the chart below, and I’ll follow up with some key observations. The numbers represent FLOPs (or TOPs for INT data types), and the X’s indicate that the datatype isn’t supported by a particular architecture.</p>
-<style>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 25px 0;
-    font-size: 18px;
-    font-family: 'Arial', sans-serif;
-    text-align: center;
-  }
-  th, td {
-    padding: 12px;
-    border: 1px solid #ddd;
-  }
-  th {
-    background-color: #4CAF50;
-    color: white;
-  }
-  tr:nth-child(even) {
-    background-color: #f2f2f2;
-  }
-  tr:hover {
-    background-color: #ddd;
-  }
-  .not-supported {
-    color: #FF6347;
-    font-weight: bold;
-  }
-  .sparse-matrix {
-    color: #4682B4; /* Different color to highlight sparse matrix values */
-    font-weight: bold;
-  }
-</style>
-<table>
-  <thead>
-    <tr>
-      <th>GPU</th>
-      <th>P100</th>
-      <th>V100</th>
-      <th>T4</th>
-      <th>A100</th>
-      <th>H100</th>
-      <th>L40</th>
-      <th>B100</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><b>VRAM</b></td>
-      <td>16GB</td>
-      <td>32GB</td>
-      <td>16GB</td>
-      <td>40GB*</td>
-      <td>80GB</td>
-      <td>48GB</td>
-      <td>192GB</td>
-    </tr>
-    <tr>
-      <td><b>Architecture</b></td>
-      <td>Pascal</td>
-      <td>Volta</td>
-      <td>Turing</td>
-      <td>Ampere</td>
-      <td>Hopper</td>
-      <td>Ada Lovelace</td>
-      <td>Blackwell</td>
-    </tr>
-    <tr>
-      <td><b>Release Date</b></td>
-      <td>Apr-16</td>
-      <td>May-17</td>
-      <td>Sep-18</td>
-      <td>May-20</td>
-      <td>Mar-22</td>
-      <td>Sep-22</td>
-      <td>Mar-24</td>
-    </tr>
-    <tr>
-      <td><b>FP32</b></td>
-      <td>10.6</td>
-      <td>8.2</td>
-      <td>8.1</td>
-      <td>19.5</td>
-      <td>67</td>
-      <td>90.5</td>
-      <td>60</td>
-    </tr>
-    <tr>
-      <td><b>TF32</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="sparse-matrix">312</td>
-      <td class="sparse-matrix">989</td>
-      <td class="sparse-matrix">181</td>
-      <td class="sparse-matrix">1800</td>
-    </tr>
-    <tr>
-      <td><b>FP16</b></td>
-      <td></td>
-      <td>130</td>
-      <td>65</td>
-      <td class="sparse-matrix">624</td>
-      <td class="sparse-matrix">1979</td>
-      <td class="sparse-matrix">362</td>
-      <td class="sparse-matrix">3500</td>
-    </tr>
-    <tr>
-      <td><b>BF16</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="sparse-matrix">624</td>
-      <td class="sparse-matrix">1979</td>
-      <td class="sparse-matrix">362</td>
-      <td class="sparse-matrix">3500</td>
-    </tr>
-    <tr>
-      <td><b>INT8</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td>130</td>
-      <td class="sparse-matrix">1248</td>
-      <td class="sparse-matrix">3958</td>
-      <td class="sparse-matrix">724</td>
-      <td class="sparse-matrix">7000</td>
-    </tr>
-    <tr>
-      <td><b>INT4</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td>260</td>
-      <td class="sparse-matrix">2496</td>
-      <td></td>
-      <td class="sparse-matrix">1448</td>
-      <td></td>
-    </tr>
-    <tr>
-      <td><b>FP8</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="sparse-matrix">3958</td>
-      <td class="sparse-matrix">724</td>
-      <td class="sparse-matrix">7000</td>
-    </tr>
-    <tr>
-      <td><b>FP4</b></td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="not-supported">X</td>
-      <td class="sparse-matrix">14000</td>
-    </tr>
-  </tbody>
-</table>
-<h3 id="some-observations">Some Observations<a hidden class="anchor" aria-hidden="true" href="#some-observations">#</a></h3>
-<ul>
-<li>All the values in blue are for sparse matrices.</li>
-<li>As you can see, TF32 preforamce compared to the FP32 is 30 times.</li>
-<li>INT4 and INT8 data types were introduce in the Turing architecture for inference.</li>
-</ul>
-<h1 id="integer-qunatization">Integer Qunatization<a hidden class="anchor" aria-hidden="true" href="#integer-qunatization">#</a></h1>
-<p>As you have already seen the T4 and Subsequnet gpu archtecture suppor INT8 and INT4 datatypes, thes datatypes can be used for inferecne and can be blazingly fast, (Just to keep another thing on the back of you mind is that if you load you matrix in a particula data type like INT8, this dosent necessarily mena the compuatations are Happening in IN8, will expand on this later)</p>
-<h2 id="abs-max-quantization">ABS Max Quantization<a hidden class="anchor" aria-hidden="true" href="#abs-max-quantization">#</a></h2>
-<p><strong>Absmax quantization</strong> is a method used to convert floating-point values (like FP16) into 8-bit integer values. Here&rsquo;s how it works in simpler terms:</p>
-<ol>
-<li>
-<p><strong>Scaling factor calculation</strong>:
-The input tensor (a matrix of floating-point numbers, $X_{f16}$) is scaled based on its largest absolute value. To do this, the method computes the <strong>maximum absolute value</strong> of all the elements in the tensor, also called the <strong>infinity norm</strong> ($|X_{f16}|_\infty$). The scaling factor, $s_{xf16}$, is then calculated as:
-$$
-s_{xf16} = \frac{127}{|X_{f16}|_\infty}
-$$
-The value 127 is used because the 8-bit integer range is between $-127$ and $127$.</p>
-</li>
-<li>
-<p><strong>Quantization</strong>:
-Once the scaling factor is computed, the input tensor values are multiplied by $s_{xf16}$ to map them into the 8-bit range:
-$$
-X_{i8} = \text{round}\left(127 \cdot \frac{X_{f16}}{|X_{f16}|_\infty}\right)
-$$
-This means each value in the tensor is scaled down proportionally to fit into the [-127, 127] range, and then rounded to the nearest integer to make it an 8-bit value.</p>
-</li>
-<li>
-<p><strong>Effect</strong>:
-This process allows a tensor originally in a high precision format (FP16) to be represented using 8-bit integers, reducing memory usage and potentially speeding up computations at the cost of some precision.</p>
-</li>
-</ol>
-<p>In summary, absmax quantization shrinks a floating-point tensor into the 8-bit range by dividing all elements by the largest absolute value in the tensor, then multiplying by 127 and rounding.</p>
-<h3 id="llm-int8">LLM int8<a hidden class="anchor" aria-hidden="true" href="#llm-int8">#</a></h3>
-<p>Abs Max Quantization works, so shouldn&rsquo;t we just wrap up quantization and move on? Not quite. In November 2022, <em><a href="https://arxiv.org/abs/2208.07339">Detmers et al.</a></em> introduced LLM.int8(), a new quantization technique, addressing an important issue: Large language models (LLMs) have started to show impressive emergent behaviors like reasoning, in-context learning, and even few-shot problem solving—abilities that were being compromised by naive quantization methods.</p>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/Emergence.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>The figure points out that once models exceed 2.7 billion parameters, naive 8-bit quantization significantly degrades performance. The drastic performance drop is due to the presence of <strong>outliers</strong>—weights that are crucial for enabling key behaviors like reasoning and in-context learning. These outliers are vital for the model&rsquo;s performance, so preserving them during quantization is essential to prevent significant degradation.
-This happens because outlier weights—which play a crucial role in driving the emergent behaviors of large models—get lost in the quantization process.</p>
-<p>LLM.int8() proposes a two-part strategy to address this issue:</p>
-<ol>
-<li>
-<p><strong>Vector-wise Quantization</strong>: Instead of quantizing the entire tensor with a single scaling constant, LLM.int8() quantizes vectors individually.  The challenge with using a single scaling constant per tensor is that just one outlier can distort the entire quantization process, reducing precision for all other values. By applying multiple scaling constants—one for each vector—this method ensures that outliers don’t interfere with the rest of the matrix.</p>
-</li>
-<li>
-<p><strong>Mixed-Precision Decomposition</strong>: LLM.int8() quantizes only weights within a defined threshold, typically $[-6, 6]$. Outliers exceeding this range are preserved in higher precision formats (FP16 or FP32). This preserves critical outlier weights—crucial for model performance—at higher precision, avoiding accuracy loss from forcing them into lower precision formats. The approach maintains key model behaviors while achieving significant compression for most weights, effectively balancing performance and efficiency across varying model sizes.</p>
-</li>
-</ol>
-<div style="text-align: center;">
-  <img src="/images/quant_p1/llm_int8.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<h3 id="the-mathematical-details">the Mathematical details<a hidden class="anchor" aria-hidden="true" href="#the-mathematical-details">#</a></h3>
-<h4 id="vector-wise-quantization">Vector-wise Quantization<a hidden class="anchor" aria-hidden="true" href="#vector-wise-quantization">#</a></h4>
-<p>In vector-wise quantization, the main idea is to apply <strong>different scaling constants</strong> for each vector in the matrix multiplication to reduce the impact of outliers on quantization precision.</p>
-<ol>
-<li>
-<p><strong>Matrix Setup</strong>:</p>
-<ul>
-<li>Let $ X_{f16} \in \mathbb{R}^{b \times h} $ be the input matrix (e.g., hidden states), where $ b $ is the batch size and $ h $ is the hidden size.</li>
-<li>Let $ W_{f16} \in \mathbb{R}^{h \times o} $ be the weight matrix, where $ o $ is the output size.</li>
-</ul>
-<p>The goal is to quantize these matrices from FP16 to Int8, applying different scaling constants to different rows or columns.</p>
-</li>
-<li>
-<p><strong>Quantization</strong>(similar to ABSMAX Quantization):</p>
-<ul>
-<li>Quantization scales the values in each vector of $ X_{f16} $ and $ W_{f16} $ into the range $[-127, 127]$. The scaling constant for each row in $ X_{f16} $ is denoted $ c_{x_{f16}} $, and for each column in $ W_{f16} $, it is $ c_{w_{f16}} $.</li>
-</ul>
-<p>This can be represented as:
-$$
-Q(X_{f16}) = \frac{127}{|X_{f16}|_{\infty}} X_{f16}
-$$
-where $ |X_{f16}|_{\infty} $ is the infinity norm (the maximum absolute value of the vector).</p>
-</li>
-<li>
-<p><strong>Matrix Multiplication</strong>:
-The quantized matrix multiplication is then performed in Int8 precision:
-$$
-C_{i32} = Q(X_{f16}) \cdot Q(W_{f16})
-$$
-Here, $ C_{i32} $ represents the result of the Int8 matrix multiplication.</p>
-</li>
-<li>
-<p><strong>Denormalization</strong>:
-To recover the correct FP16 result after quantization, the matrix result must be <strong>denormalized</strong> by the outer product of the scaling constants:
-$$
-C_{f16} \approx \frac{1}{c_{x_{f16}} \otimes c_{w_{f16}}} \cdot C_{i32}
-$$
-where $ \otimes $ is the <strong>outer product</strong> of the row-wise scaling constants $ c_{x_{f16}} $ and column-wise scaling constants $ c_{w_{f16}} $. This product ensures that the entire matrix is scaled back appropriately.</p>
-</li>
-</ol>
-<h3 id="mixed-precision-decomposition">Mixed-Precision Decomposition<a hidden class="anchor" aria-hidden="true" href="#mixed-precision-decomposition">#</a></h3>
-<p>While vector-wise quantization works well for most situations, <strong>outliers</strong>—specific dimensions with significantly larger values—can still affect overall precision, especially in very large models (e.g., 6.7B parameters or more). Mixed-precision decomposition addresses this by applying different precisions for different parts of the matrix.</p>
-<ol>
-<li>
-<p><strong>Outliers</strong>:</p>
-<ul>
-<li><strong>Outliers</strong> refer to specific dimensions in the matrix where the values are consistently much larger than others. These outliers might be critical for model performance and require higher precision for accurate representation.</li>
-<li>For example, in a matrix $ A_{f16} \in \mathbb{R}^{s \times h} $, outliers might occur in some columns across almost all sequences but are limited to a small set of feature dimensions.</li>
-</ul>
-</li>
-<li>
-<p><strong>Mixed-Precision Decomposition</strong>:
-The matrix is decomposed into two parts:</p>
-<ul>
-<li><strong>High-precision part (FP16)</strong>: The outlier dimensions are processed with higher precision.</li>
-<li><strong>Low-precision part (Int8)</strong>: The rest of the dimensions are quantized into Int8 for efficiency.</li>
-</ul>
-<p>Mathematically:
-$$
-C_{f16} \approx \sum_{h \in O} X^h_{f16} \cdot W^h_{f16} + S \cdot \sum_{h \notin O} X_{i8}^h \cdot W_{i8}^h
-$$
-where:</p>
-<ul>
-<li>$ O $ is the set of outlier dimensions.</li>
-<li>The first term computes matrix multiplication for outlier features in FP16 precision.</li>
-<li>The second term computes matrix multiplication for regular features in Int8 precision.</li>
-<li>$ S $ is the scaling factor for dequantizing the Int8 results.</li>
-</ul>
-</li>
-<li>
-<p><strong>Outlier Identification</strong>:
-Outliers are identified based on a threshold $ \alpha $. If any value in a specific feature dimension exceeds $ \alpha $, that dimension is considered an outlier and handled with higher precision.</p>
-</li>
-</ol>
-<h2 id="nf4-quantization">NF4 Quantization<a hidden class="anchor" aria-hidden="true" href="#nf4-quantization">#</a></h2>
-<p><strong>NF4 Quantization</strong> is a specialized technique optimized for data with a zero-centered normal distribution, such as neural network weights. It builds on <strong>Quantile Quantization (QQ)</strong>, which distributes values uniformly across bins to minimize information loss. However, computing exact quantiles is computationally expensive. To address this, <strong>Fixed Distribution Quantization</strong> leverages the known normal distribution of weights, allowing NF4 to efficiently estimate quantiles. This method, introduced in <strong>QLoRA</strong>, is particularly effective in fine-tuning large language models, offering strong performance while reducing computational costs and memory usage.</p>
-<h3 id="nf4-implementation-details">NF4 implementation details<a hidden class="anchor" aria-hidden="true" href="#nf4-implementation-details">#</a></h3>
-<p>NF4 quantization aims to efficiently represent neural network weights, which are assumed to be normally distributed, using only 4 bits per weight. This means we have 16 possible quantization levels ($ 2^4 = 16 $) to represent the continuous range of weight values. The challenge is to choose these 16 levels $ q_j $ within the interval $[-1, 1]$ (This is just a hyperparamater chosen by the QLoRA Authors) in a way that minimizes the error introduced by quantization.</p>
-<p><strong>Why Use Quantiles of the Normal Distribution?</strong></p>
-<p>Since the weights are normally distributed, it&rsquo;s logical to choose quantization levels that align with the properties of the normal distribution. Specifically, we use the quantiles of the standard normal distribution to determine the $ q_j $ values. This approach ensures that each quantization level represents an equal portion of the probability mass of the distribution, effectively minimizing the quantization error across the range where data points are most likely to occur.</p>
-<p>When working with quantiles near the extremes (close to 0 or 1), the inverse cumulative distribution function (CDF) of the normal distribution approaches negative or positive infinity. To avoid infinite quantile values at the tails, we introduce a small positive value $ \delta $ to slightly offset the extreme probabilities.</p>
-<h3 id="calculate-quantization-levels"><strong>Calculate Quantization Levels</strong><a hidden class="anchor" aria-hidden="true" href="#calculate-quantization-levels">#</a></h3>
-<ol>
-<li><strong>Set $ \delta $:</strong></li>
-</ol>
-<p>$$
-\delta = \frac{1}{2} \left( \frac{1}{32} + \frac{1}{30} \right)
-$$</p>
-<ul>
-<li><strong>Purpose:</strong> $ \delta $ is a small probability value that helps in determining the extreme quantiles. (This is a hyper-paramater set in the Bits and Bytes Implementation of NF4)</li>
-</ul>
-<ol start="2">
-<li>
-<p><strong>Compute Evenly Spaced Probabilities:</strong></p>
-<ul>
-<li>
-<p><strong>Lower Half ($ p_1, \ldots, p_8 $):</strong></p>
-<ul>
-<li>$ p_1 = \delta $</li>
-<li>$ p_8 = \frac{1}{2} $</li>
-<li><strong>Evenly spaced</strong> between $ \delta $ and $ \frac{1}{2} $.</li>
-</ul>
-</li>
-<li>
-<p><strong>Upper Half ($ r_9, \ldots, r_{16} $):</strong></p>
-<ul>
-<li>$ r_8 = \frac{1}{2} $ (Note: $ r_8 $ is unused as $ q_8 $ is explicitly set to 0.)</li>
-<li>$ r_{16} = 1 - \delta $</li>
-<li><strong>Evenly spaced</strong> between $ \frac{1}{2} $ and $ 1 - \delta $.</li>
-</ul>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Find Quantiles Using the Gaussian CDF ($ \Phi $):</strong></p>
-<ul>
-<li>
-<p><strong>Lower Half Quantiles ($ \tilde{q}_1, \ldots, \tilde{q}_8 $):</strong></p>
-<p>$$
-\tilde{q}_i = \Phi^{-1}(p_i) \quad \text{for } i = 1, \ldots, 8
-$$</p>
-</li>
-<li>
-<p><strong>Upper Half Quantiles ($ \tilde{q}_9, \ldots, \tilde{q}_{16} $):</strong></p>
-<p>$$
-\tilde{q}_i = \Phi^{-1}(r_i) \quad \text{for } i = 9, \ldots, 16
-$$</p>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Normalize Quantization Levels to $[-1, 1]$:</strong></p>
-<p>$$
-q_i = \frac{\tilde{q}_i}{\max_{k} |\tilde{q}_k|}
-$$</p>
-<ul>
-<li><strong>Result:</strong> The final quantization levels $ q_1 = -1 $, $ q_8 = 0 $, and $ q_{16} = 1 $, with other $ q_j $ values distributed according to the normal distribution&rsquo;s quantiles.</li>
-</ul>
-</li>
-</ol>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#f92672">import</span> torch
-</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> scipy.stats <span style="color:#f92672">import</span> norm
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 1: Calculate δ (small probability value for extreme quantiles)</span>
-</span></span><span style="display:flex;"><span>delta <span style="color:#f92672">=</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">2</span> <span style="color:#f92672">*</span> (<span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">32</span> <span style="color:#f92672">+</span> <span style="color:#ae81ff">1</span><span style="color:#f92672">/</span><span style="color:#ae81ff">30</span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 2: Compute lower half quantiles (p1 to p8)</span>
-</span></span><span style="display:flex;"><span>p <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(delta, <span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">8</span>))<span style="color:#f92672">.</span>tolist()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 3: Compute upper half quantiles (r9 to r16)</span>
-</span></span><span style="display:flex;"><span>r <span style="color:#f92672">=</span> norm<span style="color:#f92672">.</span>ppf(torch<span style="color:#f92672">.</span>linspace(<span style="color:#ae81ff">0.5</span>, <span style="color:#ae81ff">1</span> <span style="color:#f92672">-</span> delta, <span style="color:#ae81ff">9</span>))<span style="color:#f92672">.</span>tolist()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 4: Combine and sort quantiles</span>
-</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> list(set(p <span style="color:#f92672">+</span> r))
-</span></span><span style="display:flex;"><span>q_tild<span style="color:#f92672">.</span>sort()
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Step 5: Normalize quantiles to the range [-1, 1]</span>
-</span></span><span style="display:flex;"><span>q_tild <span style="color:#f92672">=</span> torch<span style="color:#f92672">.</span>Tensor(q_tild)
-</span></span><span style="display:flex;"><span>q <span style="color:#f92672">=</span> q_tild <span style="color:#f92672">/</span> q_tild<span style="color:#f92672">.</span>max()
-</span></span></code></pre></div><pre tabindex="0"><code>tensor([-1.0000, -0.6962, -0.5251, -0.3949, -0.2844, -0.1848, -0.0910,  0.0000,
-         0.0796,  0.1609,  0.2461,  0.3379,  0.4407,  0.5626,  0.7230,  1.0000])
-</code></pre><p>Now that we have done the qunatile qunatization, lets look how do we qunaitze a block of weights</p>
-<h4 id="step-1-calculate-the-absolute-maximum-absmax"><strong>Step 1: Calculate the Absolute Maximum (absmax)</strong><a hidden class="anchor" aria-hidden="true" href="#step-1-calculate-the-absolute-maximum-absmax">#</a></h4>
-<p>For a given block of $ B $ values $ w_1, w_2, \ldots, w_B $ from the matrix $ W $:</p>
-<p>$$
-M = \max_{i} |w_i|
-$$</p>
-<ul>
-<li><strong>Purpose:</strong> This scaling factor $ M $ ensures that all values in the block are normalized within $[-1, 1]$ when divided by $ M $.</li>
-</ul>
-<h4 id="step-2-determine-quantization-indices"><strong>Step 2: Determine Quantization Indices</strong><a hidden class="anchor" aria-hidden="true" href="#step-2-determine-quantization-indices">#</a></h4>
-<p>Each value $ w_i $ in the block is quantized as follows:</p>
-<ol>
-<li><strong>Scale the Value:</strong></li>
-</ol>
-<p>$$
-w&rsquo;_i = \frac{w_i}{M}
-$$</p>
-<p>Now, $ w&rsquo;_i \in [-1, 1] $.</p>
-<ol start="2">
-<li><strong>Map to Nearest Quantization Level:</strong></li>
-</ol>
-<p>$$
-c_i = \arg\min_{j} |q_j - w&rsquo;_i|
-$$</p>
-<ul>
-<li><strong>$ q_j $:</strong> The set of 16 quantization levels within $[-1, 1]$.</li>
-<li><strong>$ c_i $:</strong> The index (from 1 to 16) of the nearest quantization level to $ w&rsquo;_i $.</li>
-</ul>
-<h4 id="step-3-store-quantization-data"><strong>Step 3: Store Quantization Data</strong><a hidden class="anchor" aria-hidden="true" href="#step-3-store-quantization-data">#</a></h4>
-<p>For each block:</p>
-<ul>
-<li><strong>Store $ M $:</strong> The scaling factor.</li>
-<li><strong>Store $ c_1, c_2, \ldots, c_B $:</strong> The quantization indices for each value in the block.</li>
-</ul>
-<p><strong>Dequantization:</strong> To reconstruct the original values (approximately):</p>
-<p>$$
-w_i \approx c_i \times M
-$$</p>
-<h2 id="code-implementation-for-nf4-and-llmint8">Code Implementation for NF4 and LLM.int8()<a hidden class="anchor" aria-hidden="true" href="#code-implementation-for-nf4-and-llmint8">#</a></h2>
-<p>a simple function for model loading</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">load_model</span>(model_name, quantization_config<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>, dtype<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>):
-</span></span><span style="display:flex;"><span>    model <span style="color:#f92672">=</span> AutoModelForCausalLM<span style="color:#f92672">.</span>from_pretrained(
-</span></span><span style="display:flex;"><span>        model_name,
-</span></span><span style="display:flex;"><span>        quantization_config<span style="color:#f92672">=</span>quantization_config,
-</span></span><span style="display:flex;"><span>        device_map<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;auto&#34;</span>,
-</span></span><span style="display:flex;"><span>        torch_dtype<span style="color:#f92672">=</span>dtype,
-</span></span><span style="display:flex;"><span>    )
-</span></span><span style="display:flex;"><span>    <span style="color:#75715e"># for memory-usage calculation logic please refer to my github</span>
-</span></span><span style="display:flex;"><span>    <span style="color:#66d9ef">return</span> memory_used
-</span></span></code></pre></div><p>How to load model in LLM.int8() and NF4</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#75715e"># 8-bit quantization</span>
-</span></span><span style="display:flex;"><span>quantization_config_8bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
-</span></span><span style="display:flex;"><span>    load_in_8bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
-</span></span><span style="display:flex;"><span>    llm_int8_threshold<span style="color:#f92672">=</span><span style="color:#ae81ff">6.0</span>,
-</span></span><span style="display:flex;"><span>)
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># 4-bit quantization</span>
-</span></span><span style="display:flex;"><span>quantization_config_4bit <span style="color:#f92672">=</span> BitsAndBytesConfig(
-</span></span><span style="display:flex;"><span>    load_in_4bit<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>,
-</span></span><span style="display:flex;"><span>    bnb_4bit_quant_type<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;nf4&#34;</span>,
-</span></span><span style="display:flex;"><span>    bnb_4bit_compute_dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16,
-</span></span><span style="display:flex;"><span>    bnb_4bit_use_double_quant<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>
-</span></span><span style="display:flex;"><span>)
-</span></span></code></pre></div><p>Load and compare the models, using GPT2 for simplicity.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#66d9ef">def</span> <span style="color:#a6e22e">main</span>():
-</span></span><span style="display:flex;"><span>    model_name <span style="color:#f92672">=</span> <span style="color:#e6db74">&#34;gpt2&#34;</span>
-</span></span><span style="display:flex;"><span>    
-</span></span><span style="display:flex;"><span>    memory_without_quant_fp32 <span style="color:#f92672">=</span> load_model(model_name)
-</span></span><span style="display:flex;"><span>    memory_without_quant_bf16 <span style="color:#f92672">=</span> load_model(model_name, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
-</span></span><span style="display:flex;"><span>    memory_with_8bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_8bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
-</span></span><span style="display:flex;"><span>    memory_with_4bit_quant <span style="color:#f92672">=</span> load_model(model_name, quantization_config_4bit, dtype<span style="color:#f92672">=</span>torch<span style="color:#f92672">.</span>bfloat16)
-</span></span></code></pre></div><pre tabindex="0"><code>GPU Memory Usage Comparison:
-Without quantization (FP32): 1029.47 MB
-Without quantization (BF16): 523.49 MB
-With 8-bit quantization (BF16 compute): 370.99 MB
-With 4-bit quantization (BF16 compute): 272.46 MB
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
 
-Memory Savings (compared to FP32):
-BF16 saved: 505.98 MB
-BF16 reduction percentage: 49.15%
-8-bit quantization saved: 658.48 MB
-8-bit reduction percentage: 63.96%
-4-bit quantization saved: 757.01 MB
-4-bit reduction percentage: 73.53%
-</code></pre><h2 id="some-experiments">some experiments<a hidden class="anchor" aria-hidden="true" href="#some-experiments">#</a></h2>
-<p>Below are results of some of the experiments that i ran, for the code refer to my github.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>Summary:
-</span></span><span style="display:flex;"><span>FP32: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">50.08</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">97.20</span> tokens<span style="color:#f92672">/</span>s
-</span></span><span style="display:flex;"><span>BF16: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">83.37</span> tokens<span style="color:#f92672">/</span>s
-</span></span><span style="display:flex;"><span><span style="color:#ae81ff">8</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">51.25</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">19.37</span> tokens<span style="color:#f92672">/</span>s
-</span></span><span style="display:flex;"><span><span style="color:#ae81ff">4</span><span style="color:#f92672">-</span>bit: Perplexity <span style="color:#f92672">=</span> <span style="color:#ae81ff">53.75</span>, Throughput <span style="color:#f92672">=</span> <span style="color:#ae81ff">54.28</span> tokens<span style="color:#f92672">/</span>s
-</span></span></code></pre></div><p>Remarks
-The throughput really took a hit with the LLM.int8() implementation, cause this might not be optimized, the close to 40% decrease from the FP32, to 4 Bit for the through-put needs can be explainede as the, because even thoght the model weights are storred in 8 bits, and my GPU supports 8 bit calculations, the calculations are performed in 16bit, as set up by us <code>bnb_4bit_compute_dtype=torch.bfloat16</code>, the through put gets a hit causse of this qunatizing and dequnatizing process.</p>
-<p>so you might rightly ask<strong>why are we doing calculaitons in 16bit</strong>, The NF4 datatype was primarily developed for QLoRA, which involves finetunig and we cant finetune in 4bit int datatype, but we can certainly do inference in 4 bit int datatype, there are sepcific libraries, that lets us do that (will cover them in future posts.), Another thing to consider even if you are doing calcualtions in 4 or 8 bit for inference is the increase in perplexity, enven though you might have the latest and greatest model, running inference in lower precision hurts the model perforamcen, it might be not all that noticible, but there is not much difference in perplexity between a right and wrong answer.</p>
+        <div class="inner"><ul><ul>
+                <li>
+                    <a href="#where-did-all-the-memory-go" aria-label="Where Did all the memory go?">Where Did all the memory go?</a><ul>
+                        
+                <li>
+                    <a href="#adam-optimizer" aria-label="Adam optimizer">Adam optimizer</a></li>
+                <li>
+                    <a href="#1-recap-gradient-descent-and-sgd" aria-label="1. Recap: Gradient Descent and SGD">1. Recap: Gradient Descent and SGD</a></li>
+                <li>
+                    <a href="#2-introducing-adam-optimizer" aria-label="2. Introducing Adam Optimizer">2. Introducing Adam Optimizer</a><ul>
+                        
+                <li>
+                    <a href="#key-concepts" aria-label="Key Concepts:">Key Concepts:</a></li>
+                <li>
+                    <a href="#adams-update-mechanism" aria-label="Adam&rsquo;s Update Mechanism:">Adam&rsquo;s Update Mechanism:</a></li>
+                <li>
+                    <a href="#algorithm-summary" aria-label="Algorithm Summary:">Algorithm Summary:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#bf16optimizer" aria-label="BF16Optimizer">BF16Optimizer</a></li></ul>
+                </li>
+                <li>
+                    <a href="#ddp-distributed-data-parallel" aria-label="DDP (Distributed Data Parallel)">DDP (Distributed Data Parallel)</a></li>
+                <li>
+                    <a href="#pipeline-model-parallelism" aria-label="Pipeline model parallelism">Pipeline model parallelism</a><ul>
+                        
+                <li>
+                    <a href="#background" aria-label="Background">Background</a></li>
+                <li>
+                    <a href="#what-is-pipeline-parallelism" aria-label="What is Pipeline Parallelism?">What is Pipeline Parallelism?</a></li>
+                <li>
+                    <a href="#how-pipeline-parallelism-works" aria-label="How Pipeline Parallelism Works">How Pipeline Parallelism Works</a></li>
+                <li>
+                    <a href="#advantages-of-pipeline-parallelism" aria-label="Advantages of Pipeline Parallelism">Advantages of Pipeline Parallelism</a></li>
+                <li>
+                    <a href="#challenges-and-solutions-in-pipedream" aria-label="Challenges and Solutions in PipeDream">Challenges and Solutions in PipeDream</a><ul>
+                        
+                <li>
+                    <a href="#challenge-1-work-partitioning" aria-label="Challenge 1: Work Partitioning">Challenge 1: Work Partitioning</a></li>
+                <li>
+                    <a href="#challenge-2-work-scheduling" aria-label="Challenge 2: Work Scheduling">Challenge 2: Work Scheduling</a></li>
+                <li>
+                    <a href="#challenge-3-effective-learning" aria-label="Challenge 3: Effective Learning">Challenge 3: Effective Learning</a></li></ul>
+                </li>
+                <li>
+                    <a href="#understanding-staleness-and-consistency" aria-label="Understanding Staleness and Consistency">Understanding Staleness and Consistency</a></li>
+                <li>
+                    <a href="#memory-considerations" aria-label="Memory Considerations">Memory Considerations</a></li>
+                <li>
+                    <a href="#implementation-highlights" aria-label="Implementation Highlights">Implementation Highlights</a></li>
+                <li>
+                    <a href="#benefits-of-pipedreams-pipeline-parallelism" aria-label="Benefits of PipeDream&rsquo;s Pipeline Parallelism">Benefits of PipeDream&rsquo;s Pipeline Parallelism</a></li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a></li></ul>
+                </li></ul>
+                    
+                <li>
+                    <a href="#references" aria-label="References">References</a>
+                </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><p>In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,</p>
+<p>as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.</p>
+<p>The topics i would like to cover are as follows</p>
+<ol>
+<li>DDP (Distributed Data Parallel)</li>
+<li>Tensor Model parallelism</li>
+<li>Pipeline model parallelism</li>
+<li>Memory efficient pipeline parallelism</li>
+</ol>
+<h2 id="where-did-all-the-memory-go">Where Did all the memory go?<a hidden class="anchor" aria-hidden="true" href="#where-did-all-the-memory-go">#</a></h2>
+<p>I have eleded to this point already in my qunatization post, but i would like here just to scratch a bit deeper,</p>
+<p>to understand this, first we will take a quick look at Adam optimizer, (one of the most popular for training Neural Networks)</p>
+<h3 id="adam-optimizer">Adam optimizer<a hidden class="anchor" aria-hidden="true" href="#adam-optimizer">#</a></h3>
+<p>(if you are familiar with the adam optimizer you can skip this section)</p>
+<h3 id="1-recap-gradient-descent-and-sgd"><strong>1. Recap: Gradient Descent and SGD</strong><a hidden class="anchor" aria-hidden="true" href="#1-recap-gradient-descent-and-sgd">#</a></h3>
+<p>Before diving into Adam, let&rsquo;s briefly recap the foundational optimizer:</p>
+<ul>
+<li><strong>Gradient Descent (GD):</strong></li>
+<li><strong>Objective:</strong> Minimize a loss function by iteratively updating parameters in the direction of the steepest descent (negative gradient).</li>
+<li><strong>Update Rule:</strong>
+$$
+\theta_{t+1} = \theta_t - \eta \cdot \nabla L(\theta_t)
+$$
+where:</li>
+<li>$\theta_t$ are the parameters at iteration $t$</li>
+<li>$\eta$ is the learning rate</li>
+<li>$\nabla L(\theta_t)$ is the gradient of the loss function with respect to $\theta_t$</li>
+</ul>
+<p><strong>Limitations</strong></p>
+<ul>
+<li><strong>Fixed Learning Rate:</strong> Choosing an appropriate learning rate can be challenging; too high may cause divergence, too low may slow down convergence.</li>
+<li><strong>No Adaptation:</strong> Doesn&rsquo;t adapt the learning rate based on the geometry of the loss surface, potentially leading to inefficient updates.</li>
+</ul>
+<h3 id="2-introducing-adam-optimizer"><strong>2. Introducing Adam Optimizer</strong><a hidden class="anchor" aria-hidden="true" href="#2-introducing-adam-optimizer">#</a></h3>
+<p><strong>Adam (Adaptive Moment Estimation)</strong> combines the advantages of two other extensions of GD: <strong>Momentum</strong> and <strong>RMSProp</strong>. It computes adaptive learning rates for each parameter by maintaining estimates of both the first moment (mean) and the second moment (uncentered variance) of the gradients.</p>
+<h4 id="key-concepts"><strong>Key Concepts:</strong><a hidden class="anchor" aria-hidden="true" href="#key-concepts">#</a></h4>
+<ol>
+<li><strong>Momentum:</strong></li>
+</ol>
+<ul>
+<li>Helps accelerate GD in the relevant direction and dampens oscillations.</li>
+<li>Maintains an exponentially decaying average of past gradients.</li>
+</ul>
+<ol start="2">
+<li><strong>Adaptive Learning Rates:</strong></li>
+</ol>
+<ul>
+<li>Adjusts the learning rate for each parameter individually based on the historical gradients.</li>
+<li>Parameters with higher gradients receive smaller updates, and vice versa.</li>
+</ul>
+<p><strong>Adam</strong> effectively combines these by maintaining both moving averages and adapting learning rates accordingly.</p>
+<h4 id="adams-update-mechanism"><strong>Adam&rsquo;s Update Mechanism:</strong><a hidden class="anchor" aria-hidden="true" href="#adams-update-mechanism">#</a></h4>
+<p>Adam maintains two estimates for each parameter $\theta$:</p>
+<ul>
+<li><strong>First Moment ($m_t$):</strong> Estimate of the mean of the gradients.</li>
+<li><strong>Second Moment ($v_t$):</strong> Estimate of the uncentered variance (mean of the squared gradients).</li>
+</ul>
+<p>The update steps are as follows:</p>
+<ol>
+<li><strong>Initialize Parameters:</strong></li>
+</ol>
+<ul>
+<li>Initialize $m_0 = 0$ (first moment)</li>
+<li>Initialize $v_0 = 0$ (second moment)</li>
+<li>Choose hyperparameters:</li>
+<li>Learning rate ($\eta$)</li>
+<li>Decay rates for the moment estimates ($\beta_1$ for $m_t$, $\beta_2$ for $v_t$)</li>
+<li>Small constant ($\epsilon$) to prevent division by zero</li>
+</ul>
+<ol start="2">
+<li><strong>At each iteration $t$:</strong></li>
+</ol>
+<p>a. <strong>Compute Gradient:</strong>
+$$
+g_t = \nabla L(\theta_{t-1})
+$$
+where $L$ is the loss function.</p>
+<p>b. <strong>Update First Moment ($m_t$):</strong>
+$$
+m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t
+$$</p>
+<ul>
+<li>$m_t$ accumulates the gradients.</li>
+</ul>
+<p>c. <strong>Update Second Moment ($v_t$):</strong>
+$$
+v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2
+$$</p>
+<ul>
+<li>$v_t$ accumulates the squared gradients.</li>
+</ul>
+<p>d. <strong>Bias Correction:</strong>
+Since $m_t$ and $v_t$ are initialized at zero, they are biased towards zero, especially during the initial steps. To correct this bias:
+$$
+\hat{m}_t = \frac{m_t}{1 - \beta_1^t}
+$$
+$$
+\hat{v}_t = \frac{v_t}{1 - \beta_2^t}
+$$</p>
+<ul>
+<li>$\hat{m}_t$ and $\hat{v}_t$ are the bias-corrected estimates.</li>
+</ul>
+<p>e. <strong>Update Parameters:</strong>
+$$
+\theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+$$</p>
+<ul>
+<li>This step uses the adaptive learning rate for each parameter.</li>
+</ul>
+<h4 id="algorithm-summary"><strong>Algorithm Summary:</strong><a hidden class="anchor" aria-hidden="true" href="#algorithm-summary">#</a></h4>
+<p>$$
+\begin{align*}
+&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \[1em]
+&amp; \text{For each iteration:} \[1em]
+&amp; \quad t = t + 1 \[1em]
+&amp; \quad g_t = \nabla L(\theta_{t-1}) \[1em]
+&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \[1em]
+&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \[1em]
+&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \[1em]
+&amp; \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t} \[1em]
+&amp; \quad \theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{align*}
+$$</p>
+<p>$$
+\begin{align*}
+&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \
+&amp; \text{For each iteration:} \
+&amp; \quad t = t + 1 \
+&amp; \quad g_t = \nabla L(\theta_{t-1}) \
+&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
+&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
+&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
+&amp; \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t} \
+&amp; \quad \theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{align*}
+$$</p>
+<p>$$
+\begin{align*}
+&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \
+&amp; \text{For each iteration:} \
+&amp; \quad t = t + 1 \
+&amp; \quad g_t = \nabla L(\theta_{t-1}) \
+&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
+&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
+&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
+&amp; \quad \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} \
+&amp; \quad \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{align*}
+$$</p>
+<p>$$
+\begin{align*}
+&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 <br>
+&amp; \text{For each iteration:} <br>
+&amp; \quad t = t + 1 <br>
+&amp; \quad g_t = \nabla L(\theta_{t-1}) <br>
+&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t <br>
+&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 <br>
+&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} <br>
+&amp; \quad \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} <br>
+&amp; \quad \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{align*}
+$$</p>
+<p>$$
+\begin{array}{ll}
+\text{Initialize:} &amp; m_0 = 0, \quad v_0 = 0, \quad t = 0 <br>
+\text{For each iteration:} &amp; <br>
+&amp; t = t + 1 <br>
+&amp; g_t = \nabla L(\theta_{t-1}) <br>
+&amp; m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t <br>
+&amp; v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 <br>
+&amp; \hat{m}_t = \frac{m_t}{1 - \beta_1^t} <br>
+&amp; \hat{v}t = \frac{v_t}{1 - \beta_2^t} <br>
+&amp; \theta_t = \theta{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{array}
+$$</p>
+<p>$$
+\begin{aligned}
+&amp; \text{Initialize:} &amp;&amp; m_0 = 0, \quad v_0 = 0, \quad t = 0 \
+&amp; \text{For each iteration:} &amp;&amp; \
+&amp; &amp;&amp; t = t + 1 \
+&amp; &amp;&amp; g_t = \nabla L(\theta_{t-1}) \
+&amp; &amp;&amp; m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
+&amp; &amp;&amp; v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
+&amp; &amp;&amp; \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
+&amp; &amp;&amp; \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} \
+&amp; &amp;&amp; \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+\end{aligned}
+$$</p>
+<div class="equation">
+  <p>Initialize: m<sub>0</sub> = 0, v<sub>0</sub> = 0, t = 0</p>
+  <p>For each iteration:</p>
+  <p style="margin-left: 20px;">t = t + 1</p>
+  <p style="margin-left: 20px;">g<sub>t</sub> = ∇L(θ<sub>t-1</sub>)</p>
+  <p style="margin-left: 20px;">m<sub>t</sub> = β<sub>1</sub> · m<sub>t-1</sub> + (1 - β<sub>1</sub>) · g<sub>t</sub></p>
+  <p style="margin-left: 20px;">v<sub>t</sub> = β<sub>2</sub> · v<sub>t-1</sub> + (1 - β<sub>2</sub>) · g<sub>t</sub><sup>2</sup></p>
+  <p style="margin-left: 20px;">m̂<sub>t</sub> = m<sub>t</sub> / (1 - β<sub>1</sub><sup>t</sup>)</p>
+  <p style="margin-left: 20px;">v̂<sub>t</sub> = v<sub>t</sub> / (1 - β<sub>2</sub><sup>t</sup>)</p>
+  <p style="margin-left: 20px;">θ<sub>t</sub> = θ<sub>t-1</sub> - η · m̂<sub>t</sub> / (√v̂<sub>t</sub> + ε)</p>
+</div>
+<p>comming back to the discussion of memory&hellip;</p>
+<p>so now we know what to store cause of adam optimizer, the model weights, the gradients, and the optimizer states constitute the majority of the memory required for training.</p>
+<p>but this is not the whole picture there is additional memory called termed Residual memory by the ZeRO pape,
+this memory is made up of Activations, Temporary Buffers, and Memory Fragments.</p>
+<p>Activations, are
+The outputs of each sub-component (self-attention, feed-forward network) within each layer are activations.
+The final output of each layer, which becomes the input to the next layer, is also an activation.</p>
+<p>Large models with extensive architectures generate substantial activations. For example, training a 1.5B parameter GPT-2 model with a sequence length of 1,000 tokens and a batch size of 32 can consume around 60 GB of memory solely for activations.</p>
+<p>To mitigate high memory usage, activation checkpointing (or recomputation) can be employed. This technique saves memory by storing only a subset of activations and recomputing the others as needed during the backward pass. While it reduces memory consumption (e.g., from 60 GB to 8 GB in the aforementioned example), it introduces a computational overhead of about 33% due to the additional recomputation.</p>
+<p>so why do we need to store the activations, these are essential to for calucating the gradients in backprop,
+<strong>temp buffers</strong>
+Temporary buffers store intermediate results during operations like gradient all-reduce (used in distributed training) and gradient norm computation(used for gradient clipping). These buffers are essential for efficiently performing complex computations and communication between devices.
+For large models, temporary buffers can require significant memory. For instance, a 1.5B parameter model might need around 6 GB of memory for a flattened fp32 buffer used during gradient all-reduce operations.</p>
+<p><strong>Memory Fragmentation</strong>
+Even after taking all of the above memory consumption into consideration, you migh still encounter the dreadful &ldquo;CUDA error: out of memory&rdquo;. This happens, because the gpu allocates memory in blcoks, even if ther is space for some of your params, but not all in a block of memory you will have issues.
+In scenarios involving very large models, memory fragmentation can lead to out-of-memory (OOM) errors despite having a considerable amount of available memory. For example, training extremely large models might fail with over 30% of memory still free, but unusable due to fragmentation.</p>
+<p>We cant do much about the Residual memory consumption, it is just good to have an idea about where did the memory go.</p>
+<p>So lets take a look back at the memory we know we can control, ie the model weights, gradients and optimizer states.</p>
+<p>We can use FP32 to store all of them but, its not necessary there is a concept of mixed precision training, which is widely adoppted in the industry, this inovlves stroing some of the components in lower precison FP16 (ie, half precision).</p>
+<p>Lets take a look at this now.</p>
+<div style="text-align: center;">
+  <img src="/images/multi_gpu/mp_training.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>The state-of-the-art approach to train large models on the current generation of NVIDIA GPUs is via mixed precision (fp16/32) training, where parameters and activations are stored as fp16, enabling the use of the high throughput tensor core units on these GPUs.</p>
+<p>During mixed-precision training, both the forward and backward propagation are performed using fp16 weights and activations. However, to effectively compute and apply the updates at the end of the backward propagation, the mixed-precision optimizer keeps an fp32 copy of the parameters as well as an fp32 copy of all the other optimizer states.</p>
+<p>Mixed precision training of a model with $\Psi$ parameters using Adam requires enough memory to hold an $\text{fp16}$ copy of the parameters and the gradients, with memory requirements of $2\Psi$ and $2\Psi$ bytes respectively. In addition, it needs to hold the optimizer states: an $\text{fp32}$ copy of the parameters, momentum, and variance, with memory requirements of $4\Psi$, $4\Psi$, and $4\Psi$ bytes, respectively. Let’s use $K$ to denote the memory multiplier of the optimizer states, i.e., the additional memory required to store them is $K\Psi$ bytes. Mixed-precision Adam has $K = 12$. In total, this results in $2\Psi + 2\Psi + K\Psi = 16\Psi$ bytes of memory requirement. For a model such as GPT-2 with 1.5 Billion parameters, this leads to a memory requirement of at least 24 GB, which is significantly higher than the meager 3 GB of memory required to hold the $\text{fp16}$ parameters alone.</p>
+<p>so the above is true from a paper from ICLR 2018, after that people tried to train models in full FP16 format, which can be fruitful for smaller models, but below is an excerpt from the BLOOM model training ppl, who wrote a blogpost on huggingface.</p>
+<blockquote>
+<h3 id="bf16optimizer">BF16Optimizer<a hidden class="anchor" aria-hidden="true" href="#bf16optimizer">#</a></h3>
+<p>Training huge LLM models in FP16 is a no-no.
+We have proved it to ourselves by spending several months training a 104B model which as you can tell from the tensorboard was but a complete failure. We learned a lot of things while fighting the ever diverging lm-loss:</p>
+ <div style="text-align: center;">
+   <img src="/images/multi_gpu/tensorboard_hf_excerpt.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+ <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+   Figure 1: Comparison of FP8 and BF16 formats. Source: 
+   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+ </p>
+ </div>
+and we also got the same advice from the Megatron-LM and DeepSpeed teams after they trained the 530B model. The recent release of OPT-175B too reported that they had a very difficult time training in FP16.
+</blockquote>
+<p>So as you might rememember form the qunatization blogpost about, different datatypes, and my parise of the BF16 datatype.
+The above is true if you have a V100 or older gpus that do not support the BF16 data type, but knowing the above is important because of historical reason or you might want to rent out a cheaper gpu fro training.</p>
+<p>So how is Mixed precision training done using the BF16 fromat, lets take a look.</p>
+<div style="text-align: center;">
+  <img src="/images/multi_gpu/mp_bf16_training.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>Here&rsquo;s a more concise explanation of the mixed precision data flow using BFLOAT16:</p>
+<ol>
+<li>
+<p>Input: Activations from previous layer (L-1) in BFLOAT16.</p>
+</li>
+<li>
+<p>Forward Pass:</p>
+<ul>
+<li>Multiply BFLOAT16 activations with BFLOAT16 weights.</li>
+<li>Accumulate results in FP32.</li>
+<li>Quantize output to BFLOAT16 for next layer&rsquo;s input.</li>
+</ul>
+</li>
+<li>
+<p>Backward Pass:
+a) Error Gradients:</p>
+<ul>
+<li>Multiply BFLOAT16 error gradients with transposed weights.</li>
+<li>Accumulate in FP32, then quantize to BFLOAT16.
+b) Weight Gradients:</li>
+<li>Multiply error gradients with transposed activations.</li>
+<li>Accumulate results in FP32.</li>
+</ul>
+</li>
+<li>
+<p>Weight Update:</p>
+<ul>
+<li>Add FP32 weight gradients to FP32 master weights.</li>
+</ul>
+</li>
+<li>
+<p>Precision Management:</p>
+<ul>
+<li>Store master weights in FP32.</li>
+<li>Use BFLOAT16 for computations and storage where possible.</li>
+<li>Perform critical accumulations in FP32.</li>
+<li>Convert between FP32 and BFLOAT16 as needed (shown as &lsquo;Q&rsquo; operations).</li>
+</ul>
+</li>
+</ol>
+<p>This approach balances computational efficiency (using BFLOAT16) with numerical stability (using FP32 for critical operations), enabling effective training of large neural networks.</p>
+<p>So again this paper was published in 2019, and people now train the full model with the BF16 fromat since gpus like the A100 can support these kinds of formats.</p>
+<p>Lets take a look at at an even smaller format FP8, now people do train llms on this format. (this is a more latest paper came out in 2022).
+this paper uses fp8 for the paramaters and gradients, but generally the optimizer states need to be stored in BF16 or higher.</p>
+<p>So now we some knowledge about the adam optimizer, its weight componets, and finally mixed precision training.</p>
+<p>Lest start Multi GPU Training</p>
+<p>start with DDP or distributed data parallel.</p>
+<h2 id="ddp-distributed-data-parallel">DDP (Distributed Data Parallel)<a hidden class="anchor" aria-hidden="true" href="#ddp-distributed-data-parallel">#</a></h2>
+<p>basically ddp is quite easy, most of the effort of ddp lies in making efficient in actula production, dealing wiht race conditions etc&hellip;</p>
+<h2 id="pipeline-model-parallelism">Pipeline model parallelism<a hidden class="anchor" aria-hidden="true" href="#pipeline-model-parallelism">#</a></h2>
+<p>In data parallelism we say how we can fit multiple copies of the same model on different GPUs, but now we consider the more common scenarion of the model not being able to fit on a single gpu,
+There are primarily two ways we can tackle this problem pipeline parallelism is the more intuitive one, so lets start with that.</p>
+<p>The basic idea of pipeline parallelism is quite simple, if your model dosent fit on a single GPU, slice up the different layers and put them across multiple gpus, so each gpu takes input as the output of the previous partition as input, but the problem here is obvious, you cant rent a h100 gpu cluster for 8 bucks an hour and have this bad gpu utilization, so here are some techniques that make model parallelism efficient</p>
+<ol>
+<li><strong>PipeDream: Generalized Pipeline Parallelism for DNN Training</strong></li>
+</ol>
+<p><strong>Pipeline Parallelism in Deep Learning Training: An In-Depth Explanation Inspired by the PipeDream Paper</strong></p>
+<hr>
+<p>Pipeline parallelism is a technique used to accelerate the training of deep neural networks (DNNs) by partitioning the computation graph across multiple devices, such as GPUs. The PipeDream paper introduces a novel approach to pipeline parallelism that addresses the limitations of traditional data and model parallelism methods. Below is a detailed explanation of pipeline parallelism as described in the PipeDream paper.</p>
+<h3 id="background"><strong>Background</strong><a hidden class="anchor" aria-hidden="true" href="#background">#</a></h3>
+<p>Traditional parallelization strategies for training DNNs include:</p>
+<ol>
+<li>
+<p><strong>Data Parallelism (DP):</strong> Distributes different data samples (minibatches) across multiple GPUs, each with a complete copy of the model. After computing gradients, the GPUs synchronize to update the model parameters.</p>
+</li>
+<li>
+<p><strong>Model Parallelism (MP):</strong> Splits the model itself across multiple GPUs. Each GPU holds a portion of the model and processes the same data sample sequentially through the different parts.</p>
+</li>
+</ol>
+<p>While these methods have their advantages, they also have limitations, especially when scaling to large models or a high number of GPUs. Pipeline parallelism aims to overcome these limitations by combining aspects of both data and model parallelism.</p>
+<h3 id="what-is-pipeline-parallelism"><strong>What is Pipeline Parallelism?</strong><a hidden class="anchor" aria-hidden="true" href="#what-is-pipeline-parallelism">#</a></h3>
+<p>Pipeline parallelism involves dividing the layers of a DNN into sequential stages and assigning each stage to a different GPU. Each GPU is responsible for the forward and backward computations of its assigned layers. By injecting multiple minibatches into the pipeline, all GPUs can work simultaneously, processing different minibatches at different stages.</p>
+<h3 id="how-pipeline-parallelism-works"><strong>How Pipeline Parallelism Works</strong><a hidden class="anchor" aria-hidden="true" href="#how-pipeline-parallelism-works">#</a></h3>
+<ol>
+<li>
+<p><strong>Partitioning the Model:</strong></p>
+<ul>
+<li>The DNN is divided into several stages, each containing a consecutive set of layers.</li>
+<li>Each stage is assigned to a separate GPU.</li>
+</ul>
+</li>
+<li>
+<p><strong>Injecting Minibatches:</strong></p>
+<ul>
+<li>Multiple minibatches are introduced into the pipeline sequentially.</li>
+<li>As one GPU completes the forward pass for a minibatch, it sends the output activations to the next GPU and starts processing the next minibatch.</li>
+</ul>
+</li>
+<li>
+<p><strong>Forward and Backward Passes:</strong></p>
+<ul>
+<li>The last stage (GPU) starts the backward pass immediately after completing the forward pass for a minibatch.</li>
+<li>Each GPU performs the backward pass for its stage and sends the gradients to the previous GPU while starting computations for the next minibatch.</li>
+</ul>
+</li>
+<li>
+<p><strong>Asynchronous Communication:</strong></p>
+<ul>
+<li>Communication of activations and gradients between GPUs is done asynchronously.</li>
+<li>This allows for overlapping computation and communication, improving overall efficiency.</li>
+</ul>
+</li>
+</ol>
+<h3 id="advantages-of-pipeline-parallelism"><strong>Advantages of Pipeline Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#advantages-of-pipeline-parallelism">#</a></h3>
+<ol>
+<li>
+<p><strong>Reduced Communication Overhead:</strong></p>
+<ul>
+<li>Communication is limited to adjacent GPUs, transferring only the necessary activations and gradients.</li>
+<li>This is more efficient than DP, which requires global synchronization and communication of all model parameters.</li>
+</ul>
+</li>
+<li>
+<p><strong>Improved Resource Utilization:</strong></p>
+<ul>
+<li>By keeping multiple minibatches in flight, all GPUs remain active, reducing idle time.</li>
+<li>Overlapping computation and communication maximizes hardware utilization.</li>
+</ul>
+</li>
+</ol>
+<h3 id="challenges-and-solutions-in-pipedream"><strong>Challenges and Solutions in PipeDream</strong><a hidden class="anchor" aria-hidden="true" href="#challenges-and-solutions-in-pipedream">#</a></h3>
+<p>The PipeDream paper identifies three main challenges in implementing effective pipeline parallelism and proposes solutions for each.</p>
+<h4 id="challenge-1-work-partitioning"><strong>Challenge 1: Work Partitioning</strong><a hidden class="anchor" aria-hidden="true" href="#challenge-1-work-partitioning">#</a></h4>
+<p><strong>Problem:</strong></p>
+<ul>
+<li>Uneven computational workloads across stages can lead to pipeline bubbles, where some GPUs are idle waiting for others to complete.</li>
+<li>Excessive communication between GPUs can reduce throughput.</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<ul>
+<li><strong>Automated Partitioning Algorithm:</strong>
+<ul>
+<li>Profiles the DNN to estimate computation times and output sizes for each layer.</li>
+<li>Uses dynamic programming to partition layers into stages such that each stage has a balanced computational load.</li>
+<li>Takes into account hardware topology and communication bandwidth to minimize communication overhead.</li>
+<li>Allows for stage replication (using data parallelism within a stage) when perfect load balancing isn&rsquo;t possible with simple partitioning.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Process:</strong></p>
+<ol>
+<li><strong>Profiling:</strong>
+<ul>
+<li>Measure computation times (forward and backward passes) and activation sizes for each layer.</li>
+</ul>
+</li>
+<li><strong>Optimization:</strong>
+<ul>
+<li>Solve a dynamic programming problem to find the optimal partitioning that balances the workload and minimizes communication.</li>
+<li>Consider replication factors for stages to further balance the pipeline.</li>
+</ul>
+</li>
+</ol>
+<h4 id="challenge-2-work-scheduling"><strong>Challenge 2: Work Scheduling</strong><a hidden class="anchor" aria-hidden="true" href="#challenge-2-work-scheduling">#</a></h4>
+<p><strong>Problem:</strong></p>
+<ul>
+<li>Deciding whether a GPU should perform a forward or backward pass at any given time.</li>
+<li>Routing minibatches correctly when stages are replicated.</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>
+<p><strong>One-Forward-One-Backward (1F1B) Scheduling:</strong></p>
+<ul>
+<li>Each GPU alternates between performing a forward pass for one minibatch and a backward pass for another minibatch.</li>
+<li>This schedule ensures that all GPUs are continuously utilized.</li>
+</ul>
+</li>
+<li>
+<p><strong>Deterministic Round-Robin Load Balancing (1F1B-RR):</strong></p>
+<ul>
+<li>When stages are replicated, minibatches are assigned to replicas in a round-robin fashion based on their IDs.</li>
+<li>Ensures that each minibatch is processed by the same GPU for both forward and backward passes within a stage.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Process:</strong></p>
+<ol>
+<li><strong>Startup Phase:</strong>
+<ul>
+<li>The pipeline is filled with an optimal number of minibatches to reach steady state.</li>
+</ul>
+</li>
+<li><strong>Steady State:</strong>
+<ul>
+<li>GPUs follow the 1F1B schedule, maintaining a balance between forward and backward computations.</li>
+</ul>
+</li>
+</ol>
+<h4 id="challenge-3-effective-learning"><strong>Challenge 3: Effective Learning</strong><a hidden class="anchor" aria-hidden="true" href="#challenge-3-effective-learning">#</a></h4>
+<p><strong>Problem:</strong></p>
+<ul>
+<li>Inconsistency in parameter versions used during forward and backward passes can lead to invalid gradients and hinder convergence.</li>
+<li>Since parameters are updated asynchronously across stages, a minibatch might use different parameter versions in its forward and backward passes.</li>
+</ul>
+<p><strong>Solution:</strong></p>
+<ul>
+<li>
+<p><strong>Weight Stashing:</strong></p>
+<ul>
+<li>Store (stash) the parameters used during the forward pass of each minibatch.</li>
+<li>Use the same stashed parameters during the backward pass to compute gradients.</li>
+<li>Ensures that gradients are computed consistently with the parameters used in the forward pass.</li>
+</ul>
+</li>
+<li>
+<p><strong>Vertical Sync (Optional):</strong></p>
+<ul>
+<li>Coordinates the use of parameter versions across stages.</li>
+<li>Each minibatch uses the same parameter version for both forward and backward passes across all stages.</li>
+<li>Involves more coordination and storage but provides consistency similar to synchronous data parallelism.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Process:</strong></p>
+<ol>
+<li><strong>During Forward Pass:</strong>
+<ul>
+<li>Use the latest available parameters.</li>
+<li>Stash the parameters for each minibatch.</li>
+</ul>
+</li>
+<li><strong>During Backward Pass:</strong>
+<ul>
+<li>Retrieve the stashed parameters corresponding to the minibatch.</li>
+<li>Compute gradients and update parameters accordingly.</li>
+</ul>
+</li>
+</ol>
+<h3 id="understanding-staleness-and-consistency"><strong>Understanding Staleness and Consistency</strong><a hidden class="anchor" aria-hidden="true" href="#understanding-staleness-and-consistency">#</a></h3>
+<ul>
+<li>
+<p><strong>Staleness:</strong></p>
+<ul>
+<li>Refers to the difference in parameter versions used when computing gradients.</li>
+<li>Weight stashing reduces staleness within a stage but doesn&rsquo;t eliminate it across stages.</li>
+</ul>
+</li>
+<li>
+<p><strong>Consistency Models:</strong></p>
+<ul>
+<li><strong>Without Weight Stashing:</strong> Parameters may be inconsistent, leading to invalid gradients.</li>
+<li><strong>With Weight Stashing:</strong> Consistent within a stage; some staleness across stages.</li>
+<li><strong>With Vertical Sync:</strong> Consistent across all stages for each minibatch; mimics synchronous training.</li>
+</ul>
+</li>
+</ul>
+<h3 id="memory-considerations"><strong>Memory Considerations</strong><a hidden class="anchor" aria-hidden="true" href="#memory-considerations">#</a></h3>
+<ul>
+<li>
+<p><strong>Memory Overhead:</strong></p>
+<ul>
+<li>Weight stashing increases memory usage since parameters need to be stored for each in-flight minibatch.</li>
+<li>However, the per-GPU memory usage remains comparable to data parallelism.</li>
+</ul>
+</li>
+<li>
+<p><strong>Optimization Techniques:</strong></p>
+<ul>
+<li><strong>Activation Recomputation:</strong> Discard activations after forward pass and recompute them during backward pass to save memory.</li>
+<li><strong>Gradient Accumulation:</strong> Aggregate gradients over multiple minibatches before updating parameters.</li>
+</ul>
+</li>
+</ul>
+<h3 id="implementation-highlights"><strong>Implementation Highlights</strong><a hidden class="anchor" aria-hidden="true" href="#implementation-highlights">#</a></h3>
+<ul>
+<li>
+<p><strong>PipeDream Runtime:</strong></p>
+<ul>
+<li>Manages device memory, schedules tasks, and handles communication between GPUs.</li>
+<li>Integrates with deep learning frameworks like PyTorch.</li>
+</ul>
+</li>
+<li>
+<p><strong>Communication Backend:</strong></p>
+<ul>
+<li>Uses efficient communication libraries (e.g., Gloo, NCCL) for transferring activations and gradients.</li>
+</ul>
+</li>
+<li>
+<p><strong>Checkpointing:</strong></p>
+<ul>
+<li>Supports periodic saving of model parameters for fault tolerance.</li>
+<li>Each stage checkpoints independently, reducing coordination overhead.</li>
+</ul>
+</li>
+</ul>
+<h3 id="benefits-of-pipedreams-pipeline-parallelism"><strong>Benefits of PipeDream&rsquo;s Pipeline Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#benefits-of-pipedreams-pipeline-parallelism">#</a></h3>
+<ul>
+<li>
+<p><strong>Scalability:</strong></p>
+<ul>
+<li>Enables training of larger models that don&rsquo;t fit into the memory of a single GPU.</li>
+<li>Efficiently utilizes multiple GPUs without incurring excessive communication overhead.</li>
+</ul>
+</li>
+<li>
+<p><strong>Throughput Improvement:</strong></p>
+<ul>
+<li>By keeping all GPUs busy and overlapping computation with communication, PipeDream achieves higher throughput compared to traditional methods.</li>
+</ul>
+</li>
+<li>
+<p><strong>Flexibility:</strong></p>
+<ul>
+<li>Can be combined with data parallelism within stages (hybrid parallelism) for further scalability.</li>
+</ul>
+</li>
+</ul>
+<h3 id="conclusion"><strong>Conclusion</strong><a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h3>
+<p>Pipeline parallelism, as implemented in the PipeDream paper, presents an effective method for scaling DNN training across multiple GPUs. By carefully partitioning the model, scheduling work to maximize GPU utilization, and ensuring consistent parameter usage through weight stashing, PipeDream overcomes the challenges associated with pipeline parallelism. This approach leads to significant improvements in training throughput while maintaining model convergence, making it a valuable technique for training large-scale deep learning models.</p>
+<p>8:37
+parallelism uh we split the layers or operators in the model over multiple devices uh and then we also will split
+8:45
+each batch of inputs into smaller micro batches and then paralyze execution across these micro
+8:52
+batches to be very concrete uh let&rsquo;s look at this visually um so this is a
+8:57
+model uh that we&rsquo;re splitting over four devices uh so let&rsquo;s say that if the if the model
+9:06
+has eight Transformer layers uh what we&rsquo;re going to do is we&rsquo;re going to assign the first two Transformer layers
+9:12
+to the first device the next two to the second device and so on now in order to perform a single
+9:18
+forward and backward path through the model we&rsquo;re going to need to take a single input pass it through device one
+9:26
+device one performs its computation uh represented by this blue box computes an
+9:32
+what what we call an output activation and then this output activation needs to be communicated to the next device uh uh
+9:40
+and and and and and the second device can start it uh it its computation until it&rsquo;s receive this activation from the
+9:47
+the first device um and and so what that means is that there is this sequential
+9:53
+data dependency across each of these devices um and lots of these devices are
+9:58
+idle um in in particular at any point in time only one device is
+10:04
+active um and so so very quickly you can see that uh this scheme has uh pretty uh
+10:11
+poor utilization and low throughput so instead what we can do is we can take this input batch a um and
+10:19
+split it into smaller micro batches uh let&rsquo;s say that this this uh input batch
+10:26
+a has has four inputs in it um what we can do is we can split that um input of
+10:32
+uh input batch of four into four micro batches of size one and then pipeline execution across um those micro
+10:41
+batches um in particular um this is this is what this looks like um we note now
+10:46
+that we only have sequential uh sequential data dependencies um between
+10:53
+uh devices for a given microbatch um in other words um device 2 now only needs
+10:59
+to wait on device one for um uh this output activation of microbatch A1
+11:06
+before it starts computation so no longer do you have to wait for all four for for device one to complete uh
+11:12
+computation for all four um input samples in in in in in this patch um
+11:18
+instead we can just um we can immediately start uh processing on device 2 as soon as just an a single
+11:26
+input&rsquo;s uh worth of computation is is completed on on device
+11:35
+one after we complete uh uh computation for all of these forward and and
+11:42
+backward passes for these four um uh micro batches uh then we can step the
+11:47
+the optimizer uh which is basically around here um and then we can update
+11:54
+the the weights and move on to the next training iteration
+12:00
+it&rsquo;s easy to see from from from these figures that uh this is much more efficient um compared to the the naive
+12:07
+case where um we only have a single batch uh but there are still some idle
+12:14
+periods we haven&rsquo;t completely eliminated um these idle periods from
+12:20
+from from these timelines um we call um the periods of of time that each device
+12:27
+is is Idle um uh at the start and end of a training iteration the pipeline flush
+12:33
+um and and these are basically fundamental right um uh basically the pipeline flush is the time that devices
+12:39
+need to wait for inputs to actually flow through the the pipeline um and then
+12:45
+subsequently get drained
+12:52
+out so to summarize with pipeline model parallelism we need to perform uh point-to-point communication between
+12:58
+between consecutive pipeline stages uh and we have these pipeline Bubbles at the start and end of every
+13:05
+batch we can actually exactly quantify how much time is spent in the pipeline bubble uh it&rsquo;s actually going to be
+13:11
+equal to P minus one microb batches worth of forward and backward passes uh
+13:16
+where p is the number of pipeline stages um so in the previous figure uh the uh
+13:23
+the number of pipeline stages was four um and the size of the pipeline bubble was three micro batches worth of forward
+13:31
+and and backward pass</p>
+<hr>
+<h1 id="references">References<a hidden class="anchor" aria-hidden="true" href="#references">#</a></h1>
+<p>[1] <a href="https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer">https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer</a></p>
+<p>[2] <a href="https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/">https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/</a></p>
 
 
   </div>
@@ -803,7 +885,7 @@ The throughput really took a hit with the LLM.int8() implementation, cause this 
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:42943/">TensorTunes</a></span> · 
+        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
 
     <span>
         Powered by

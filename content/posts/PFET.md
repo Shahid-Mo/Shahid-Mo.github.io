@@ -55,7 +55,7 @@ Lest start with the simplest of Additive finetunign methods,
 ##### Prompt tuning image from paper
 
 <div style="text-align: center;">
-  <img src="/images/PEFT/PEFT_prompt_tuning_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/PEFT/PEFT_promp_tuning_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
   Figure 1: Comparison of FP8 and BF16 formats. Source: 
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
@@ -76,20 +76,25 @@ Prompt tuning involves adding a few special embeddings, or "prompt vectors," at 
 1. **Parameter Efficiency**: Only a small number of parameters (the prompt vectors) need to be updated, drastically reducing storage requirements and making it easier to share models. Instead of sharing an entire 11-billion-parameter model, one can share just a few prompt vectors.
 2. **Batch Processing**: Prompt tuning enables the same base model to handle multiple tasks simultaneously. By including task-specific prompt vectors in the input, a single batch can contain examples from different tasks, streamlining the processing and improving efficiency.
 
-Prompt-Tunig vs Fine Tuing vs Prompting
+**Prompt-Tunig vs Fine Tuing vs Prompting**
+
+<div style="text-align: center;">
+  <img src="/images/PEFT/PEFT_prompt_tuning_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
 
 The blue line represents prompting, where natural language prompts are used without further training. The red and orange lines depict model fine-tuning, where the entire model is fine-tuned on downstream datasets, yielding the highest performance. The green line indicates prompt tuning.
+
 Key Observations
 1.	Smaller Models: Prompt tuning underperforms compared to full fine-tuning for smaller models. However, it still provides a significant improvement over plain prompting.
 2.	Larger Models: The performance gap between prompt tuning and full model fine-tuning diminishes as model size increases. With large models, prompt tuning achieves comparable results to full fine-tuning, making it an efficient alternative.
 
-<div style="text-align: center;">
-  <img src="/images/PEFT/PEFT_promp_tuning_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+
+Figure 1: Comparison of FP8 and BF16 formats. Source: 
+<a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
+
+# Prefix tuning
 
 <div style="text-align: center;">
   <img src="/images/PEFT/PEFT_prefix_tuning_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
@@ -98,6 +103,25 @@ Key Observations
   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
 </p>
 </div>
+
+Prefix tuning is similar to prompt tuning, but instead of appending prompt tokens only at the embedding layer, prefix tokens are added at every layer of the model.
+
+Lets look at this in a bit more detail
+ 
+In a standard Transformer architecture, each layer consists of two main components:
+- **Self-Attention Mechanism**
+- **Feed-Forward Neural Network (FFN)**
+
+**Prefix Tuning modifies this architecture by inserting prefixes before the self-attention layers of each Transformer block. Here's how it works:**
+
+1. **Addition of Prefix Embeddings:**
+- **Before Self-Attention:** For each Transformer layer, a set of prefix embeddings (continuous vectors) is prepended to the input sequence. If the original input to a layer is represented as `x`, the modified input becomes `[PREFIX; x]`.
+- **Not Applied to FFN Layers:** The prefixes are only added before the self-attention mechanisms, leaving the feed-forward layers unchanged.
+
+2. **Impact on Self-Attention:**
+- **Extended Input Sequence:** By prepending prefixes, the self-attention mechanism now processes both the original tokens and the prefix tokens simultaneously.
+- **Attention Computation:** The self-attention layers compute attention scores across the combined sequence (`[PREFIX; x]`). This means that every token in the original input can attend to the prefix tokens and vice versa.
+- **Guiding the Model:** The prefix embeddings act as a continuous, task-specific context that influences how the model attends to and processes the input tokens. They effectively steer the model's focus and generation behavior based on the learned prefixes.
 
 
 <div style="text-align: center;">
@@ -108,21 +132,35 @@ Key Observations
 </p>
 </div>
 
-<div style="text-align: center;">
-  <img src="/images/PEFT/adapter_fusion_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+# adapters
+
+<div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 300px; max-width: 45%;">
+    <img src="/images/PEFT/adapter_fusion_1.png" alt="PEFT Prefix Tuning" style="width: 100%; height: auto;">
+    <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6); text-align: center;">
+      Figure 1: Comparison of FP8 and BF16 formats. Source: 
+      <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+    </p>
+  </div>
+  <div style="flex: 1; min-width: 300px; max-width: 45%;">
+    <img src="/images/PEFT/adapter_fusion_2.png" alt="Adapter Fusion" style="width: 100%; height: auto;">
+    <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6); text-align: center;">
+      Figure 2: Comparison of FP8 and BF16 formats. Source: 
+      <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+    </p>
+  </div>
 </div>
 
-<div style="text-align: center;">
-  <img src="/images/PEFT/adapter_fusion_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
+
+## adapter fusion
+## p-tuning
+## $(IA)^3$
+
+# Bitfit
+
+## lora
+## vera 
+## dora
 
 <div style="text-align: center;">
   <img src="/images/PEFT/dora_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
