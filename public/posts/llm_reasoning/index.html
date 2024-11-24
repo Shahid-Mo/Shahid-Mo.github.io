@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>LLM Reasoning | TensorTunes</title>
+<meta name="keywords" content="">
+<meta name="description" content="Motivation for Reasoning Classical ML algorithms like Linear Regression, Support Vector Machines, K- Nearest Neighbours etc, have long served as powerful tools for narrow, well-structured problems, but what sets apaprt todays field of AI that distinguishes itself from the previous generation is the ability of todays models to reason (or do sometinig that resembels reasonig, quite convincingly i might add), the ideal of AGI (artificial general intellingence) is a computer that can reason and plan ahead, and current llms can be taught to do many things, this just comes under the paradigm of prompt engineering.">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/llm_reasoning/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/llm_reasoning/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$','$$'], ['\\[', '\\]']],
+      processEscapes: true,
+      processEnvironments: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  };
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://localhost:1313/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://localhost:1313/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      LLM Reasoning
+    </h1>
+    <div class="post-meta"><span title='2024-11-09 00:00:00 +0000 UTC'>November 9, 2024</span>
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#motivation-for-reasoning" aria-label="Motivation for Reasoning">Motivation for Reasoning</a><ul>
+                        <ul>
+                        
+                <li>
+                    <a href="#the-ability-to-reason" aria-label="The ability to reason,">The ability to reason,</a></li>
+                <li>
+                    <a href="#enter-llms" aria-label="Enter LLMs">Enter LLMs</a></li>
+                <li>
+                    <a href="#in-context-learning" aria-label="In context Learning">In context Learning</a></li></ul>
+                    
+                <li>
+                    <a href="#in-context-learning-1" aria-label="In Context Learning">In Context Learning</a></li>
+                <li>
+                    <a href="#lets-think-step-by-step" aria-label="Let’s think step by step">Let’s think step by step</a></li></ul>
+                </li>
+                <li>
+                    <a href="#a-look-at-some-of-the-latest-research-in-advanced-reasoning-capabilities" aria-label="A Look at some of the latest Research in advanced Reasoning capabilities">A Look at some of the latest Research in advanced Reasoning capabilities</a><ul>
+                        
+                <li>
+                    <a href="#1-self-consistency-improves-chain-of-thought-reasoning-in-language-models-mar-23" aria-label="1. SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS (Mar 23)">1. SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS (Mar 23)</a></li>
+                <li>
+                    <a href="#7-universal-self-consistency-for-large-language-model-generation-nov-23" aria-label="7. UNIVERSAL SELF-CONSISTENCY FOR LARGE LANGUAGE MODEL GENERATION (Nov 23)">7. UNIVERSAL SELF-CONSISTENCY FOR LARGE LANGUAGE MODEL GENERATION (Nov 23)</a></li>
+                <li>
+                    <a href="#6-chain-of-thought-reasoning-without-prompting" aria-label="6. Chain-of-Thought Reasoning without Prompting">6. Chain-of-Thought Reasoning without Prompting</a></li>
+                <li>
+                    <a href="#8-large-language-models-as-analogical-reasoners-" aria-label="8. LARGE LANGUAGE MODELS AS ANALOGICAL REASONERS ✅">8. LARGE LANGUAGE MODELS AS ANALOGICAL REASONERS ✅</a></li>
+                <li>
+                    <a href="#11-least-to-most-prompting-enables-complex-reasoning-in-large-language-models-" aria-label="11. LEAST-TO-MOST PROMPTING ENABLES COMPLEX REASONING IN LARGE LANGUAGE MODELS ✅">11. LEAST-TO-MOST PROMPTING ENABLES COMPLEX REASONING IN LARGE LANGUAGE MODELS ✅</a></li>
+                <li>
+                    <a href="#10-compositional-semantic-parsing-with-large-language-models" aria-label="10. COMPOSITIONAL SEMANTIC PARSING WITH LARGE LANGUAGE MODELS">10. COMPOSITIONAL SEMANTIC PARSING WITH LARGE LANGUAGE MODELS</a></li>
+                <li>
+                    <a href="#take-a-step-back-evoking-reasoning-via-abstraction-in-large-language-models" aria-label="TAKE A STEP BACK: EVOKING REASONING VIA ABSTRACTION IN LARGE LANGUAGE MODELS">TAKE A STEP BACK: EVOKING REASONING VIA ABSTRACTION IN LARGE LANGUAGE MODELS</a></li>
+                <li>
+                    <a href="#re-reading-improves-reasoning-in-large-language-models" aria-label="Re-Reading Improves Reasoning in Large Language Models">Re-Reading Improves Reasoning in Large Language Models</a></li></ul>
+                </li>
+                <li>
+                    <a href="#limitations" aria-label="Limitations">Limitations</a><ul>
+                        
+                <li>
+                    <a href="#4-large-language-models-can-be-easily-distracted-by-irrelevant-context-" aria-label="4. Large Language Models Can Be Easily Distracted by Irrelevant Context ✅">4. Large Language Models Can Be Easily Distracted by Irrelevant Context ✅</a></li>
+                <li>
+                    <a href="#5-large-language-models-cannot-self-correct-reasoning-yet-" aria-label="5. LARGE LANGUAGE MODELS CANNOT SELF-CORRECT REASONING YET ✅">5. LARGE LANGUAGE MODELS CANNOT SELF-CORRECT REASONING YET ✅</a></li>
+                <li>
+                    <a href="#self-refine-iterative-refinement-with-self-feedback" aria-label="Self-Refine: Iterative Refinement with Self-Feedback">Self-Refine: Iterative Refinement with Self-Feedback</a></li>
+                <li>
+                    <a href="#reflexion-language-agents-with-verbal-reinforcement-learning" aria-label="Reflexion: Language Agents with Verbal Reinforcement Learning">Reflexion: Language Agents with Verbal Reinforcement Learning</a></li>
+                <li>
+                    <a href="#3-teaching-large-language-models-to-selfdebug" aria-label="3. TEACHING LARGE LANGUAGE MODELS TO SELFDEBUG">3. TEACHING LARGE LANGUAGE MODELS TO SELFDEBUG</a></li>
+                <li>
+                    <a href="#2-premise-order-matters-in-reasoning-with-large-language-models-" aria-label="2. Premise Order Matters in Reasoning with Large Language Models ✅">2. Premise Order Matters in Reasoning with Large Language Models ✅</a></li>
+                <li>
+                    <a href="#do-language-models-know-when-theyre-hallucinating-references" aria-label="Do Language Models Know When They’re Hallucinating References?">Do Language Models Know When They’re Hallucinating References?</a></li></ul>
+                </li>
+                <li>
+                    <a href="#prompt-templates" aria-label="Prompt Templates">Prompt Templates</a></li>
+                <li>
+                    <a href="#new-stuff" aria-label="New Stuff">New Stuff</a><ul>
+                        
+                <li>
+                    <a href="#motivation-for-reasoning-1" aria-label="Motivation for Reasoning">Motivation for Reasoning</a><ul>
+                        
+                <li>
+                    <a href="#last-letter-concatenation" aria-label="Last Letter Concatenation">Last Letter Concatenation</a></li>
+                <li>
+                    <a href="#enter-llms-1" aria-label="Enter LLMs">Enter LLMs</a></li></ul>
+                </li>
+                <li>
+                    <a href="#language-models-are-few-shot-learners" aria-label="Language Models are Few-Shot Learners">Language Models are Few-Shot Learners</a><ul>
+                        
+                <li>
+                    <a href="#in-context-learning-2" aria-label="In-Context Learning">In-Context Learning</a></li>
+                <li>
+                    <a href="#zero-shot-one-shot-and-few-shot-learning-contrasted-with-traditional-fine-tuning" aria-label="Zero-Shot, One-Shot, and Few-Shot Learning, Contrasted with Traditional Fine-Tuning">Zero-Shot, One-Shot, and Few-Shot Learning, Contrasted with Traditional Fine-Tuning</a></li></ul>
+                </li>
+                <li>
+                    <a href="#chain-of-thought-prompting" aria-label="Chain-of-Thought Prompting">Chain-of-Thought Prompting</a><ul>
+                        
+                <li>
+                    <a href="#unsupervised-chain-of-thought-prompting" aria-label="Unsupervised Chain-of-Thought Prompting">Unsupervised Chain-of-Thought Prompting</a></li></ul>
+                </li></ul>
+                </li>
+                <li>
+                    <a href="#drafts" aria-label="Drafts">Drafts</a><ul>
+                        
+                <li>
+                    <a href="#language-models-are-few-shot-learners-1" aria-label="Language Models are Few-Shot Learners">Language Models are Few-Shot Learners</a><ul>
+                        
+                <li>
+                    <a href="#in-context-learnign" aria-label="In-context learnign">In-context learnign</a></li>
+                <li>
+                    <a href="#zero-shot-one-shot-and-few-shot-contrasted-with-traditional-fine-tuning" aria-label="Zero-shot, one-shot and few-shot, contrasted with traditional fine-tuning">Zero-shot, one-shot and few-shot, contrasted with traditional fine-tuning</a></li></ul>
+                </li>
+                <li>
+                    <a href="#chain-of-thought-prompting-1" aria-label="Chain-of-Thought Prompting">Chain-of-Thought Prompting</a></li>
+                <li>
+                    <a href="#2-tree-of-thoughts-deliberate-problem-solving-with-large-language-models--own-post-quite-comples-and-requires-code" aria-label="2. Tree of Thoughts: Deliberate Problem Solving with Large Language Models ✅ (own post, quite comples and requires code)�">2. Tree of Thoughts: Deliberate Problem Solving with Large Language Models ✅ (own post, quite comples and requires code)�</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="motivation-for-reasoning">Motivation for Reasoning<a hidden class="anchor" aria-hidden="true" href="#motivation-for-reasoning">#</a></h1>
+<p>Classical ML algorithms like Linear Regression, Support Vector Machines, K- Nearest Neighbours etc, have long served as powerful tools for narrow, well-structured problems, but what sets apaprt todays field of AI that distinguishes itself from the previous generation is the ability of todays models to reason (or do sometinig that resembels reasonig, quite convincingly i might add), the ideal of AGI (artificial general intellingence) is a computer that can reason and plan ahead, and current llms can be taught to do many things, this just comes under the paradigm of prompt engineering.</p>
+<h3 id="the-ability-to-reason">The ability to reason,<a hidden class="anchor" aria-hidden="true" href="#the-ability-to-reason">#</a></h3>
+<p>lets just assume that you are in 2017, before LLMs were mainstream, and you wanted to sovle the following problem,</p>
+<p>Last Letter Concatenation</p>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Elon Musk”</td>
+<td>“nk”</td>
+</tr>
+<tr>
+<td>“Bill Gates”</td>
+<td>“ls”</td>
+</tr>
+<tr>
+<td>“Donald John Trump”</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule:</strong> Take the last letter of each word and concatenate them.</p>
+<p>(Even thought this is a toy problem, this can provide us with the fundamental concepts necessary to understand how LLM reason)</p>
+<p>So most people would collect vasts amount of data to and try and train a model that can do this simple task, So this is just a massive waste of time and resources, even though a human can write a simple program to solve this, but it would take a ML model a few thousand examples to get it right</p>
+<h3 id="enter-llms">Enter LLMs<a hidden class="anchor" aria-hidden="true" href="#enter-llms">#</a></h3>
+<p>For the first try most people will try and do something like this:</p>
+<blockquote>
+<p><strong>Input:</strong><br>
+Rule: Take the last letter of each word and concatenate them.<br>
+&ldquo;Donald John Trump&rdquo;</p>
+</blockquote>
+<blockquote>
+<p><strong>Response:</strong><br>
+pTrump</p>
+</blockquote>
+<p>So from &ldquo;Language models are few-shot learners&rdquo; we know that LLMs can give you a correct answer based on a few examples, lest see how does the LM do now?</p>
+<blockquote>
+<p><strong>Input:</strong><br>
+Rule: Take the last letter of each word and concatenate them.<br>
+&ldquo;Elon Musk&rdquo;: &ldquo;nk&rdquo; <br>
+&ldquo;Bill Gates&rdquo;: &ldquo;ls&rdquo; <br>
+&ldquo;Donald John Trump&rdquo;: ?</p>
+</blockquote>
+<blockquote>
+<p><strong>Response:</strong><br>
+&ldquo;Donald John Trump&rdquo;: &ldquo;mp&rdquo;</p>
+</blockquote>
+<p>(Expirements performed using the google/gemma-2-9B-it model, released June 27 2024, on togeather.ai, The above zero shot and few shot work on todays massive llms like GPT4o, and Claude 3.5 Sonnet.)</p>
+<p>So why does techniques like few shot learning actually work?
+The technique of few shot learning was so powerful, and paradigm shifting when the researchers came across it, they named their GPT3 paper &ldquo;Language Models are Few-Shot Learners&rdquo;. Here they provide some reasoning as to why something like Few shot learning actually works, it is called in-context Learning</p>
+<h3 id="in-context-learning">In context Learning<a hidden class="anchor" aria-hidden="true" href="#in-context-learning">#</a></h3>
+<div style="text-align: center;">
+  <img src="/images/proompt/gpt3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>During the pre-training stage, a language model develops a broad set of skills and pattern recognition abilities. It then uses these abilities at inference time to rapidly adapt to or recognize the desired task. We use the term “in-context learning” to describe the inner loop of this process, which occurs within the forward-pass upon each sequence.</p>
+<h2 id="in-context-learning-1">In Context Learning<a hidden class="anchor" aria-hidden="true" href="#in-context-learning-1">#</a></h2>
+<p>As we can see, the model was not able to recogonize the pattern, so instead of concluding that this cannot be solved by the LM, researchers rolled up their sleevs, and started tinkering with the model.</p>
+<p>We explore how generating a chain of thought—a series of intermediate reasoning
+steps—significantly improves the ability of large language models to perform
+complex reasoning. In particular, we show how such reasoning abilities emerge
+naturally in sufficiently large language models via a simple method called chain-ofthought prompting, where a few chain of thought demonstrations are provided as
+exemplars in prompting</p>
+<p>They thought Let’s add “reasoning process” before “answer”, explain to the model how it should go about thinking to solve this problem.</p>
+<blockquote>
+<p><strong>Input:</strong><br>
+Q: “Elon Musk” <br>
+A: the last letter of &ldquo;Elon&rdquo; is &ldquo;n&rdquo;. the last letter of &ldquo;Musk&rdquo; is &ldquo;k&rdquo;. Concatenating &ldquo;n&rdquo;, &ldquo;k&rdquo;
+leads to &ldquo;nk&rdquo;. so the output is &ldquo;nk&rdquo;. <br>
+Q: “Bill Gates” <br>
+A: the last letter of &ldquo;Bill&rdquo; is &ldquo;l&rdquo;. the last letter of &ldquo;Gates&rdquo; is &ldquo;s&rdquo;. Concatenating &ldquo;l&rdquo;, &ldquo;s&rdquo; leads
+to &ldquo;ls&rdquo;. so the output is &ldquo;ls&rdquo;. <br>
+Q: “Donald John Trump&quot;</p>
+</blockquote>
+<blockquote>
+<p><strong>Response:</strong><br>
+A: the last letter of &ldquo;Donald&rdquo; is &ldquo;d&rdquo;. the last letter of &ldquo;John&rdquo; is &ldquo;n&rdquo;. the last letter of &ldquo;Trump&rdquo; is &ldquo;p&rdquo;. Concatenating &ldquo;d&rdquo;, &ldquo;n&rdquo;, &ldquo;p&rdquo; leads to &ldquo;dnp&rdquo;. so the output is &ldquo;dnp&rdquo;.</p>
+</blockquote>
+<p>One demonstration is enough, like humans</p>
+<blockquote>
+<p><strong>Input:</strong><br>
+Q: “Elon Musk” <br>
+A: the last letter of &ldquo;Elon&rdquo; is &ldquo;n&rdquo;. the last letter of &ldquo;Musk&rdquo; is &ldquo;k&rdquo;. Concatenating &ldquo;n&rdquo;, &ldquo;k&rdquo;
+leads to &ldquo;nk&rdquo;. so the output is &ldquo;nk&rdquo;. <br>
+Q: “Donald John Trump&quot;</p>
+</blockquote>
+<blockquote>
+<p><strong>Response:</strong><br>
+A: the last letter of &ldquo;Donald&rdquo; is &ldquo;d&rdquo;. the last letter of &ldquo;John&rdquo; is &ldquo;n&rdquo;. the last letter of &ldquo;Trump&rdquo; is &ldquo;p&rdquo;. Concatenating &ldquo;d&rdquo;, &ldquo;n&rdquo;, &ldquo;p&rdquo; leads to &ldquo;dnp&rdquo;. so the output is &ldquo;dnp&rdquo;.</p>
+</blockquote>
+<p>So this is basically Chain of Thought prompting, one of the most powerful ways to interact with an LLM.</p>
+<p>So, CoT is widely considered as the go to prompting stratergy for complex reasoning tasks in the ML Community, and most of the subsiquent research compares its performace to CoT Prompting.</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_benchmark.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 40%;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_prompts.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="lets-think-step-by-step">Let’s think step by step<a hidden class="anchor" aria-hidden="true" href="#lets-think-step-by-step">#</a></h2>
+<p>&ldquo;Prompt Programming for Large Language Models: Beyond the Few-Shot Paradigm&rdquo;, i think this paper is gulty of giving prompot engineeering the bad rep it has in the research community, just by inserting coluns in place of arrows for language translation and by using, terms like</p>
+<blockquote>
+<p>A French phrase is provided: source_phrase
+The masterful French translator flawlessly
+translates the phrase into English:</p>
+</blockquote>
+<p>this definitely didnt help the research community, i think they were a bit mad, cause simple dumb prompts were working wonders, and the $300k prompt engineer memes came flooding in, i wnat to look at the merits of this research&hellip;</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/zero_shot_cot.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/zero_shot_cot_scaling.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/zero_shot_cot_pipeline.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>These are some of the fundamentals that you need to know, now Look at some of the latest Research in advanced Reasoning capabilities</p>
+<h1 id="a-look-at-some-of-the-latest-research-in-advanced-reasoning-capabilities">A Look at some of the latest Research in advanced Reasoning capabilities<a hidden class="anchor" aria-hidden="true" href="#a-look-at-some-of-the-latest-research-in-advanced-reasoning-capabilities">#</a></h1>
+<p>Chain of Thought reasoning and Zero-Shot Chain of thought reasoning, are common ways people try to get most out of the models, now lets look at some of the latest research in Prompting and reasoning that came out over the last couple of years.</p>
+<h2 id="1-self-consistency-improves-chain-of-thought-reasoning-in-language-models-mar-23">1. SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS (Mar 23)<a hidden class="anchor" aria-hidden="true" href="#1-self-consistency-improves-chain-of-thought-reasoning-in-language-models-mar-23">#</a></h2>
+<p>Self-consistency can be thought of as an, advanced decoding stratergy, i you want to learn some the fundamentals of decoding in language models, you can refer to my post: Decoding in LMs.
+Self consistency involves sampling a diverse set of solutions for a particualr answer,  Self-consistency is compatible with most existing sampling algorithms, including temperature sampling , top-k sampling , and nucleus sampling.</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/self_con_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>The idea is quite simple, you sample multiple outputs, and the answer which has more concensus is chosen as the answer, as in the above figure $18, occurs 2 out of three times, so this is the answer, but how do you decide which answer to present to the user, the first or the third one? This leads to and important question that we face in LLMs, how do you compare two correct answers, in situation of reasoning, it might be better to present the longer of the two answers, as it might have a more indepth reasoning, but this might not always be correct, so we generally use the answer with the higher normalized probability by the output length.</p>
+<p>In Table 1, we show the test accuracy over a set of reasoning tasks by using different answer aggregation strategies. In addition to majority vote, one can also weight each $(r_i, a_i)$ by $P(r_i, a_i \mid \text{prompt, question})$ when aggregating the answers. Note to compute $P(r_i, a_i \mid \text{prompt, question})$, we can either take the unnormalized probability of the model generating $(r_i, a_i)$ given ($\text{prompt, question}$), or we can normalize the conditional probability by the output length (Brown et al., 2020), i.e.,</p>
+<p>$$
+P(r_i, a_i \mid \text{prompt, question}) = \exp \left( \frac{1}{K} \sum_{k=1}^{K} \log P(t_k \mid \text{prompt, question}, t_1, \ldots, t_{k-1}) \right),
+$$</p>
+<p>where $\log P(t_k \mid \text{prompt, question}, t_1, \ldots, t_{k-1})$ is the log probability of generating the $k$-th token $t_k$ in $(r_i, a_i)$ conditioned on the previous tokens, and $K$ is the total number of tokens in $(r_i, a_i)$.</p>
+<p>In Table 1, we show that taking the &ldquo;unweighted sum&rdquo;, i.e., taking a majority vote directly over $a_i$ yields a very similar accuracy as aggregating using the &ldquo;normalized weighted sum&rdquo;. We took a closer look at the model&rsquo;s output probabilities and found this is because for each $(r_i, a_i)$, the normalized conditional probabilities $P(r_i, a_i \mid \text{prompt, question})$ are quite close to each other, i.e., the language model regards those generations as &ldquo;similarly likely&rdquo;.</p>
+<p>Additionally, when aggregating the answers, the results in Table 1 show that the &ldquo;normalized&rdquo; weighted sum (i.e., Equation 1) yields a much higher accuracy compared to its unnormalized counterpart. For completeness, in Table 1 we also report the results by taking a &ldquo;weighted average&rdquo;, i.e., each $a$ gets a score of its weighted sum divided by $\sum_{i=1}^{m} \mathbb{1}(a_i = a)$, which results in a much worse performance.</p>
+<h2 id="7-universal-self-consistency-for-large-language-model-generation-nov-23">7. UNIVERSAL SELF-CONSISTENCY FOR LARGE LANGUAGE MODEL GENERATION (Nov 23)<a hidden class="anchor" aria-hidden="true" href="#7-universal-self-consistency-for-large-language-model-generation-nov-23">#</a></h2>
+<p>self-consistency can only be applied to tasks where the final answer
+can be aggregated via exact match, e.g., a single number for math problems.</p>
+<p>To address this major limitation of self-consistency, we propose Universal Self-Consistency (USC)
+to support various applications, especially free-form generation tasks. Specifically, given multiple
+candidate responses, USC simply calls the LLM to select the most consistent response among them
+as the final output.</p>
+<p>The above Self-Consistency frame work is a bit rigid, cause you need the final answer and the best response is determined based on which final answer occurs the most amount of times, but what about problems like text summarization or code generation or open ended quesition answering, wher it is quite difficult to get consistency among different anwers, to remedy this the researchers introduced Universal Self consistency.</p>
+<p>This is the first time we are encountering lms evaluating their own generation, this will be a recurring theme among various approaches to prompt engineering, and at the end i will discuss some limitations of llms evaluation their own work, that you should be aware of..</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/usc_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/usc_example.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/usc_stat.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="6-chain-of-thought-reasoning-without-prompting">6. Chain-of-Thought Reasoning without Prompting<a hidden class="anchor" aria-hidden="true" href="#6-chain-of-thought-reasoning-without-prompting">#</a></h2>
+<p>This is another cool approach, this research is from Google Deepmind, and the researchers behind it are some of the most pieonering in the field of NLP, they</p>
+<blockquote>
+<p>We investigate whether pre-trained language models inherently possess reasoning capabilities, without
+explicit prompts or human intervention.</p>
+</blockquote>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_without_prompting.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_without_prompting_example.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_without_prompting_sample.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/cot_without_prompting_bench.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="8-large-language-models-as-analogical-reasoners-">8. LARGE LANGUAGE MODELS AS ANALOGICAL REASONERS ✅<a hidden class="anchor" aria-hidden="true" href="#8-large-language-models-as-analogical-reasoners-">#</a></h2>
+<div style="text-align: center;">
+  <img src="/images/proompt/ar_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/ar_bench.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/ar_example.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="11-least-to-most-prompting-enables-complex-reasoning-in-large-language-models-">11. LEAST-TO-MOST PROMPTING ENABLES COMPLEX REASONING IN LARGE LANGUAGE MODELS ✅<a hidden class="anchor" aria-hidden="true" href="#11-least-to-most-prompting-enables-complex-reasoning-in-large-language-models-">#</a></h2>
+<p>Chain-of-thought prompting has demonstrated remarkable performance on various natural language reasoning tasks. However, it tends to perform poorly on
+tasks which requires solving problems harder than the exemplars shown in the
+prompts.</p>
+<p>The key idea in this strategy is to break down a complex problem into a series of simpler subproblems
+and then solve them in sequence.</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/least_to_most_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/least_to_most_bench.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="10-compositional-semantic-parsing-with-large-language-models">10. COMPOSITIONAL SEMANTIC PARSING WITH LARGE LANGUAGE MODELS<a hidden class="anchor" aria-hidden="true" href="#10-compositional-semantic-parsing-with-large-language-models">#</a></h2>
+<div style="text-align: center;">
+  <img src="/images/proompt/csp_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/csp_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<div style="text-align: center;">
+  <img src="/images/proompt/csp_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="take-a-step-back-evoking-reasoning-via-abstraction-in-large-language-models">TAKE A STEP BACK: EVOKING REASONING VIA ABSTRACTION IN LARGE LANGUAGE MODELS<a hidden class="anchor" aria-hidden="true" href="#take-a-step-back-evoking-reasoning-via-abstraction-in-large-language-models">#</a></h2>
+<div style="text-align: center;">
+  <img src="/images/proompt/take_a_step_back_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h2 id="re-reading-improves-reasoning-in-large-language-models">Re-Reading Improves Reasoning in Large Language Models<a hidden class="anchor" aria-hidden="true" href="#re-reading-improves-reasoning-in-large-language-models">#</a></h2>
+<p>A quite simple but elegant idea,</p>
+<div style="text-align: center;">
+  <img src="/images/proompt/re_basic.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<h1 id="limitations">Limitations<a hidden class="anchor" aria-hidden="true" href="#limitations">#</a></h1>
+<p>Till Now we have looked, what LLMs can do with proper prompting techniques,</p>
+<h2 id="4-large-language-models-can-be-easily-distracted-by-irrelevant-context-">4. Large Language Models Can Be Easily Distracted by Irrelevant Context ✅<a hidden class="anchor" aria-hidden="true" href="#4-large-language-models-can-be-easily-distracted-by-irrelevant-context-">#</a></h2>
+<p>Prompting large language models performs decently well in a variety of domains However, for most of theses evaluation benchmarks, all the information provided in the problem description is relevant to the problem solution, as the problems in exams. This is different from real-world situations, where problems usually come with several pieces of contextually related information, which may or may not be relevant to the problems that we want to solve. We have to identify what information is actually necessary during solving those
+problems.</p>
+<h2 id="5-large-language-models-cannot-self-correct-reasoning-yet-">5. LARGE LANGUAGE MODELS CANNOT SELF-CORRECT REASONING YET ✅<a hidden class="anchor" aria-hidden="true" href="#5-large-language-models-cannot-self-correct-reasoning-yet-">#</a></h2>
+<h2 id="self-refine-iterative-refinement-with-self-feedback">Self-Refine: Iterative Refinement with Self-Feedback<a hidden class="anchor" aria-hidden="true" href="#self-refine-iterative-refinement-with-self-feedback">#</a></h2>
+<h2 id="reflexion-language-agents-with-verbal-reinforcement-learning">Reflexion: Language Agents with Verbal Reinforcement Learning<a hidden class="anchor" aria-hidden="true" href="#reflexion-language-agents-with-verbal-reinforcement-learning">#</a></h2>
+<h2 id="3-teaching-large-language-models-to-selfdebug">3. TEACHING LARGE LANGUAGE MODELS TO SELFDEBUG<a hidden class="anchor" aria-hidden="true" href="#3-teaching-large-language-models-to-selfdebug">#</a></h2>
+<h2 id="2-premise-order-matters-in-reasoning-with-large-language-models-">2. Premise Order Matters in Reasoning with Large Language Models ✅<a hidden class="anchor" aria-hidden="true" href="#2-premise-order-matters-in-reasoning-with-large-language-models-">#</a></h2>
+<h2 id="do-language-models-know-when-theyre-hallucinating-references">Do Language Models Know When They’re Hallucinating References?<a hidden class="anchor" aria-hidden="true" href="#do-language-models-know-when-theyre-hallucinating-references">#</a></h2>
+<h1 id="prompt-templates">Prompt Templates<a hidden class="anchor" aria-hidden="true" href="#prompt-templates">#</a></h1>
+<p>This is also a fundamental thing that prompt engineers need to understand, lets just look at the open ai template, will not discuss this in greater detail, cause not that intresting, ill provide references for LLama and Anthropic prompt templates.</p>
+<h1 id="new-stuff">New Stuff<a hidden class="anchor" aria-hidden="true" href="#new-stuff">#</a></h1>
+<h2 id="motivation-for-reasoning-1">Motivation for Reasoning<a hidden class="anchor" aria-hidden="true" href="#motivation-for-reasoning-1">#</a></h2>
+<p>I&rsquo;ve dedicated significant time and effort to studying classical machine learning algorithms like Linear Regression, Support Vector Machines, and K-Nearest Neighbors. However, what sets today&rsquo;s field of AI apart from previous generations is the ability of modern models to reason—or do something that convincingly resembles reasoning. The ideal of Artificial General Intelligence (AGI) envisions a computer that can reason and plan ahead. Current large language models (LLMs) can be taught to perform a wide variety of tasks, primarily through the paradigm of prompt engineering.</p>
+<p>The ability to reason is transformative. Let’s imagine it’s 2020, before LLMs became mainstream, and you want to solve the following problem:</p>
+<h3 id="last-letter-concatenation">Last Letter Concatenation<a hidden class="anchor" aria-hidden="true" href="#last-letter-concatenation">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>“Elon Musk”</td>
+<td>“nk”</td>
+</tr>
+<tr>
+<td>“Bill Gates”</td>
+<td>“ls”</td>
+</tr>
+<tr>
+<td>“Barack Obama”</td>
+<td>?</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rule:</strong> Take the last letter of each word and concatenate them.</p>
+<p>Even though this is a toy problem, it provides fundamental concepts necessary to understand how LLMs reason. Most people would collect vast amounts of data and try to train a model to perform this simple task. This approach is a massive waste of time and resources, as a human can write a simple program to solve it. In contrast, an ML model might require thousands of examples to get it right.</p>
+<h3 id="enter-llms-1">Enter LLMs<a hidden class="anchor" aria-hidden="true" href="#enter-llms-1">#</a></h3>
+<p>From the paper &ldquo;Language Models are Few-Shot Learners,&rdquo; we know that LLMs can provide correct answers based on just a few examples. Let’s see how ChatGPT handles the problem:</p>
+<p>Initially, the model might not recognize the pattern. Instead of concluding that the task cannot be solved by the LM, researchers enhanced the model by introducing a &ldquo;reasoning process&rdquo; before the answer.</p>
+<p><strong>Example:</strong></p>
+<p><strong>Q:</strong> “Elon Musk”<br>
+<strong>A:</strong> The last letter of &ldquo;Elon&rdquo; is &ldquo;n.&rdquo; The last letter of &ldquo;Musk&rdquo; is &ldquo;k.&rdquo; Concatenating &ldquo;n&rdquo; and &ldquo;k&rdquo; leads to &ldquo;nk.&rdquo; So, the output is &ldquo;nk.&rdquo;</p>
+<p><strong>Q:</strong> “Bill Gates”<br>
+<strong>A:</strong> The last letter of &ldquo;Bill&rdquo; is &ldquo;l.&rdquo; The last letter of &ldquo;Gates&rdquo; is &ldquo;s.&rdquo; Concatenating &ldquo;l&rdquo; and &ldquo;s&rdquo; leads to &ldquo;ls.&rdquo; So, the output is &ldquo;ls.&rdquo;</p>
+<p><strong>Q:</strong> “Barack Obama”<br>
+<strong>A:</strong> The last letter of &ldquo;Barack&rdquo; is &ldquo;k.&rdquo; The last letter of &ldquo;Obama&rdquo; is &ldquo;a.&rdquo; Concatenating &ldquo;k&rdquo; and &ldquo;a&rdquo; leads to &ldquo;ka.&rdquo; So, the output is &ldquo;ka.&rdquo;</p>
+<p>One demonstration is enough, much like it is for humans.</p>
+<p><strong>Example:</strong></p>
+<p><strong>Q:</strong> “Elon Musk”<br>
+<strong>A:</strong> The last letter of &ldquo;Elon&rdquo; is &ldquo;n.&rdquo; The last letter of &ldquo;Musk&rdquo; is &ldquo;k.&rdquo; Concatenating &ldquo;n&rdquo; and &ldquo;k&rdquo; leads to &ldquo;nk.&rdquo; So, the output is &ldquo;nk.&rdquo;</p>
+<p><strong>Q:</strong> “Barack Obama”<br>
+<strong>A:</strong> The last letter of &ldquo;Barack&rdquo; is &ldquo;k.&rdquo; The last letter of &ldquo;Obama&rdquo; is &ldquo;a.&rdquo; Concatenating &ldquo;k&rdquo; and &ldquo;a&rdquo; leads to &ldquo;ka.&rdquo; So, the output is &ldquo;ka.&rdquo;</p>
+<p>This approach achieves 100% accuracy with only one demonstration example. This is essentially Chain-of-Thought prompting, one of the most powerful ways to interact with an LLM.</p>
+<h2 id="language-models-are-few-shot-learners">Language Models are Few-Shot Learners<a hidden class="anchor" aria-hidden="true" href="#language-models-are-few-shot-learners">#</a></h2>
+<p>Let’s move away from this toy example and examine one of the seminal papers in AI, &ldquo;Language Models are Few-Shot Learners&rdquo; (commonly referred to as the GPT-3 paper). This paper introduces terms like &ldquo;in-context learning&rdquo; and provides examples of few-shot and zero-shot learning, highlighting how they differ from fine-tuning.</p>
+<h3 id="in-context-learning-2">In-Context Learning<a hidden class="anchor" aria-hidden="true" href="#in-context-learning-2">#</a></h3>
+<p><img loading="lazy" src="image_link" alt="In-Context Learning Diagram"  />
+</p>
+<p><strong>A Better Explanation:</strong></p>
+<p>During unsupervised pre-training, a language model develops a broad set of skills and pattern recognition abilities. It then uses these abilities at inference time to rapidly adapt to or recognize the desired task. We use the term “in-context learning” to describe the inner loop of this process, which occurs within the forward pass upon each sequence. The sequences in this diagram are not intended to represent the data a model would see during pre-training but are meant to show that there are sometimes repeated sub-tasks embedded within a single sequence.</p>
+<h3 id="zero-shot-one-shot-and-few-shot-learning-contrasted-with-traditional-fine-tuning">Zero-Shot, One-Shot, and Few-Shot Learning, Contrasted with Traditional Fine-Tuning<a hidden class="anchor" aria-hidden="true" href="#zero-shot-one-shot-and-few-shot-learning-contrasted-with-traditional-fine-tuning">#</a></h3>
+<p><img loading="lazy" src="image_link" alt="Learning Paradigms Diagram"  />
+</p>
+<p>Let’s look at the difference in performance observed by researchers:</p>
+<p><img loading="lazy" src="performance_image_link" alt="Performance Comparison"  />
+</p>
+<p>Few-shot learning with around 10 examples provides the best results.</p>
+<h2 id="chain-of-thought-prompting">Chain-of-Thought Prompting<a hidden class="anchor" aria-hidden="true" href="#chain-of-thought-prompting">#</a></h2>
+<p>These fundamentals are essential for everyone to understand. Let’s explore some of the other pioneering work in the field.</p>
+<p>The paper &ldquo;Prompt Programming for Large Language Models: Beyond the Few-Shot Paradigm&rdquo; is partly to blame for the bad reputation prompt engineering has in the research community. By inserting colons in place of arrows for language translation and using terms like:</p>
+<blockquote>
+<p>A French phrase is provided: source_phrase<br>
+The masterful French translator flawlessly translates the phrase into English:</p>
+</blockquote>
+<p>This approach didn’t help the research community. Simple, straightforward prompts were working wonders, leading to memes about $300k prompt engineers flooding in. I want to examine the merits of this research&hellip;</p>
+<h3 id="unsupervised-chain-of-thought-prompting">Unsupervised Chain-of-Thought Prompting<a hidden class="anchor" aria-hidden="true" href="#unsupervised-chain-of-thought-prompting">#</a></h3>
+<p><em>To be continued&hellip;</em></p>
+<hr>
+<p>I&rsquo;m working on a blog about prompt engineering, and this is my initial draft. I&rsquo;ve made several improvements, particularly in the opening paragraph, while maintaining the original tone and intent. Let me know if you have any further suggestions or areas you&rsquo;d like to refine!</p>
+<h1 id="drafts">Drafts<a hidden class="anchor" aria-hidden="true" href="#drafts">#</a></h1>
+<h2 id="language-models-are-few-shot-learners-1">Language Models are Few-Shot Learners<a hidden class="anchor" aria-hidden="true" href="#language-models-are-few-shot-learners-1">#</a></h2>
+<p>So now that we have be motivated and suffiently familiar with zero shot, few shot and CoT prompting, lets look at some more important concepts, and try and understand why techniques like Few shot prompting work. Lets move away from this toy Example and look at one of the seminal papers in the field of AI, &ldquo;Language Models are Few-Shot Learners&rdquo;, (more commonly reffered to as the GPT-3 paper). Here they introduce terms like &ldquo;in-context learnign&rdquo; and provided examples of few shot and zero shot learnign and how it differs from finetuning.</p>
+<h3 id="in-context-learnign">In-context learnign<a hidden class="anchor" aria-hidden="true" href="#in-context-learnign">#</a></h3>
+<img>
+<p>a better explanation</p>
+<h3 id="zero-shot-one-shot-and-few-shot-contrasted-with-traditional-fine-tuning">Zero-shot, one-shot and few-shot, contrasted with traditional fine-tuning<a hidden class="anchor" aria-hidden="true" href="#zero-shot-one-shot-and-few-shot-contrasted-with-traditional-fine-tuning">#</a></h3>
+<img>
+<p>So, lest look at the difference in performance the researchers observed,</p>
+<img>
+<p>So, few shot with around 10 examples provide the best results.</p>
+<h2 id="chain-of-thought-prompting-1">Chain-of-Thought Prompting<a hidden class="anchor" aria-hidden="true" href="#chain-of-thought-prompting-1">#</a></h2>
+<p>so the above are the fundamentals that every-one need to understand, lets look at some of the other pienoering work..</p>
+<h2 id="2-tree-of-thoughts-deliberate-problem-solving-with-large-language-models--own-post-quite-comples-and-requires-code">2. Tree of Thoughts: Deliberate Problem Solving with Large Language Models ✅ (own post, quite comples and requires code)�<a hidden class="anchor" aria-hidden="true" href="#2-tree-of-thoughts-deliberate-problem-solving-with-large-language-models--own-post-quite-comples-and-requires-code">#</a></h2>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer><script src="https://utteranc.es/client.js"
+        repo="Shahid-Mo/Shahid-Mo.github.io"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

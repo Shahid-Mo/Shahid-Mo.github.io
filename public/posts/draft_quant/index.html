@@ -5,12 +5,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Test | TensorTunes</title>
+<title>Decoding Test | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,
-as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.
-The topics i would like to cover are as follows
-DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallelism Memory efficient pipeline parallelism Where Did all the memory go?">
+<meta name="description" content="SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS Chain-of-Thought Reasoning without Prompting
+In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,
+as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/draft_quant/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
@@ -134,7 +133,7 @@ DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallel
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Test
+      Decoding Test
     </h1>
     <div class="post-meta"><span title='2024-10-16 00:00:00 +0000 UTC'>October 16, 2024</span>
 
@@ -146,26 +145,6 @@ DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallel
         </summary>
 
         <div class="inner"><ul><ul>
-                <li>
-                    <a href="#where-did-all-the-memory-go" aria-label="Where Did all the memory go?">Where Did all the memory go?</a><ul>
-                        
-                <li>
-                    <a href="#adam-optimizer" aria-label="Adam optimizer">Adam optimizer</a></li>
-                <li>
-                    <a href="#1-recap-gradient-descent-and-sgd" aria-label="1. Recap: Gradient Descent and SGD">1. Recap: Gradient Descent and SGD</a></li>
-                <li>
-                    <a href="#2-introducing-adam-optimizer" aria-label="2. Introducing Adam Optimizer">2. Introducing Adam Optimizer</a><ul>
-                        
-                <li>
-                    <a href="#key-concepts" aria-label="Key Concepts:">Key Concepts:</a></li>
-                <li>
-                    <a href="#adams-update-mechanism" aria-label="Adam&rsquo;s Update Mechanism:">Adam&rsquo;s Update Mechanism:</a></li>
-                <li>
-                    <a href="#algorithm-summary" aria-label="Algorithm Summary:">Algorithm Summary:</a></li></ul>
-                </li>
-                <li>
-                    <a href="#bf16optimizer" aria-label="BF16Optimizer">BF16Optimizer</a></li></ul>
-                </li>
                 <li>
                     <a href="#ddp-distributed-data-parallel" aria-label="DDP (Distributed Data Parallel)">DDP (Distributed Data Parallel)</a></li>
                 <li>
@@ -209,7 +188,9 @@ DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallel
     </details>
 </div>
 
-  <div class="post-content"><p>In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,</p>
+  <div class="post-content"><p>SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS
+Chain-of-Thought Reasoning without Prompting</p>
+<p>In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,</p>
 <p>as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.</p>
 <p>The topics i would like to cover are as follows</p>
 <ol>
@@ -218,295 +199,6 @@ DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallel
 <li>Pipeline model parallelism</li>
 <li>Memory efficient pipeline parallelism</li>
 </ol>
-<h2 id="where-did-all-the-memory-go">Where Did all the memory go?<a hidden class="anchor" aria-hidden="true" href="#where-did-all-the-memory-go">#</a></h2>
-<p>I have eleded to this point already in my qunatization post, but i would like here just to scratch a bit deeper,</p>
-<p>to understand this, first we will take a quick look at Adam optimizer, (one of the most popular for training Neural Networks)</p>
-<h3 id="adam-optimizer">Adam optimizer<a hidden class="anchor" aria-hidden="true" href="#adam-optimizer">#</a></h3>
-<p>(if you are familiar with the adam optimizer you can skip this section)</p>
-<h3 id="1-recap-gradient-descent-and-sgd"><strong>1. Recap: Gradient Descent and SGD</strong><a hidden class="anchor" aria-hidden="true" href="#1-recap-gradient-descent-and-sgd">#</a></h3>
-<p>Before diving into Adam, let&rsquo;s briefly recap the foundational optimizer:</p>
-<ul>
-<li><strong>Gradient Descent (GD):</strong></li>
-<li><strong>Objective:</strong> Minimize a loss function by iteratively updating parameters in the direction of the steepest descent (negative gradient).</li>
-<li><strong>Update Rule:</strong>
-$$
-\theta_{t+1} = \theta_t - \eta \cdot \nabla L(\theta_t)
-$$
-where:</li>
-<li>$\theta_t$ are the parameters at iteration $t$</li>
-<li>$\eta$ is the learning rate</li>
-<li>$\nabla L(\theta_t)$ is the gradient of the loss function with respect to $\theta_t$</li>
-</ul>
-<p><strong>Limitations</strong></p>
-<ul>
-<li><strong>Fixed Learning Rate:</strong> Choosing an appropriate learning rate can be challenging; too high may cause divergence, too low may slow down convergence.</li>
-<li><strong>No Adaptation:</strong> Doesn&rsquo;t adapt the learning rate based on the geometry of the loss surface, potentially leading to inefficient updates.</li>
-</ul>
-<h3 id="2-introducing-adam-optimizer"><strong>2. Introducing Adam Optimizer</strong><a hidden class="anchor" aria-hidden="true" href="#2-introducing-adam-optimizer">#</a></h3>
-<p><strong>Adam (Adaptive Moment Estimation)</strong> combines the advantages of two other extensions of GD: <strong>Momentum</strong> and <strong>RMSProp</strong>. It computes adaptive learning rates for each parameter by maintaining estimates of both the first moment (mean) and the second moment (uncentered variance) of the gradients.</p>
-<h4 id="key-concepts"><strong>Key Concepts:</strong><a hidden class="anchor" aria-hidden="true" href="#key-concepts">#</a></h4>
-<ol>
-<li><strong>Momentum:</strong></li>
-</ol>
-<ul>
-<li>Helps accelerate GD in the relevant direction and dampens oscillations.</li>
-<li>Maintains an exponentially decaying average of past gradients.</li>
-</ul>
-<ol start="2">
-<li><strong>Adaptive Learning Rates:</strong></li>
-</ol>
-<ul>
-<li>Adjusts the learning rate for each parameter individually based on the historical gradients.</li>
-<li>Parameters with higher gradients receive smaller updates, and vice versa.</li>
-</ul>
-<p><strong>Adam</strong> effectively combines these by maintaining both moving averages and adapting learning rates accordingly.</p>
-<h4 id="adams-update-mechanism"><strong>Adam&rsquo;s Update Mechanism:</strong><a hidden class="anchor" aria-hidden="true" href="#adams-update-mechanism">#</a></h4>
-<p>Adam maintains two estimates for each parameter $\theta$:</p>
-<ul>
-<li><strong>First Moment ($m_t$):</strong> Estimate of the mean of the gradients.</li>
-<li><strong>Second Moment ($v_t$):</strong> Estimate of the uncentered variance (mean of the squared gradients).</li>
-</ul>
-<p>The update steps are as follows:</p>
-<ol>
-<li><strong>Initialize Parameters:</strong></li>
-</ol>
-<ul>
-<li>Initialize $m_0 = 0$ (first moment)</li>
-<li>Initialize $v_0 = 0$ (second moment)</li>
-<li>Choose hyperparameters:</li>
-<li>Learning rate ($\eta$)</li>
-<li>Decay rates for the moment estimates ($\beta_1$ for $m_t$, $\beta_2$ for $v_t$)</li>
-<li>Small constant ($\epsilon$) to prevent division by zero</li>
-</ul>
-<ol start="2">
-<li><strong>At each iteration $t$:</strong></li>
-</ol>
-<p>a. <strong>Compute Gradient:</strong>
-$$
-g_t = \nabla L(\theta_{t-1})
-$$
-where $L$ is the loss function.</p>
-<p>b. <strong>Update First Moment ($m_t$):</strong>
-$$
-m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t
-$$</p>
-<ul>
-<li>$m_t$ accumulates the gradients.</li>
-</ul>
-<p>c. <strong>Update Second Moment ($v_t$):</strong>
-$$
-v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2
-$$</p>
-<ul>
-<li>$v_t$ accumulates the squared gradients.</li>
-</ul>
-<p>d. <strong>Bias Correction:</strong>
-Since $m_t$ and $v_t$ are initialized at zero, they are biased towards zero, especially during the initial steps. To correct this bias:
-$$
-\hat{m}_t = \frac{m_t}{1 - \beta_1^t}
-$$
-$$
-\hat{v}_t = \frac{v_t}{1 - \beta_2^t}
-$$</p>
-<ul>
-<li>$\hat{m}_t$ and $\hat{v}_t$ are the bias-corrected estimates.</li>
-</ul>
-<p>e. <strong>Update Parameters:</strong>
-$$
-\theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-$$</p>
-<ul>
-<li>This step uses the adaptive learning rate for each parameter.</li>
-</ul>
-<h4 id="algorithm-summary"><strong>Algorithm Summary:</strong><a hidden class="anchor" aria-hidden="true" href="#algorithm-summary">#</a></h4>
-<p>$$
-\begin{align*}
-&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \[1em]
-&amp; \text{For each iteration:} \[1em]
-&amp; \quad t = t + 1 \[1em]
-&amp; \quad g_t = \nabla L(\theta_{t-1}) \[1em]
-&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \[1em]
-&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \[1em]
-&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \[1em]
-&amp; \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t} \[1em]
-&amp; \quad \theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{align*}
-$$</p>
-<p>$$
-\begin{align*}
-&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \
-&amp; \text{For each iteration:} \
-&amp; \quad t = t + 1 \
-&amp; \quad g_t = \nabla L(\theta_{t-1}) \
-&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
-&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
-&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
-&amp; \quad \hat{v}_t = \frac{v_t}{1 - \beta_2^t} \
-&amp; \quad \theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{align*}
-$$</p>
-<p>$$
-\begin{align*}
-&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 \
-&amp; \text{For each iteration:} \
-&amp; \quad t = t + 1 \
-&amp; \quad g_t = \nabla L(\theta_{t-1}) \
-&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
-&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
-&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
-&amp; \quad \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} \
-&amp; \quad \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{align*}
-$$</p>
-<p>$$
-\begin{align*}
-&amp; \text{Initialize:} \quad m_0 = 0, \quad v_0 = 0, \quad t = 0 <br>
-&amp; \text{For each iteration:} <br>
-&amp; \quad t = t + 1 <br>
-&amp; \quad g_t = \nabla L(\theta_{t-1}) <br>
-&amp; \quad m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t <br>
-&amp; \quad v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 <br>
-&amp; \quad \hat{m}_t = \frac{m_t}{1 - \beta_1^t} <br>
-&amp; \quad \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} <br>
-&amp; \quad \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{align*}
-$$</p>
-<p>$$
-\begin{array}{ll}
-\text{Initialize:} &amp; m_0 = 0, \quad v_0 = 0, \quad t = 0 <br>
-\text{For each iteration:} &amp; <br>
-&amp; t = t + 1 <br>
-&amp; g_t = \nabla L(\theta_{t-1}) <br>
-&amp; m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t <br>
-&amp; v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 <br>
-&amp; \hat{m}_t = \frac{m_t}{1 - \beta_1^t} <br>
-&amp; \hat{v}t = \frac{v_t}{1 - \beta_2^t} <br>
-&amp; \theta_t = \theta{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{array}
-$$</p>
-<p>$$
-\begin{aligned}
-&amp; \text{Initialize:} &amp;&amp; m_0 = 0, \quad v_0 = 0, \quad t = 0 \
-&amp; \text{For each iteration:} &amp;&amp; \
-&amp; &amp;&amp; t = t + 1 \
-&amp; &amp;&amp; g_t = \nabla L(\theta_{t-1}) \
-&amp; &amp;&amp; m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t \
-&amp; &amp;&amp; v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \
-&amp; &amp;&amp; \hat{m}_t = \frac{m_t}{1 - \beta_1^t} \
-&amp; &amp;&amp; \hat{v}<em>t = \frac{v_t}{1 - \beta_2^t} \
-&amp; &amp;&amp; \theta_t = \theta</em>{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-\end{aligned}
-$$</p>
-<div class="equation">
-  <p>Initialize: m<sub>0</sub> = 0, v<sub>0</sub> = 0, t = 0</p>
-  <p>For each iteration:</p>
-  <p style="margin-left: 20px;">t = t + 1</p>
-  <p style="margin-left: 20px;">g<sub>t</sub> = ∇L(θ<sub>t-1</sub>)</p>
-  <p style="margin-left: 20px;">m<sub>t</sub> = β<sub>1</sub> · m<sub>t-1</sub> + (1 - β<sub>1</sub>) · g<sub>t</sub></p>
-  <p style="margin-left: 20px;">v<sub>t</sub> = β<sub>2</sub> · v<sub>t-1</sub> + (1 - β<sub>2</sub>) · g<sub>t</sub><sup>2</sup></p>
-  <p style="margin-left: 20px;">m̂<sub>t</sub> = m<sub>t</sub> / (1 - β<sub>1</sub><sup>t</sup>)</p>
-  <p style="margin-left: 20px;">v̂<sub>t</sub> = v<sub>t</sub> / (1 - β<sub>2</sub><sup>t</sup>)</p>
-  <p style="margin-left: 20px;">θ<sub>t</sub> = θ<sub>t-1</sub> - η · m̂<sub>t</sub> / (√v̂<sub>t</sub> + ε)</p>
-</div>
-<p>comming back to the discussion of memory&hellip;</p>
-<p>so now we know what to store cause of adam optimizer, the model weights, the gradients, and the optimizer states constitute the majority of the memory required for training.</p>
-<p>but this is not the whole picture there is additional memory called termed Residual memory by the ZeRO pape,
-this memory is made up of Activations, Temporary Buffers, and Memory Fragments.</p>
-<p>Activations, are
-The outputs of each sub-component (self-attention, feed-forward network) within each layer are activations.
-The final output of each layer, which becomes the input to the next layer, is also an activation.</p>
-<p>Large models with extensive architectures generate substantial activations. For example, training a 1.5B parameter GPT-2 model with a sequence length of 1,000 tokens and a batch size of 32 can consume around 60 GB of memory solely for activations.</p>
-<p>To mitigate high memory usage, activation checkpointing (or recomputation) can be employed. This technique saves memory by storing only a subset of activations and recomputing the others as needed during the backward pass. While it reduces memory consumption (e.g., from 60 GB to 8 GB in the aforementioned example), it introduces a computational overhead of about 33% due to the additional recomputation.</p>
-<p>so why do we need to store the activations, these are essential to for calucating the gradients in backprop,
-<strong>temp buffers</strong>
-Temporary buffers store intermediate results during operations like gradient all-reduce (used in distributed training) and gradient norm computation(used for gradient clipping). These buffers are essential for efficiently performing complex computations and communication between devices.
-For large models, temporary buffers can require significant memory. For instance, a 1.5B parameter model might need around 6 GB of memory for a flattened fp32 buffer used during gradient all-reduce operations.</p>
-<p><strong>Memory Fragmentation</strong>
-Even after taking all of the above memory consumption into consideration, you migh still encounter the dreadful &ldquo;CUDA error: out of memory&rdquo;. This happens, because the gpu allocates memory in blcoks, even if ther is space for some of your params, but not all in a block of memory you will have issues.
-In scenarios involving very large models, memory fragmentation can lead to out-of-memory (OOM) errors despite having a considerable amount of available memory. For example, training extremely large models might fail with over 30% of memory still free, but unusable due to fragmentation.</p>
-<p>We cant do much about the Residual memory consumption, it is just good to have an idea about where did the memory go.</p>
-<p>So lets take a look back at the memory we know we can control, ie the model weights, gradients and optimizer states.</p>
-<p>We can use FP32 to store all of them but, its not necessary there is a concept of mixed precision training, which is widely adoppted in the industry, this inovlves stroing some of the components in lower precison FP16 (ie, half precision).</p>
-<p>Lets take a look at this now.</p>
-<div style="text-align: center;">
-  <img src="/images/multi_gpu/mp_training.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>The state-of-the-art approach to train large models on the current generation of NVIDIA GPUs is via mixed precision (fp16/32) training, where parameters and activations are stored as fp16, enabling the use of the high throughput tensor core units on these GPUs.</p>
-<p>During mixed-precision training, both the forward and backward propagation are performed using fp16 weights and activations. However, to effectively compute and apply the updates at the end of the backward propagation, the mixed-precision optimizer keeps an fp32 copy of the parameters as well as an fp32 copy of all the other optimizer states.</p>
-<p>Mixed precision training of a model with $\Psi$ parameters using Adam requires enough memory to hold an $\text{fp16}$ copy of the parameters and the gradients, with memory requirements of $2\Psi$ and $2\Psi$ bytes respectively. In addition, it needs to hold the optimizer states: an $\text{fp32}$ copy of the parameters, momentum, and variance, with memory requirements of $4\Psi$, $4\Psi$, and $4\Psi$ bytes, respectively. Let’s use $K$ to denote the memory multiplier of the optimizer states, i.e., the additional memory required to store them is $K\Psi$ bytes. Mixed-precision Adam has $K = 12$. In total, this results in $2\Psi + 2\Psi + K\Psi = 16\Psi$ bytes of memory requirement. For a model such as GPT-2 with 1.5 Billion parameters, this leads to a memory requirement of at least 24 GB, which is significantly higher than the meager 3 GB of memory required to hold the $\text{fp16}$ parameters alone.</p>
-<p>so the above is true from a paper from ICLR 2018, after that people tried to train models in full FP16 format, which can be fruitful for smaller models, but below is an excerpt from the BLOOM model training ppl, who wrote a blogpost on huggingface.</p>
-<blockquote>
-<h3 id="bf16optimizer">BF16Optimizer<a hidden class="anchor" aria-hidden="true" href="#bf16optimizer">#</a></h3>
-<p>Training huge LLM models in FP16 is a no-no.
-We have proved it to ourselves by spending several months training a 104B model which as you can tell from the tensorboard was but a complete failure. We learned a lot of things while fighting the ever diverging lm-loss:</p>
- <div style="text-align: center;">
-   <img src="/images/multi_gpu/tensorboard_hf_excerpt.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
- <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-   Figure 1: Comparison of FP8 and BF16 formats. Source: 
-   <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
- </p>
- </div>
-and we also got the same advice from the Megatron-LM and DeepSpeed teams after they trained the 530B model. The recent release of OPT-175B too reported that they had a very difficult time training in FP16.
-</blockquote>
-<p>So as you might rememember form the qunatization blogpost about, different datatypes, and my parise of the BF16 datatype.
-The above is true if you have a V100 or older gpus that do not support the BF16 data type, but knowing the above is important because of historical reason or you might want to rent out a cheaper gpu fro training.</p>
-<p>So how is Mixed precision training done using the BF16 fromat, lets take a look.</p>
-<div style="text-align: center;">
-  <img src="/images/multi_gpu/mp_bf16_training.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-<p>Here&rsquo;s a more concise explanation of the mixed precision data flow using BFLOAT16:</p>
-<ol>
-<li>
-<p>Input: Activations from previous layer (L-1) in BFLOAT16.</p>
-</li>
-<li>
-<p>Forward Pass:</p>
-<ul>
-<li>Multiply BFLOAT16 activations with BFLOAT16 weights.</li>
-<li>Accumulate results in FP32.</li>
-<li>Quantize output to BFLOAT16 for next layer&rsquo;s input.</li>
-</ul>
-</li>
-<li>
-<p>Backward Pass:
-a) Error Gradients:</p>
-<ul>
-<li>Multiply BFLOAT16 error gradients with transposed weights.</li>
-<li>Accumulate in FP32, then quantize to BFLOAT16.
-b) Weight Gradients:</li>
-<li>Multiply error gradients with transposed activations.</li>
-<li>Accumulate results in FP32.</li>
-</ul>
-</li>
-<li>
-<p>Weight Update:</p>
-<ul>
-<li>Add FP32 weight gradients to FP32 master weights.</li>
-</ul>
-</li>
-<li>
-<p>Precision Management:</p>
-<ul>
-<li>Store master weights in FP32.</li>
-<li>Use BFLOAT16 for computations and storage where possible.</li>
-<li>Perform critical accumulations in FP32.</li>
-<li>Convert between FP32 and BFLOAT16 as needed (shown as &lsquo;Q&rsquo; operations).</li>
-</ul>
-</li>
-</ol>
-<p>This approach balances computational efficiency (using BFLOAT16) with numerical stability (using FP32 for critical operations), enabling effective training of large neural networks.</p>
-<p>So again this paper was published in 2019, and people now train the full model with the BF16 fromat since gpus like the A100 can support these kinds of formats.</p>
-<p>Lets take a look at at an even smaller format FP8, now people do train llms on this format. (this is a more latest paper came out in 2022).
-this paper uses fp8 for the paramaters and gradients, but generally the optimizer states need to be stored in BF16 or higher.</p>
-<p>So now we some knowledge about the adam optimizer, its weight componets, and finally mixed precision training.</p>
 <p>Lest start Multi GPU Training</p>
 <p>start with DDP or distributed data parallel.</p>
 <h2 id="ddp-distributed-data-parallel">DDP (Distributed Data Parallel)<a hidden class="anchor" aria-hidden="true" href="#ddp-distributed-data-parallel">#</a></h2>
@@ -866,7 +558,7 @@ and and backward pass</p>
 <hr>
 <h1 id="references">References<a hidden class="anchor" aria-hidden="true" href="#references">#</a></h1>
 <p>[1] <a href="https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer">https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer</a></p>
-<p>[2] <a href="https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/">https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/</a></p>
+<p>[2] <a href="https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/">https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/</a>�</p>
 
 
   </div>

@@ -9,7 +9,7 @@
 <meta name="keywords" content="">
 <meta name="description" content="Introduction
 Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.
-The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy. GPTQ builds upon previous methods like Optimal Brain Quantization (OBQ) but introduces significant modifications to make it scalable to models with billions of parameters.">
+The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/gptq/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
@@ -135,10 +135,164 @@ The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to
     <h1 class="post-title entry-hint-parent">
       Quantization in LLMS Part 2: GPTQ (A Mathematical View)
     </h1>
-    <div class="post-meta"><span title='2024-08-01 09:51:17 -0400 -0400'>August 1, 2024</span>
+    <div class="post-meta"><span title='2024-08-01 09:51:17 -0400 EDT'>August 1, 2024</span>
 
 </div>
-  </header> 
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul><ul>
+                <li>
+                    <a href="#1-problem-statement" aria-label="1. Problem Statement">1. Problem Statement</a></li></ul>
+                    
+                <li>
+                    <a href="#a-quick-refresher-on-constrained-optimaizaiton" aria-label="A Quick Refresher on Constrained Optimaizaiton">A Quick Refresher on Constrained Optimaizaiton</a><ul>
+                        
+                <li>
+                    <a href="#problem-setup" aria-label="Problem Setup:">Problem Setup:</a></li>
+                <li>
+                    <a href="#lagrange-multipliers" aria-label="Lagrange Multipliers:">Lagrange Multipliers:</a></li>
+                <li>
+                    <a href="#why-does-this-work-super-optional-read-if-intrested" aria-label="Why Does This Work? (Super Optional: Read if Intrested&hellip;.)">Why Does This Work? (Super Optional: Read if Intrested&hellip;.)</a><ul>
+                        
+                <li>
+                    <a href="#why-are-the-gradients-aligned" aria-label="Why Are the Gradients Aligned?">Why Are the Gradients Aligned?</a></li>
+                <li>
+                    <a href="#1-the-gradient-and-direction-of-steepest-ascent" aria-label="1. The Gradient and Direction of Steepest Ascent">1. The Gradient and Direction of Steepest Ascent</a></li>
+                <li>
+                    <a href="#2-feasible-directions-and-tangent-space" aria-label="2. Feasible Directions and Tangent Space">2. Feasible Directions and Tangent Space</a></li>
+                <li>
+                    <a href="#3-optimality-condition-under-constraint" aria-label="3. Optimality Condition Under Constraint">3. Optimality Condition Under Constraint</a></li>
+                <li>
+                    <a href="#4-gradients-must-be-parallel" aria-label="4. Gradients Must Be Parallel">4. Gradients Must Be Parallel</a></li></ul>
+                </li>
+                <li>
+                    <a href="#steps-to-solve" aria-label="Steps to Solve:">Steps to Solve:</a></li>
+                <li>
+                    <a href="#a-quick-review-of-taylor-series" aria-label="A quick review of Taylor Series">A quick review of Taylor Series</a></li></ul>
+                </li>
+                <li>
+                    <a href="#obs-optimnal-brain-surgery" aria-label="OBS (Optimnal Brain Surgery)">OBS (Optimnal Brain Surgery)</a><ul>
+                        
+                <li>
+                    <a href="#overview" aria-label="Overview">Overview</a></li>
+                <li>
+                    <a href="#problem-context" aria-label="Problem Context">Problem Context</a></li>
+                <li>
+                    <a href="#optimization-problem" aria-label="Optimization Problem">Optimization Problem</a></li>
+                <li>
+                    <a href="#mathematical-formulation" aria-label="Mathematical Formulation">Mathematical Formulation</a></li>
+                <li>
+                    <a href="#setting-up-the-optimization-problem" aria-label="Setting up the Optimization Problem:">Setting up the Optimization Problem:</a></li>
+                <li>
+                    <a href="#solving-the-optimization-problem" aria-label="Solving the optimization problem">Solving the optimization problem</a></li>
+                <li>
+                    <a href="#step-by-step-derivation" aria-label="Step-by-Step Derivation:">Step-by-Step Derivation:</a><ul>
+                        
+                <li>
+                    <a href="#1-formulating-the-objective" aria-label="1. Formulating the Objective:">1. Formulating the Objective:</a></li>
+                <li>
+                    <a href="#2-setting-the-constraint" aria-label="2. Setting the Constraint:">2. Setting the Constraint:</a></li>
+                <li>
+                    <a href="#3-setting-up-the-lagrangian" aria-label="3. Setting up the Lagrangian:">3. Setting up the Lagrangian:</a></li>
+                <li>
+                    <a href="#4-taking-the-derivative-of-the-lagrangian" aria-label="4. Taking the Derivative of the Lagrangian:">4. Taking the Derivative of the Lagrangian:</a><ul>
+                        
+                <li>
+                    <a href="#a-derivative-wrt--delta-mathbfw-" aria-label="a. Derivative w.r.t. $ \delta \mathbf{w} $:">a. Derivative w.r.t. $ \delta \mathbf{w} $:</a></li>
+                <li>
+                    <a href="#b-derivative-wrt--lambda-" aria-label="b. Derivative w.r.t. $ \lambda $:">b. Derivative w.r.t. $ \lambda $:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#5-solving-for--delta-mathbfw-" aria-label="5. Solving for $ \delta \mathbf{w} $:">5. Solving for $ \delta \mathbf{w} $:</a></li>
+                <li>
+                    <a href="#6-solving-for--lambda-" aria-label="6. Solving for $ \lambda $:">6. Solving for $ \lambda $:</a></li>
+                <li>
+                    <a href="#7-substitute--lambda--back-into--delta-mathbfw-" aria-label="7. Substitute $ \lambda $ Back into $ \delta \mathbf{w} $:">7. Substitute $ \lambda $ Back into $ \delta \mathbf{w} $:</a></li></ul>
+                </li>
+                <li>
+                    <a href="#finding--delta-w-" aria-label="Finding $ \delta w $">Finding $ \delta w $</a></li>
+                <li>
+                    <a href="#final-change-in-error--l_q-" aria-label="Final Change in Error ($ L_q $)">Final Change in Error ($ L_q $)</a></li>
+                <li>
+                    <a href="#2-optimal-brain-quantization-obq" aria-label="2. Optimal Brain Quantization (OBQ)">2. Optimal Brain Quantization (OBQ)</a><ul>
+                        
+                <li>
+                    <a href="#21-row-wise-independent-quantization" aria-label="2.1. Row-wise Independent Quantization">2.1. Row-wise Independent Quantization</a></li>
+                <li>
+                    <a href="#22-quadratic-formulation" aria-label="2.2. Quadratic Formulation">2.2. Quadratic Formulation</a></li>
+                <li>
+                    <a href="#23-greedy-quantization" aria-label="2.3. Greedy Quantization">2.3. Greedy Quantization</a></li>
+                <li>
+                    <a href="#24-mathematical-derivation" aria-label="2.4. Mathematical Derivation">2.4. Mathematical Derivation</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-limitations-of-obq" aria-label="3. Limitations of OBQ">3. Limitations of OBQ</a></li>
+                <li>
+                    <a href="#4-gptq-algorithm" aria-label="4. GPTQ Algorithm">4. GPTQ Algorithm</a><ul>
+                        
+                <li>
+                    <a href="#41-arbitrary-quantization-order" aria-label="4.1. Arbitrary Quantization Order">4.1. Arbitrary Quantization Order</a></li>
+                <li>
+                    <a href="#42-shared-hessian-inverse" aria-label="4.2. Shared Hessian Inverse">4.2. Shared Hessian Inverse</a></li>
+                <li>
+                    <a href="#43-lazy-batch-updates" aria-label="4.3. Lazy Batch Updates">4.3. Lazy Batch Updates</a></li>
+                <li>
+                    <a href="#44-cholesky-decomposition" aria-label="4.4. Cholesky Decomposition">4.4. Cholesky Decomposition</a></li></ul>
+                </li>
+                <li>
+                    <a href="#5-mathematical-details" aria-label="5. Mathematical Details">5. Mathematical Details</a><ul>
+                        
+                <li>
+                    <a href="#51-hessian-matrix--mathbfh-" aria-label="5.1. Hessian Matrix $ \mathbf{H} $">5.1. Hessian Matrix $ \mathbf{H} $</a></li>
+                <li>
+                    <a href="#52-inverse-hessian--mathbfh-1-" aria-label="5.2. Inverse Hessian $ \mathbf{H}^{-1} $">5.2. Inverse Hessian $ \mathbf{H}^{-1} $</a></li>
+                <li>
+                    <a href="#53-cholesky-decomposition" aria-label="5.3. Cholesky Decomposition">5.3. Cholesky Decomposition</a></li></ul>
+                </li>
+                <li>
+                    <a href="#6-gptq-algorithm-steps" aria-label="6. GPTQ Algorithm Steps">6. GPTQ Algorithm Steps</a><ul>
+                        
+                <li>
+                    <a href="#61-initialization" aria-label="6.1. Initialization">6.1. Initialization</a></li>
+                <li>
+                    <a href="#62-quantization-loop" aria-label="6.2. Quantization Loop">6.2. Quantization Loop</a></li></ul>
+                </li>
+                <li>
+                    <a href="#7-example" aria-label="7. Example">7. Example</a></li>
+                <li>
+                    <a href="#8-understanding-the-hessian-in-pre-trained-models" aria-label="8. Understanding the Hessian in Pre-trained Models">8. Understanding the Hessian in Pre-trained Models</a><ul>
+                        
+                <li>
+                    <a href="#81-source-of-the-hessian" aria-label="8.1. Source of the Hessian">8.1. Source of the Hessian</a></li>
+                <li>
+                    <a href="#82-interpretation" aria-label="8.2. Interpretation">8.2. Interpretation</a></li>
+                <li>
+                    <a href="#83-hessian-computation-in-practice" aria-label="8.3. Hessian Computation in Practice">8.3. Hessian Computation in Practice</a></li></ul>
+                </li>
+                <li>
+                    <a href="#9-cholesky-decomposition-in-detail" aria-label="9. Cholesky Decomposition in Detail">9. Cholesky Decomposition in Detail</a><ul>
+                        
+                <li>
+                    <a href="#91-mathematical-background" aria-label="9.1. Mathematical Background">9.1. Mathematical Background</a></li>
+                <li>
+                    <a href="#92-computation-steps" aria-label="9.2. Computation Steps">9.2. Computation Steps</a></li>
+                <li>
+                    <a href="#93-significance-in-gptq" aria-label="9.3. Significance in GPTQ">9.3. Significance in GPTQ</a></li></ul>
+                </li>
+                <li>
+                    <a href="#10-conclusion" aria-label="10. Conclusion">10. Conclusion</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
   <div class="post-content"><p><strong>Introduction</strong></p>
 <p>Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.</p>
 <p>The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy. GPTQ builds upon previous methods like Optimal Brain Quantization (OBQ) but introduces significant modifications to make it scalable to models with billions of parameters.</p>

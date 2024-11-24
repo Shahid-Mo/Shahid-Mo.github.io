@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en" dir="auto">
+
+<head><script src="/livereload.js?mindelay=10&amp;v=2&amp;port=1313&amp;path=livereload" data-no-instant defer></script><meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<meta name="robots" content="noindex, nofollow">
+<title>LLM Agents | TensorTunes</title>
+<meta name="keywords" content="">
+<meta name="description" content="Convexity: Key Properties and Derivations Convexity is a fundamental concept in optimization and plays a crucial role in the design and analysis of algorithms. In this post, i&rsquo;ll delve into three important properties of convex functions:
+Local Minima Are Global Minima Below Sets of Convex Functions Are Convex Convexity and Second Derivatives i&rsquo;ll provide detailed explanations and derivations for each property, enhancing our understanding of convex functions and their significance in optimization.">
+<meta name="author" content="">
+<link rel="canonical" href="http://localhost:1313/posts/llm_agents/">
+<link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
+<link rel="icon" href="http://localhost:1313/favicon.ico">
+<link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="http://localhost:1313/favicon-32x32.png">
+<link rel="apple-touch-icon" href="http://localhost:1313/apple-touch-icon.png">
+<link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
+<meta name="theme-color" content="#2e2e33">
+<meta name="msapplication-TileColor" content="#2e2e33">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/llm_agents/">
+<noscript>
+    <style>
+        #theme-toggle,
+        .top-link {
+            display: none;
+        }
+
+    </style>
+    <style>
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --theme: rgb(29, 30, 32);
+                --entry: rgb(46, 46, 51);
+                --primary: rgb(218, 218, 219);
+                --secondary: rgb(155, 156, 157);
+                --tertiary: rgb(65, 66, 68);
+                --content: rgb(196, 196, 197);
+                --code-block-bg: rgb(46, 46, 51);
+                --code-bg: rgb(55, 56, 62);
+                --border: rgb(51, 51, 51);
+            }
+
+            .list {
+                background: var(--theme);
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-track {
+                background: 0 0;
+            }
+
+            .list:not(.dark)::-webkit-scrollbar-thumb {
+                border-color: var(--theme);
+            }
+        }
+
+    </style>
+</noscript><script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+  MathJax = {
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$','$$'], ['\\[', '\\]']],
+      processEscapes: true,
+      processEnvironments: true
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+    }
+  };
+</script>
+</head>
+
+<body class="" id="top">
+<script>
+    if (localStorage.getItem("pref-theme") === "dark") {
+        document.body.classList.add('dark');
+    } else if (localStorage.getItem("pref-theme") === "light") {
+        document.body.classList.remove('dark')
+    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.body.classList.add('dark');
+    }
+
+</script>
+
+<header class="header">
+    <nav class="nav">
+        <div class="logo">
+            <a href="http://localhost:1313/" accesskey="h" title="TensorTunes (Alt + H)">TensorTunes</a>
+            <div class="logo-switches">
+                <button id="theme-toggle" accesskey="t" title="(Alt + T)">
+                    <svg id="moon" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg id="sun" xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <ul id="menu">
+            <li>
+                <a href="http://localhost:1313/posts/" title="Posts">
+                    <span>Posts</span>
+                </a>
+            </li>
+            <li>
+                <a href="http://localhost:1313/tags/" title="Tags">
+                    <span>Tags</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</header>
+<main class="main">
+
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      LLM Agents
+    </h1>
+    <div class="post-meta"><span title='2024-11-11 00:00:00 +0000 UTC'>November 11, 2024</span>
+
+</div>
+  </header> <div class="toc">
+    <details >
+        <summary accesskey="c" title="(Alt + C)">
+            <span class="details">Table of Contents</span>
+        </summary>
+
+        <div class="inner"><ul>
+                <li>
+                    <a href="#convexity-key-properties-and-derivations" aria-label="Convexity: Key Properties and Derivations">Convexity: Key Properties and Derivations</a><ul>
+                        
+                <li>
+                    <a href="#1-local-minima-are-global-minima" aria-label="1. Local Minima Are Global Minima">1. Local Minima Are Global Minima</a><ul>
+                        
+                <li>
+                    <a href="#introduction" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#definition-of-convex-function" aria-label="Definition of Convex Function">Definition of Convex Function</a></li>
+                <li>
+                    <a href="#theorem-statement" aria-label="Theorem Statement">Theorem Statement</a></li>
+                <li>
+                    <a href="#proof" aria-label="Proof">Proof</a></li>
+                <li>
+                    <a href="#implications" aria-label="Implications">Implications</a></li>
+                <li>
+                    <a href="#examples" aria-label="Examples">Examples</a></li></ul>
+                </li>
+                <li>
+                    <a href="#2-below-sets-of-convex-functions-are-convex" aria-label="2. Below Sets of Convex Functions Are Convex">2. Below Sets of Convex Functions Are Convex</a><ul>
+                        
+                <li>
+                    <a href="#introduction-1" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#definition-of-below-set" aria-label="Definition of Below Set">Definition of Below Set</a></li>
+                <li>
+                    <a href="#theorem-statement-1" aria-label="Theorem Statement">Theorem Statement</a></li>
+                <li>
+                    <a href="#proof-1" aria-label="Proof">Proof</a></li>
+                <li>
+                    <a href="#implications-1" aria-label="Implications">Implications</a></li>
+                <li>
+                    <a href="#examples-1" aria-label="Examples">Examples</a></li>
+                <li>
+                    <a href="#visualization" aria-label="Visualization">Visualization</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-convexity-and-second-derivatives" aria-label="3. Convexity and Second Derivatives">3. Convexity and Second Derivatives</a><ul>
+                        
+                <li>
+                    <a href="#introduction-2" aria-label="Introduction">Introduction</a></li>
+                <li>
+                    <a href="#one-dimensional-case" aria-label="One-Dimensional Case">One-Dimensional Case</a><ul>
+                        
+                <li>
+                    <a href="#proof-2" aria-label="Proof">Proof</a></li></ul>
+                </li>
+                <li>
+                    <a href="#multidimensional-case" aria-label="Multidimensional Case">Multidimensional Case</a><ul>
+                        
+                <li>
+                    <a href="#definitions" aria-label="Definitions">Definitions</a></li>
+                <li>
+                    <a href="#proof-3" aria-label="Proof">Proof</a></li></ul>
+                </li>
+                <li>
+                    <a href="#implications-2" aria-label="Implications">Implications</a></li>
+                <li>
+                    <a href="#examples-2" aria-label="Examples">Examples</a></li>
+                <li>
+                    <a href="#visualization-in-two-dimensions" aria-label="Visualization in Two Dimensions">Visualization in Two Dimensions</a></li></ul>
+                </li>
+                <li>
+                    <a href="#conclusion" aria-label="Conclusion">Conclusion</a></li></ul>
+                </li>
+                <li>
+                    <a href="#references" aria-label="References">References</a><ul>
+                        
+                <li>
+                    <a href="#what-is-an-agent" aria-label="What is an Agent?">What is an Agent?</a></li>
+                <li>
+                    <a href="#llm-agenst-a-birds-eye-view" aria-label="LLM Agenst, A birds Eye View">LLM Agenst, A birds Eye View</a><ul>
+                        
+                <li>
+                    <a href="#image" aria-label="Image">Image</a></li></ul>
+                </li>
+                <li>
+                    <a href="#question-answering" aria-label="Question Answering">Question Answering</a></li>
+                <li>
+                    <a href="#react" aria-label="ReAct">ReAct</a>
+                </li>
+            </ul>
+            </li>
+            </ul>
+        </div>
+    </details>
+</div>
+
+  <div class="post-content"><h1 id="convexity-key-properties-and-derivations">Convexity: Key Properties and Derivations<a hidden class="anchor" aria-hidden="true" href="#convexity-key-properties-and-derivations">#</a></h1>
+<p>Convexity is a fundamental concept in optimization and plays a crucial role in the design and analysis of algorithms. In this post, i&rsquo;ll delve into three important properties of convex functions:</p>
+<ol>
+<li><strong>Local Minima Are Global Minima</strong></li>
+<li><strong>Below Sets of Convex Functions Are Convex</strong></li>
+<li><strong>Convexity and Second Derivatives</strong></li>
+</ol>
+<p>i&rsquo;ll provide detailed explanations and derivations for each property, enhancing our understanding of convex functions and their significance in optimization.</p>
+<hr>
+<h2 id="1-local-minima-are-global-minima">1. Local Minima Are Global Minima<a hidden class="anchor" aria-hidden="true" href="#1-local-minima-are-global-minima">#</a></h2>
+<h3 id="introduction"><strong>Introduction</strong><a hidden class="anchor" aria-hidden="true" href="#introduction">#</a></h3>
+<p>One of the most powerful features of convex functions is that any local minimum is also a global minimum. This property simplifies optimization significantly because it eliminates the concern of getting trapped in suboptimal local minima—a common issue in non-convex optimization.</p>
+<h3 id="definition-of-convex-function"><strong>Definition of Convex Function</strong><a hidden class="anchor" aria-hidden="true" href="#definition-of-convex-function">#</a></h3>
+<p>Let $ f: X \rightarrow \mathbb{R} $ be a function defined on a convex set $ X \subseteq \mathbb{R}^n $. The function $ f $ is <strong>convex</strong> if, for all $ x, y \in X $ and $ \lambda \in [0, 1] $:</p>
+<p>$$
+f(\lambda x + (1 - \lambda)y) \leq \lambda f(x) + (1 - \lambda) f(y)
+$$</p>
+<p>This inequality essentially states that the function lies below or on the straight line (chord) connecting $ f(x) $ and $ f(y) $.</p>
+<h3 id="theorem-statement"><strong>Theorem Statement</strong><a hidden class="anchor" aria-hidden="true" href="#theorem-statement">#</a></h3>
+<p><strong>Theorem:</strong> <em>If $ f: X \rightarrow \mathbb{R} $ is a convex function on a convex set $ X $, then any local minimum of $ f $ is also a global minimum.</em></p>
+<h3 id="proof"><strong>Proof</strong><a hidden class="anchor" aria-hidden="true" href="#proof">#</a></h3>
+<p>We will prove this theorem by contradiction.</p>
+<p><strong>Assumption:</strong></p>
+<p>Suppose $ x^* \in X $ is a local minimum of $ f $, but <strong>not</strong> a global minimum. This means there exists some $ x_0 \in X $ such that:</p>
+<p>$$
+f(x_0) &lt; f(x^*)
+$$</p>
+<p>Since $ x^* $ is a local minimum, there exists a neighborhood around $ x^* $, say $ B_\delta(x^<em>) $ (an open ball of radius $ \delta $), such that for all $ x \in B_\delta(x^</em>) \cap X $:</p>
+<p>$$
+f(x^*) \leq f(x)
+$$</p>
+<p><strong>Constructing a Contradiction:</strong></p>
+<ol>
+<li>
+<p><strong>Convex Combination:</strong></p>
+<p>Since $ X $ is convex, the line segment between $ x^* $ and $ x_0 $ lies entirely within $ X $. Consider points along this segment defined by:</p>
+<p>$$
+x_\lambda = \lambda x^* + (1 - \lambda) x_0, \quad \lambda \in [0, 1]
+$$</p>
+</li>
+<li>
+<p><strong>Choosing $ \lambda $:</strong></p>
+<p>Select $ \lambda $ sufficiently close to 1 such that $ x_\lambda \in B_\delta(x^*) $. Specifically, choose:</p>
+<p>$$
+\lambda = 1 - \epsilon, \quad \text{where } \epsilon &gt; 0 \text{ is small enough}
+$$</p>
+</li>
+<li>
+<p><strong>Applying Convexity:</strong></p>
+<p>Using the convexity of $ f $:</p>
+<p>$$
+\begin{align*}
+f(x_\lambda) &amp;= f(\lambda x^* + (1 - \lambda) x_0) \
+&amp;\leq \lambda f(x^<em>) + (1 - \lambda) f(x_0) \
+&amp;= (1 - \epsilon) f(x^</em>) + \epsilon f(x_0)
+\end{align*}
+$$</p>
+</li>
+<li>
+<p><strong>Since $ f(x_0) &lt; f(x^*) $:</strong></p>
+<p>$$
+f(x_\lambda) &lt; (1 - \epsilon) f(x^<em>) + \epsilon f(x^</em>) = f(x^*)
+$$</p>
+<p>This inequality arises because $ f(x_0) &lt; f(x^<em>) $, so the weighted average is less than $ f(x^</em>) $.</p>
+</li>
+<li>
+<p><strong>Contradiction:</strong></p>
+<p>We have found a point $ x_\lambda \in B_\delta(x^<em>) \cap X $ such that $ f(x_\lambda) &lt; f(x^</em>) $, contradicting the assumption that $ x^* $ is a local minimum.</p>
+</li>
+</ol>
+<p><strong>Conclusion:</strong></p>
+<p>Our assumption that $ x^* $ is not a global minimum must be false. Therefore, any local minimum of a convex function is also a global minimum.</p>
+<h3 id="implications"><strong>Implications</strong><a hidden class="anchor" aria-hidden="true" href="#implications">#</a></h3>
+<ul>
+<li><strong>Optimization Simplicity:</strong> In convex optimization problems, any algorithm that converges to a local minimum has effectively found the global minimum.</li>
+<li><strong>Algorithm Design:</strong> This property allows for the development of efficient optimization algorithms without worrying about local minima traps.</li>
+</ul>
+<h3 id="examples"><strong>Examples</strong><a hidden class="anchor" aria-hidden="true" href="#examples">#</a></h3>
+<ol>
+<li>
+<p><strong>Quadratic Function:</strong></p>
+<p>Consider $ f(x) = (x - 3)^2 $.</p>
+<ul>
+<li><strong>Convexity:</strong> The second derivative $ f&rsquo;&rsquo;(x) = 2 &gt; 0 $ confirms convexity.</li>
+<li><strong>Minimum:</strong> Setting $ f&rsquo;(x) = 0 $ yields $ x^* = 3 $.</li>
+<li><strong>Global Minimum:</strong> Since $ f $ is convex, $ x^* = 3 $ is the global minimum.</li>
+</ul>
+</li>
+<li>
+<p><strong>Exponential Function:</strong></p>
+<p>$ f(x) = e^x $.</p>
+<ul>
+<li><strong>Convexity:</strong> $ f&rsquo;&rsquo;(x) = e^x &gt; 0 $.</li>
+<li><strong>Behavior:</strong> As $ x \rightarrow -\infty $, $ f(x) \rightarrow 0 $, but $ f(x) $ never reaches a minimum value in $ \mathbb{R} $.</li>
+<li><strong>No Minimum:</strong> This illustrates that a convex function may not attain a minimum within its domain.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="2-below-sets-of-convex-functions-are-convex">2. Below Sets of Convex Functions Are Convex<a hidden class="anchor" aria-hidden="true" href="#2-below-sets-of-convex-functions-are-convex">#</a></h2>
+<h3 id="introduction-1"><strong>Introduction</strong><a hidden class="anchor" aria-hidden="true" href="#introduction-1">#</a></h3>
+<p>Sublevel sets (also known as <strong>below sets</strong> or <strong>sublevel sets</strong>) of convex functions inherit convexity from the function itself. This property is vital in constraint optimization, where feasible regions are often defined by such sets.</p>
+<h3 id="definition-of-below-set"><strong>Definition of Below Set</strong><a hidden class="anchor" aria-hidden="true" href="#definition-of-below-set">#</a></h3>
+<p>Given a function $ f: X \rightarrow \mathbb{R} $, the <strong>below set</strong> at level $ b $ is:</p>
+<p>$$
+S_b = { x \in X \mid f(x) \leq b }
+$$</p>
+<h3 id="theorem-statement-1"><strong>Theorem Statement</strong><a hidden class="anchor" aria-hidden="true" href="#theorem-statement-1">#</a></h3>
+<p><strong>Theorem:</strong> <em>If $ f: X \rightarrow \mathbb{R} $ is a convex function on a convex set $ X $, then the below set $ S_b $ is a convex set for any $ b \in \mathbb{R} $.</em></p>
+<h3 id="proof-1"><strong>Proof</strong><a hidden class="anchor" aria-hidden="true" href="#proof-1">#</a></h3>
+<p>To prove that $ S_b $ is convex, we must show that for any $ x_1, x_2 \in S_b $ and any $ \lambda \in [0, 1] $, the point $ x_\lambda = \lambda x_1 + (1 - \lambda) x_2 $ also belongs to $ S_b $.</p>
+<p><strong>Given:</strong></p>
+<ul>
+<li>$ x_1, x_2 \in S_b \implies f(x_1) \leq b $ and $ f(x_2) \leq b $.</li>
+<li>$ \lambda \in [0, 1] $.</li>
+<li>$ x_\lambda = \lambda x_1 + (1 - \lambda) x_2 \in X $ (since $ X $ is convex).</li>
+</ul>
+<p><strong>Using Convexity:</strong></p>
+<p>$$
+\begin{align*}
+f(x_\lambda) &amp;= f(\lambda x_1 + (1 - \lambda) x_2) \
+&amp;\leq \lambda f(x_1) + (1 - \lambda) f(x_2) \
+&amp;\leq \lambda b + (1 - \lambda) b = b
+\end{align*}
+$$</p>
+<p><strong>Conclusion:</strong></p>
+<p>Since $ f(x_\lambda) \leq b $, $ x_\lambda \in S_b $. Therefore, $ S_b $ is convex.</p>
+<h3 id="implications-1"><strong>Implications</strong><a hidden class="anchor" aria-hidden="true" href="#implications-1">#</a></h3>
+<ul>
+<li><strong>Feasible Regions:</strong> In optimization problems with convex constraints (e.g., $ f(x) \leq b $), the feasible region is convex.</li>
+<li><strong>Constraint Handling:</strong> Convexity of sublevel sets simplifies the analysis and solution of constrained optimization problems.</li>
+</ul>
+<h3 id="examples-1"><strong>Examples</strong><a hidden class="anchor" aria-hidden="true" href="#examples-1">#</a></h3>
+<ol>
+<li>
+<p><strong>Norm Constraint:</strong></p>
+<p>$ f(x) = | x |_2 $, $ S_1 = { x \in \mathbb{R}^n \mid | x |_2 \leq 1 } $.</p>
+<ul>
+<li><strong>Convexity of $ f $:</strong> The norm function is convex.</li>
+<li><strong>Below Set:</strong> $ S_1 $ is the closed unit ball in $ \mathbb{R}^n $, a convex set.</li>
+</ul>
+</li>
+<li>
+<p><strong>Affine Function:</strong></p>
+<p>$ f(x) = a^T x + b $, where $ a \in \mathbb{R}^n $, $ b \in \mathbb{R} $.</p>
+<ul>
+<li><strong>Convexity of $ f $:</strong> Affine functions are convex.</li>
+<li><strong>Below Set:</strong> $ S_b = { x \in \mathbb{R}^n \mid a^T x + b \leq c } $ is a half-space, which is convex.</li>
+</ul>
+</li>
+</ol>
+<h3 id="visualization"><strong>Visualization</strong><a hidden class="anchor" aria-hidden="true" href="#visualization">#</a></h3>
+<p>Consider a convex function $ f(x) $ and a horizontal line $ y = b $. The sublevel set $ S_b $ consists of all points $ x $ such that $ f(x) $ lies below or on this line.</p>
+<p><img loading="lazy" src="https://i.imgur.com/Fp6L6XZ.png" alt="Sublevel Set Visualization"  />
+</p>
+<p>In the figure, the blue region represents $ S_b $. Any convex combination of points within this region remains within the region, illustrating its convexity.</p>
+<hr>
+<h2 id="3-convexity-and-second-derivatives">3. Convexity and Second Derivatives<a hidden class="anchor" aria-hidden="true" href="#3-convexity-and-second-derivatives">#</a></h2>
+<h3 id="introduction-2"><strong>Introduction</strong><a hidden class="anchor" aria-hidden="true" href="#introduction-2">#</a></h3>
+<p>The relationship between convexity and second derivatives provides a practical criterion for determining the convexity of twice-differentiable functions. In one dimension, convexity is linked to the sign of the second derivative, while in higher dimensions, it involves the positive semidefiniteness of the Hessian matrix.</p>
+<h3 id="one-dimensional-case"><strong>One-Dimensional Case</strong><a hidden class="anchor" aria-hidden="true" href="#one-dimensional-case">#</a></h3>
+<p><strong>Theorem:</strong> <em>A twice-differentiable function $ f: \mathbb{R} \rightarrow \mathbb{R} $ is convex on an interval $ I $ if and only if $ f&rsquo;&rsquo;(x) \geq 0 $ for all $ x \in I $.</em></p>
+<h4 id="proof-2"><strong>Proof</strong><a hidden class="anchor" aria-hidden="true" href="#proof-2">#</a></h4>
+<p><strong>(Necessity)</strong></p>
+<p>Assume $ f $ is convex on $ I $.</p>
+<ol>
+<li>
+<p><strong>Midpoint Convexity:</strong></p>
+<p>For any $ x, h $ such that $ x, x \pm h \in I $:</p>
+<p>$$
+f(x) \leq \frac{1}{2} f(x - h) + \frac{1}{2} f(x + h)
+$$</p>
+</li>
+<li>
+<p><strong>Second Difference:</strong></p>
+<p>Rearranging:</p>
+<p>$$
+f(x + h) + f(x - h) - 2f(x) \geq 0
+$$</p>
+</li>
+<li>
+<p><strong>Limit as $ h \rightarrow 0 $:</strong></p>
+<p>The second derivative is:</p>
+<p>$$
+f&rsquo;&rsquo;(x) = \lim_{h \rightarrow 0} \frac{f(x + h) + f(x - h) - 2f(x)}{h^2} \geq 0
+$$</p>
+</li>
+</ol>
+<p><strong>(Sufficiency)</strong></p>
+<p>Assume $ f&rsquo;&rsquo;(x) \geq 0 $ for all $ x \in I $.</p>
+<ol>
+<li>
+<p><strong>Non-Decreasing First Derivative:</strong></p>
+<p>Since $ f&rsquo;&rsquo;(x) \geq 0 $, $ f&rsquo;(x) $ is non-decreasing on $ I $.</p>
+</li>
+<li>
+<p><strong>Applying Mean Value Theorem:</strong></p>
+<p>For any $ x, y \in I $ with $ x &lt; y $, there exists $ c \in (x, y) $ such that:</p>
+<p>$$
+f&rsquo;(c) = \frac{f(y) - f(x)}{y - x}
+$$</p>
+</li>
+<li>
+<p><strong>Convexity Condition:</strong></p>
+<p>Since $ f&rsquo; $ is non-decreasing:</p>
+<p>$$
+f&rsquo;(x) \leq f&rsquo;(c) \leq f&rsquo;(y)
+$$</p>
+<p>Thus, the secant line between $ (x, f(x)) $ and $ (y, f(y)) $ lies above the tangent lines at $ x $ and $ y $, satisfying the convexity condition.</p>
+</li>
+</ol>
+<h3 id="multidimensional-case"><strong>Multidimensional Case</strong><a hidden class="anchor" aria-hidden="true" href="#multidimensional-case">#</a></h3>
+<p><strong>Theorem:</strong> <em>A twice-differentiable function $ f: \mathbb{R}^n \rightarrow \mathbb{R} $ is convex on a convex set $ X \subseteq \mathbb{R}^n $ if and only if its Hessian matrix $ \nabla^2 f(x) $ is positive semidefinite (PSD) for all $ x \in X $.</em></p>
+<h4 id="definitions"><strong>Definitions</strong><a hidden class="anchor" aria-hidden="true" href="#definitions">#</a></h4>
+<ul>
+<li>
+<p><strong>Hessian Matrix:</strong> The matrix of second-order partial derivatives:</p>
+<p>$$
+\nabla^2 f(x) = \left[ \frac{\partial^2 f}{\partial x_i \partial x_j} \right]_{i,j=1}^n
+$$</p>
+</li>
+<li>
+<p><strong>Positive Semidefinite Matrix:</strong> A symmetric matrix $ H $ is PSD if:</p>
+<p>$$
+z^T H z \geq 0 \quad \text{for all } z \in \mathbb{R}^n
+$$</p>
+</li>
+</ul>
+<h4 id="proof-3"><strong>Proof</strong><a hidden class="anchor" aria-hidden="true" href="#proof-3">#</a></h4>
+<p><strong>(Necessity)</strong></p>
+<p>Assume $ f $ is convex on $ X $.</p>
+<ol>
+<li>
+<p><strong>Directional Second Derivative:</strong></p>
+<p>For any $ x \in X $ and any $ z \in \mathbb{R}^n $ such that $ x + tz \in X $ for small $ t $:</p>
+<p>Define $ \phi(t) = f(x + tz) $.</p>
+</li>
+<li>
+<p><strong>Convexity of $ \phi(t) $:</strong></p>
+<p>Since $ f $ is convex, $ \phi(t) $ is convex in $ t $.</p>
+</li>
+<li>
+<p><strong>Second Derivative of $ \phi(t) $:</strong></p>
+<p>$$
+\phi&rsquo;&rsquo;(0) = z^T \nabla^2 f(x) z \geq 0
+$$</p>
+<p>Therefore, $ \nabla^2 f(x) $ is PSD.</p>
+</li>
+</ol>
+<p><strong>(Sufficiency)</strong></p>
+<p>Assume $ \nabla^2 f(x) $ is PSD for all $ x \in X $.</p>
+<ol>
+<li>
+<p><strong>Convexity Along Lines:</strong></p>
+<p>For any $ x, y \in X $ and $ \lambda \in [0,1] $, consider:</p>
+<p>$$
+\gamma(\lambda) = x + \lambda(y - x)
+$$</p>
+</li>
+<li>
+<p><strong>Function $ \phi(\lambda) = f(\gamma(\lambda)) $:</strong></p>
+<p>The second derivative is:</p>
+<p>$$
+\phi&rsquo;&rsquo;(\lambda) = (y - x)^T \nabla^2 f(\gamma(\lambda)) (y - x) \geq 0
+$$</p>
+<p>Thus, $ \phi $ is convex in $ \lambda $.</p>
+</li>
+<li>
+<p><strong>Applying Convexity of $ \phi $:</strong></p>
+<p>$$
+f(\lambda x + (1 - \lambda) y) = \phi(\lambda) \leq \lambda \phi(1) + (1 - \lambda) \phi(0) = \lambda f(y) + (1 - \lambda) f(x)
+$$</p>
+<p>Therefore, $ f $ is convex.</p>
+</li>
+</ol>
+<h3 id="implications-2"><strong>Implications</strong><a hidden class="anchor" aria-hidden="true" href="#implications-2">#</a></h3>
+<ul>
+<li><strong>Testing Convexity:</strong> Checking the positive semidefiniteness of the Hessian is a practical method for verifying the convexity of twice-differentiable functions.</li>
+<li><strong>Optimization Algorithms:</strong> Knowledge of the Hessian&rsquo;s properties informs algorithm selection (e.g., Newton&rsquo;s method relies on the Hessian).</li>
+</ul>
+<h3 id="examples-2"><strong>Examples</strong><a hidden class="anchor" aria-hidden="true" href="#examples-2">#</a></h3>
+<ol>
+<li>
+<p><strong>Quadratic Function:</strong></p>
+<p>$ f(x) = \frac{1}{2} x^T Q x + b^T x + c $, where $ Q $ is a symmetric matrix.</p>
+<ul>
+<li><strong>Hessian:</strong> $ \nabla^2 f(x) = Q $.</li>
+<li><strong>Convexity:</strong> If $ Q $ is PSD, then $ f $ is convex.</li>
+</ul>
+</li>
+<li>
+<p><strong>Log-Sum-Exp Function:</strong></p>
+<p>$ f(x) = \log\left( \sum_{i=1}^n e^{a_i^T x} \right) $.</p>
+<ul>
+<li><strong>Hessian:</strong> The Hessian $ \nabla^2 f(x) $ is PSD because $ f $ is a composition of convex functions.</li>
+<li><strong>Convexity:</strong> $ f $ is convex.</li>
+</ul>
+</li>
+</ol>
+<h3 id="visualization-in-two-dimensions"><strong>Visualization in Two Dimensions</strong><a hidden class="anchor" aria-hidden="true" href="#visualization-in-two-dimensions">#</a></h3>
+<p>Consider $ f(x) = x^T x = x_1^2 + x_2^2 $.</p>
+<ul>
+<li>
+<p><strong>Hessian:</strong> $ \nabla^2 f(x) = 2I $, where $ I $ is the identity matrix.</p>
+</li>
+<li>
+<p><strong>Eigenvalues:</strong> All eigenvalues are 2, which are positive.</p>
+</li>
+<li>
+<p><strong>Contour Plot:</strong></p>
+<p><img loading="lazy" src="https://i.imgur.com/syP47Pl.png" alt="Contour Plot of Convex Function"  />
+</p>
+<p>The contours are concentric circles, illustrating the convexity of $ f $.</p>
+</li>
+</ul>
+<hr>
+<h2 id="conclusion"><strong>Conclusion</strong><a hidden class="anchor" aria-hidden="true" href="#conclusion">#</a></h2>
+<p>Understanding these properties of convex functions enhances our ability to analyze and solve optimization problems effectively:</p>
+<ul>
+<li><strong>Local vs. Global Minima:</strong> Convex functions guarantee that any local minimum is a global minimum, simplifying optimization.</li>
+<li><strong>Convex Sublevel Sets:</strong> The convexity of below sets aids in defining and working with feasible regions in constrained optimization.</li>
+<li><strong>Second Derivatives and Convexity:</strong> The relationship between the second derivative (or Hessian) and convexity provides a practical criterion for verifying convexity.</li>
+</ul>
+<p>By leveraging these properties, we can design efficient algorithms and gain deeper insights into the structure of optimization problems.</p>
+<hr>
+<h1 id="references">References<a hidden class="anchor" aria-hidden="true" href="#references">#</a></h1>
+<ul>
+<li>Boyd, S., &amp; Vandenberghe, L. (2004). <em>Convex Optimization</em>. Cambridge University Press.</li>
+<li>Nesterov, Y. (2004). <em>Introductory Lectures on Convex Optimization: A Basic Course</em>. Springer.</li>
+<li>Rockafellar, R. T. (1970). <em>Convex Analysis</em>. Princeton University Press.</li>
+</ul>
+<hr>
+<h2 id="what-is-an-agent">What is an Agent?<a hidden class="anchor" aria-hidden="true" href="#what-is-an-agent">#</a></h2>
+<p>So, what is an agent?, Right Agent Smith was the antoganist in the Matrix films, you call a Real Estate agent to buy or lease a house, actors and athletes have agents that manage their career, and even i was acused of being an agent(bot) by humans palyers, when i tried to play PUBG for the first time 🥲.</p>
+<p>All the above cases are agents, and an LLM agent is not something very different, so some of the smartest minds on the planet are trying to develop systems that are general purpose agets, that can find you a house or shout you down in a game of fortnite.</p>
+<p>still we dont have a concrete defiation of what an agent is.., So what does the established AI community think what an agent is? The REinforcement Learnign community is quite mature and has a proper defination of what an agent is&hellip;</p>
+<p>An “intelligent” system that interacts with some “environment”</p>
+<p>So there are two terms that i need to define here, what is menat by an intelligen system, what what does an environment mean, lets start by definig the easiere and more straightforwar of the two.</p>
+<p>The environemt,
+Physical environments: robot, autonomous car, …
+Digital environments: Atari, Applications, Websites, …
+Humans as environments: chatbot</p>
+<p>Lets come backe to the defination of intelligence, The thing with defining intelligence is, it is not fixed it is a moving goalpost, people thouught when machines learned to play atari games with nothing but the pixels on the screen or when alpha go defeated Le So Dol in a game of GO, that was definitely a tipping point, or when the google engineer interacted will an llm in 2022 and thought it was sentian, was that the point intelligence was reached?
+the answere is no, the best measure of intelligence for these systems is what they are capable of, this is usually done using benchmarks, (Still not perfect, many ai companies are acused of trainig on the test data to boost their benchmark scores,) but i still think these are the best tools we have in our arsenal.</p>
+<p>So now that we have a rudementary ideal of what an agent is, lets dive into LLM agents.</p>
+<h2 id="llm-agenst-a-birds-eye-view">LLM Agenst, A birds Eye View<a hidden class="anchor" aria-hidden="true" href="#llm-agenst-a-birds-eye-view">#</a></h2>
+<h3 id="image">Image<a hidden class="anchor" aria-hidden="true" href="#image">#</a></h3>
+<p>So why LLM and not something like a RL agent using DQN or PPO, it was smart enought to beat the best go player of all time, so the problem with any other kind of system is that they are rigid, they have a standard set of inputs and outputs, but with current LLM with their pretrainig and finetunig setup up, they can be thought of as General systems that can be used in Zero shot or Few shot prompting methods, (LLM Reasoning/ Prompting) is one of the biggest piece of the puzzle for intellignent agents to emmerge.</p>
+<p>The paper &ldquo;Language Models are Few-Shot Learners&rdquo; established that llms, are capable of reasoning/ solving a wide variety of tasks in human language, since thye are basically trained on the whole internet, they are capable of solving a wide variety of tasks, (can be finetuned very efficiently for specific tasks as well).</p>
+<h2 id="question-answering">Question Answering<a hidden class="anchor" aria-hidden="true" href="#question-answering">#</a></h2>
+<p>Lets start with the OG application of LLMs, chatBotst or question answering systems/ agents,</p>
+<h2 id="react">ReAct<a hidden class="anchor" aria-hidden="true" href="#react">#</a></h2>
+<p>�</p>
+
+
+  </div>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer><script src="https://utteranc.es/client.js"
+        repo="Shahid-Mo/Shahid-Mo.github.io"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
+</article>
+    </main>
+    
+<footer class="footer">
+        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
+
+    <span>
+        Powered by
+        <a href="https://gohugo.io/" rel="noopener noreferrer" target="_blank">Hugo</a> &
+        <a href="https://github.com/adityatelange/hugo-PaperMod/" rel="noopener" target="_blank">PaperMod</a>
+    </span>
+</footer>
+<a href="#top" aria-label="go to top" title="Go to Top (Alt + G)" class="top-link" id="top-link" accesskey="g">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 6" fill="currentColor">
+        <path d="M12 6H0l6-6z" />
+    </svg>
+</a>
+
+<script>
+    let menu = document.getElementById('menu')
+    if (menu) {
+        menu.scrollLeft = localStorage.getItem("menu-scroll-position");
+        menu.onscroll = function () {
+            localStorage.setItem("menu-scroll-position", menu.scrollLeft);
+        }
+    }
+
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener("click", function (e) {
+            e.preventDefault();
+            var id = this.getAttribute("href").substr(1);
+            if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView({
+                    behavior: "smooth"
+                });
+            } else {
+                document.querySelector(`[id='${decodeURIComponent(id)}']`).scrollIntoView();
+            }
+            if (id === "top") {
+                history.replaceState(null, null, " ");
+            } else {
+                history.pushState(null, null, `#${id}`);
+            }
+        });
+    });
+
+</script>
+<script>
+    var mybutton = document.getElementById("top-link");
+    window.onscroll = function () {
+        if (document.body.scrollTop > 800 || document.documentElement.scrollTop > 800) {
+            mybutton.style.visibility = "visible";
+            mybutton.style.opacity = "1";
+        } else {
+            mybutton.style.visibility = "hidden";
+            mybutton.style.opacity = "0";
+        }
+    };
+
+</script>
+<script>
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        if (document.body.className.includes("dark")) {
+            document.body.classList.remove('dark');
+            localStorage.setItem("pref-theme", 'light');
+        } else {
+            document.body.classList.add('dark');
+            localStorage.setItem("pref-theme", 'dark');
+        }
+    })
+
+</script>
+</body>
+
+</html>

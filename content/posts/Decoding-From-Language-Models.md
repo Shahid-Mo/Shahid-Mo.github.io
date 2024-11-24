@@ -1,17 +1,14 @@
 ---
 title: "Deconding From Language Models"
 date: 2024-09-11
-draft: true
+draft: false
+comments: true
 ---
 
 ## A quick refresher on Autoregressive text generation
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/decoding_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/decoding_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 </div>
 
 Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{<t} $ as input  and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
@@ -46,11 +43,7 @@ $$ \hat{y_t} = \arg\max_{w \in V} P(y_t = w \mid \lbrace y \rbrace _{<t}) $$
 Below is an example of unconditional text generation. The model starts with a special \<START> token, which can also be something like a newline character '\n', and iteratively selects the most probable token at each step until it reaches the \<END> token or some external maximum sequence length is met.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/greedy.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/greedy.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 70%;">
 </div>
 
 The issue with greedy decoding is that once a decision is made you can't go back and change the decision, like there might have been a word like “a” or “the” If we could have taken it differently, we could eventually end up with a higher probability statement overall.
@@ -102,7 +95,7 @@ The fundamental idea of beam search is to explore multiple hypotheses simultaneo
    Collect all possible candidates formed by extending each sequence in the current beam with all possible next tokens:
 
    $$
-   \text{Candidates} = \{ (Y_{1:t-1} \oplus \hat{y_t}, \log P(\hat{y_t} \mid Y_{1:t-1}) + \log P(Y_{1:t-1})) \}
+   \text{Candidates} = \lbrace{ (Y_{1:t-1} \oplus \hat{y_t}, \log P(\hat{y_t} \mid Y_{1:t-1}) + \log P(Y_{1:t-1})) } \rbrace
    $$
 
 5. **Pruning:**
@@ -130,41 +123,25 @@ The fundamental idea of beam search is to explore multiple hypotheses simultaneo
 Beam Search with an Example of K =2
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/beam_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/beam_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 15%;">
 </div>
 
 Get the two most probable tokens, rest are pruned.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/beam_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/beam_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 25%;">
 </div>
 
 top 2 generations are “the poor” and “a poor”, these are kept and the reset are pruned
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/beam_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/beam_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 30%;">
 </div>
 
 The above process is continued till we reach the \<EOS> end of sequence token or reach a limit for max output tokens.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/beam_4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/beam_4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 </div>
 
 Greedy decoding and Beam Seach are some of the most popular approaches for decoding in LLM’s like chat GPT, Llam and Gemini. 
@@ -172,20 +149,21 @@ Greedy decoding and Beam Seach are some of the most popular approaches for decod
 ### The issue with these approaches.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/issues_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/Decoding/issues_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  Even with substantial human context and the powerful GPT-2 Large language model,
+Beam Search (size 32) leads to degenerate repetition (highlighted in red). Source: 
+  <a href="https://arxiv.org/pdf/1904.09751" style="color: rgba(0, 0, 0, 0.6);">Holtzman et al. (2020)</a>
 </p>
 </div>
 
-Open-ended text generation often leads to repetitive outputs. For example, when generating text about a unicorn trying to speak English, the continuation may initially appear coherent but soon start repeating phrases, like an institution's name, excessively. This repetition happens because the language model assigns increasing probability to repeated sequences, as shown in a plot of the model's probability for the sequence "I don't know." Initially, the probability is regular, but as the phrase repeats, the probability increases, indicating the model is more confident about the repetition.
+Open-ended text generation often leads to repetitive outputs. For example, when generating text about a unicorn trying to speak English, the continuation may initially appear coherent but soon start repeating phrases, like an institution's name, excessively. This repetition happens because the language model assigns increasing probability to repeated sequences, as shown in the plot below of the model's probability for the sequence "I don't know." Initially, the probability is regular, but as the phrase repeats, the probability increases, indicating the model is more confident about the repetition.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/issues_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/Decoding/issues_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  The probability of a repeated phrase increases with each repetition, creating a positive feedback loop. We found this effect to hold for the vast majority of phrases we tested, regardless of phrase length or if the phrases were sampled randomly rather than taken from human text. Source: 
+  <a href="https://arxiv.org/pdf/1904.09751" style="color: rgba(0, 0, 0, 0.6);">Holtzman et al. (2020)</a>
 </p>
 </div>
 
@@ -193,10 +171,10 @@ This issue, known as self-amplification, persists even with larger models. For i
 To mitigate repetition, one approach is n-gram blocking, which prevents the same n-gram from appearing twice. For example, if n is set to three, and the text contains "I am happy," the next time "I am" appears, "happy" would be set to zero probability, preventing the repetition of this trigram. However, n-gram blocking has limitations, as it can eliminate necessary repetitions, such as a person's name appearing multiple times.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/issues_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+  <img src="/images/Decoding/issues_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 70%;">
 <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+  The probability assigned to tokens generated by Beam Search and humans, given the same context. Note the increased variance that characterizes human text, in contrast with the endless repetition of text decoded by Beam Search. Source: 
+  <a href="https://arxiv.org/pdf/1904.09751" style="color: rgba(0, 0, 0, 0.6);">Holtzman et al. (2020)</a>
 </p>
 </div>
 
@@ -221,11 +199,7 @@ $$
 For example, previously you might have been restricted to selecting "restroom," but with sampling, you might select "bathroom" as well.
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/sampl_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/sampl_1.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 </div>
 
 #### Issues with ancestral sampling.
@@ -237,30 +211,15 @@ For instance, many tokens may be contextually inappropriate, yet a good language
 ### Top $ k $ Sampling
 
 <div style="text-align: center;">
-  <img src="/images/Decoding/sampl_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
+  <img src="/images/Decoding/sampl_3.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 70%;">
 </div>
 
 One effective approach is top-$k$ sampling, where we only sample from the top $k$ tokens in the probability distribution.
 Increasing $k$ results in more diverse but potentially risky outputs, while decreasing $k$ leads to safer but more generic outputs.
 
-<div style="text-align: center;">
-  <img src="/images/Decoding/sampl_2.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
 
 <div style="text-align: center;">
   <img src="/images/Decoding/sampl_4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
 </div>
 
 Top-$k$ decoding can present two major issues. First, it can cut off too quickly, as illustrated by the sentence "She said, 'I never \___'." Many valid options, such as "won't" or "can't," might be excluded because they don't fall within the top $k$ candidates, leading to poor recall for the generation system. Second, top-$k$ decoding can also cut off too slowly. For instance, in the sentence "ate the pizza while it was still ___," the word "cold" is an unlikely choice according to common sense. Despite its low probability, the model might still sample "cold" as an output, resulting in poor precision for the generation model.
@@ -274,10 +233,6 @@ The solution might be that $k$ is just a suboptimal hyperparameter. Instead of f
 
 <div style="text-align: center;">
   <img src="/images/Decoding/sampl_5.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
 </div>
 
 The advantage of using top-$P$ sampling, where we sample from the top $P$ percentile of the cumulative probability mass, is that it effectively gives us an adaptive $k$ for each different probability distribution. 
@@ -315,58 +270,21 @@ Temperature is a hyperparameter for decoding, similar to $ k $ in top-k sampling
 
 <div style="text-align: center;">
   <img src="/images/Decoding/temp.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
 </div>
 
-## Some other sampling methods (edit)
+## Advanced decoding methods 
 
-So all the decoding methods we discussed so far are standard decoding methods. But, just like any other area of NLP, this is an acitvely researched field. Next i am going to present some more advanced decoding methods that have popped up over the past few years that i think are relly and are being used to import the decoding enven more.
-Cool and the second one is the one people suspect is used by Open AI for faster inference on their massive models like GPT4.
-
-### Contrastive Decoding
-
-The idea is to incorporate additional information during the decoding process of language models by utilizing another another model. If you've experimented with relatively small language models like GPT-2 small, you may have noticed that they often degenerate into repeating the same sequence or provide incorrect outputs when asked factual questions. These issues are less prevalent in larger models trained on more extensive data.
-
-The question arises: can we use the shortcomings of the smaller model to enhance the performance of the larger model? The approach is based on the intuition that if the smaller model assigns a low probability to a certain answer while the larger model assigns a high probability, it's likely because the larger model has learned something the smaller model hasn't. Therefore, we modify the probability distribution of the larger model to favor outputs that it considers highly likely and the weaker model considers unlikely.
-
-<div style="text-align: center;">
-  <img src="/images/Decoding/contrastive.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
-<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-  Figure 1: Comparison of FP8 and BF16 formats. Source: 
-  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
-</p>
-</div>
-
-For example, consider the input: **"Barack Obama was born in Hawaii. He was born in..."** The smaller model might start repeating itself, and even naive sampling from the larger model can lead to repetitive loops like **"He was born in Hawaii. He was born in Hawaii..."**—a behavior we generally want to avoid. Using methods like nucleus or top-p sampling might yield factually incorrect outputs such as **"He was born in Washington D.C."**
-
-By employing **contrastive decoding**, we take the outputs from our expert (larger) model and subtract the probabilities assigned by the weaker (smaller) model. This process emphasizes outputs that the stronger model deems probable but the weaker model does not, likely because these are facts known to the larger model but not the smaller one. In this example, we might obtain the actual year Barack Obama was born—a fact the larger model knows and the smaller model doesn't.
-
-This method is part of a broader class of techniques that use external information to improve decoding by adjusting the probability distribution at each step.
-
-Lets look at a few questions that i had when i read this for the first time...
-
-**Does this approach improve upon standard methods?** Generally, yes. Both the expert and weak models might assign high probabilities to degenerate cases like repetitive sequences because they're easy patterns to learn. However, genuinely valuable outputs that only the expert model can produce tend to have low probabilities under the weak model. By subtracting the weak model's probabilities, we filter out these less desirable behaviors, retaining the high-quality outputs.
-
-**When generating longer sequences with contrastive decoding, how do you decide when to involve the expert model?** In contrastive decoding, this adjustment occurs at every individual time step. We use the expert model to generate predictions and incorporate the amateur model to subtract probabilities for each next token. While the paper applies this at every step, you could opt to use it selectively—such as when facing high uncertainty or a less sharp probability distribution.
-
-**How weak should the weak predictor be?** The paper doesn't suggest a significant disparity between the two models used. For instance, they experimented with GPT-2 XL and GPT-2 small, which differ in parameter counts and data but aren't drastically different in capability. The key is to choose a weak model that's not so similar to the expert that it subtracts useful information, nor so weak that it lacks any valuable insights about the task. The optimal choice may vary depending on the specific task at hand.
-
-**Could highly plausible tokens receive low contrastive scores if both models assign them similar probabilities, potentially causing the model to overlook good continuations?** 
-
-Yes, highly plausible tokens can receive low contrastive scores when both the expert and amateur models assign them similar probabilities, which might cause the model to overlook good continuations. To prevent this, the authors implement an **adaptive plausibility constraint** that ensures only tokens deemed sufficiently probable by the expert model are considered. By filtering out less probable tokens and having the amateur model adjust the scores of the remaining candidates, the approach maintains high-quality and distinctive continuations without discarding promising tokens.
+So far, we've covered the basic ways language models generate text. But the world of natural language processing is always evolving, with new techniques popping up to make these models smarter and faster. In this section, we'll explore some of these innovative decoding methods that are taking text generation to the next level.
 
 ## Speculative Decoding
 
-In the realm of large language models, generating text efficiently without compromising quality is a significant challenge. **Speculative decoding** emerges as a powerful technique to speed up the inference process by leveraging a faster approximation model alongside the target model. This post delves into the mathematical underpinnings of speculative decoding, illustrates it with a detailed example, and discusses its advantages and practical considerations.
-
----
+People don't always need the latest and greatest large language models (LLMs) to solve their problems, especially since most of us spend our time asking simple questions like, "How many 'r's are in 'strawberry'?" You don't need OpenAI's servers spinning up their massive trillion-parameter models for such straightforward queries when a much smaller model can provide the same answer. Using smaller models results in a lower memory footprint and more savings, which can also benefit the user. Therefore, why not use smaller models for simple questions and bring in the expert models when the smaller ones are not sufficient? This is a high-level overview of speculative decoding. Many prominent AI researchers believe that companies like OpenAI and Anthropic are implementing this approach when serving their models.
 
 ### Understanding Speculative Decoding
 
-Speculative decoding accelerates text generation by using a lightweight approximation model to generate multiple candidate tokens in parallel, and then evaluating these candidates with the accurate but slower target model. By accepting tokens that are probable under the target model and adjusting the distribution when necessary, we ensure that the final output matches the target model's output distribution without the computational overhead of evaluating every token sequentially with the target model.
+Speculative decoding accelerates text generation by using a lightweight **approximation model** to generate multiple candidate tokens (called speculative tokens) in advance. These speculative tokens are then evaluated by the accurate but slower and larger **target model**. By accepting tokens that are probable under the target model and adjusting the distribution when the tokens produced by the approximation model do not align with the target model, we ensure that the final output matches what the target model would have produced—all without the time taken for sequential decoding from the larger models.
+
+
 
 The key components of speculative decoding are:
 
@@ -377,33 +295,60 @@ The key components of speculative decoding are:
 
 ---
 
-## The Speculative Decoding Algorithm
+<div style="text-align: center;">
+  <img src="/images/Decoding/speculative.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 180%;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  In contrast to autoregressive decoding (left) that generates sequentially, Speculative Decoding (right) first efficiently drafts multiple tokens and then verifies them in parallel using the target LLM. Drafted tokens after the bifurcation position (e.g., ) will be discarded to guarantee the generation quality. Source: 
+  <a href="https://arxiv.org/pdf/2401.07851v3" style="color: rgba(0, 0, 0, 0.6);">Xia et al. (2020)</a>
+</p>
+</div>
 
-The speculative decoding process combines outputs from both the approximation model $ M_q $ and the target model $ M_p $ in a single decoding step.
+### The Speculative Decoding Algorithm
 
-**Step 1: Sampling Guesses from the Approximation Model**
+The speculative decoding process combines outputs from both the approximation model and the target model to generate text more efficiently. It involves generating speculative tokens with the approximation model and then validating them with the target model. Here's how it works:
 
-We begin by using the approximation model $ M_q $ to generate $ \gamma $ speculative tokens. For each speculative token, we compute the probability distribution $ q_i(x) $ based on the current prefix and sample a token $ x_i $ from this distribution. This process is autoregressive, meaning each token is generated based on the prefix plus any previously generated speculative tokens.
+#### Step 1: Generate Speculative Tokens with the Approximation Model
 
-**Step 2: Evaluating with the Target Model**
+- **Starting Point**: Begin with the current prefix $ x_{<t} $.
+- **Speculative Generation**: Use the approximation model $ M_q $ to generate $ \gamma $ speculative tokens $ x_1, x_2, \dots, x_\gamma $ in an autoregressive manner. Each token is generated based on the prefix and any previously generated speculative tokens.
 
-In parallel, we use the target model $ M_p $ to compute the true probability distributions $ p_i(x) $ for each extended prefix resulting from the tokens sampled by $ M_q $. This allows us to assess the likelihood of the speculative tokens under the target model.
+#### Step 2: Evaluate Speculative Tokens with the Target Model
 
-**Step 3: Determining Acceptance of Speculative Tokens**
+- **Probability Computation**: For each speculative token $ x_i $, compute the target model's probability distribution $ p_i(x) $ based on the extended prefix up to $ x_i $.
+- **Purpose**: This assesses how likely each speculative token is under the target model, allowing us to decide whether to accept it.
 
-For each speculative token $ x_i $, we determine whether to accept it based on an acceptance criterion. We calculate the acceptance probability $ a_i = \min\left(1, \frac{p_i(x_i)}{q_i(x_i)}\right) $ and generate a random number $ r_i $ from a uniform distribution between 0 and 1. If $ r_i \leq a_i $, we accept the token. We continue this process sequentially; if a token is rejected, we stop accepting further speculative tokens because their contexts include the rejected token.
+#### Step 3: Decide Whether to Accept Each Speculative Token
 
-**Step 4: Adjusting the Distribution if Needed**
+- **Acceptance Probability**: For each speculative token $ x_i $, calculate:
+  $$
+  a_i = \min\left(1, \frac{p_i(x_i)}{q_i(x_i)}\right)
+  $$
+- **Random Sampling**: Generate a random number $ r_i $ between 0 and 1.
+- **Acceptance Criterion**:
+  - **Accept** $ x_i $ if $ r_i \leq a_i $.
+  - **Reject** $ x_i $ if $ r_i > a_i $, and discard all subsequent speculative tokens (since they depend on the rejected token).
 
-If we reject a token or reach the end of the speculative tokens, we adjust the probability distribution for sampling the next token from the target model. We compute an adjusted distribution $ p'(x) = \text{normalize}(\max(0, p_{n+1}(x) - q_{n+1}(x))) $, where $ n $ is the number of accepted speculative tokens. This adjustment ensures that we account for the probability mass not covered by the accepted speculative tokens.
+#### Step 4: Adjust the Probability Distribution if Needed
 
-**Step 5: Generating the Next Token**
+- **When to Adjust**: If a token is rejected.
+- **Adjusted Distribution**: Compute the adjusted target model distribution for the next token:
+  $$
+  p'(x) = \text{norm}\left(\max\left(0, p_{n+1}(x) - q_{n+1}(x)\right)\right)
+  $$
+  where $ n $ is the number of accepted speculative tokens.
+- **Purpose**: This adjustment accounts for the probability mass already covered by the accepted speculative tokens, ensuring correct sampling for the next token.
 
-Finally, we sample the next token $ t $ from the adjusted distribution $ p'(x) $ using the target model $ M_p $. We then construct the new prefix by concatenating the accepted speculative tokens $ x_1, ..., x_n $ and the new token $ t $.
+#### Step 5: Generate the Next Token from the Target Model
+
+- **Sampling**: Draw the next token $ t $ from the adjusted distribution $ p'(x) $ using the target model $ M_p $.
+- **Update Prefix**: Extend the current prefix by appending the accepted speculative tokens and the new token $ t $.
+- **Iterate**: Repeat the process starting from Step 1 with the updated prefix.
+
+
 
 ---
 
-## Detailed Example
+### Detailed Example
 
 To illustrate the speculative decoding algorithm, let's walk through a concrete example.
 
@@ -461,17 +406,32 @@ After normalization (since total mass is 0.1), we have $ p'(\text{over}) = 1.0 $
 
 We sample $ t $ from $ p'(x) $, which must be "over" since $ p'(\text{over}) = 1.0 $. We construct the new prefix by adding the accepted tokens and the new token: "The quick brown **fox jumps over**".
 
----
+<div style="text-align: center;">
+  <img src="/images/Decoding/speculative_decoding.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 180%;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+Each line represents one iteration of the algorithm. 
+The green tokens are the suggestions made by the approximation model (here, a GPT-like Transformer decoder with 6M parameters
+trained on lm1b with 8k tokens) that the target model (here, a GPT-like Transformer decoder with 97M parameters in the same setting)
+accepted, while the red and blue tokens are the rejected suggestions and their corrections, respectively. For example, in the first line the
+target model was run only once, and 5 tokens were generated.
+ Source: 
+  <a href="https://arxiv.org/pdf/2211.17192" style="color: rgba(0, 0, 0, 0.6);">Leviathan et al. (2020)</a>
+</p>
+</div>
 
-## Theoretical Justification
+### Why Speculative Decoding Works
 
-Speculative decoding uses an acceptance-rejection sampling mechanism to correct for discrepancies between the approximation model $ M_q $ and the target model $ M_p $. By accepting samples from $ M_q $ with a probability proportional to $ \frac{p(x)}{q(x)} $, we ensure that the accepted tokens follow the target distribution $ p(x) $.
+At first glance, speculative decoding might seem counterintuitive—using two models and computing probabilities twice to save time? I had the same skepticism when I first encountered the concept. How could this approach possibly be more efficient when it appears we're doubling our efforts?
 
-When tokens are rejected, we adjust the distribution for the next token to account for the probability mass not covered by $ M_q $. This adjustment ensures that the final output aligns with the target model's distribution, preserving the quality of the generated text.
+The key lies in understanding the autoregressive nature of language models. Traditionally, generating each token sequentially with a large model is time-consuming because each new token depends on all the previous ones, which prevents any form of parallel processing. This sequential dependency was a major bottleneck that frustrated many users, including myself, who experienced slower generation speeds with models like GPT-4.
 
----
+Speculative decoding offers a clever workaround. By leveraging a lightweight approximation model, we can generate multiple speculative tokens in advance. Since this approximation model is both fast and efficient, producing these tokens doesn't add much overhead. Imagine having a smaller, distilled version of the model doing the heavy lifting upfront—it feels almost like having an assistant that anticipates your next move.
 
-## Practical Considerations
+Once these speculative tokens are generated, the more accurate but slower target model steps in to evaluate them. This evaluation happens in parallel, significantly reducing the overall latency compared to the traditional sequential approach. It's like having the best expert in the room quickly vet a batch of suggestions from the assistant, ensuring that only the most probable and relevant tokens make it to the final output.
+
+What truly makes speculative decoding work is this balance between speed and accuracy. By accepting tokens that align well with what the target model would produce, we maintain the quality of the output without the painstakingly slow generation process. It's an elegant solution that not only speeds things up but also preserves the integrity of the responses, making the entire system more efficient and user-friendly.
+
+### Practical Considerations
 
 **Choosing the Completion Parameter ($ \gamma $)**
 
@@ -481,38 +441,18 @@ There is a trade-off in selecting $ \gamma $. A larger $ \gamma $ increases the 
 
 The effectiveness of speculative decoding depends on the approximation quality of $ M_q $. A closer match between $ q(x) $ and $ p(x) $ leads to higher acceptance rates, improving efficiency. However, $ M_q $ must be significantly faster than $ M_p $ to justify its use.
 
-**Computational Resources**
 
-Speculative decoding requires hardware capable of parallel processing to run $ M_p $ on multiple prefixes simultaneously. This may increase memory usage and computational demands, which should be considered when implementing this technique.
+## References:
 
-**Implementation Tips**
+[1] https://arxiv.org/pdf/1904.09751
 
-- Utilize batch processing to optimize computations.
-- Cache repeated computations when possible to reduce redundancy.
-- Handle calculations carefully to prevent numerical instability, such as division by zero or overflow errors.
+[2] https://arxiv.org/pdf/2401.07851v3
 
----
+[3] https://arxiv.org/pdf/2211.17192
 
-## Advantages and Limitations
+[4] https://people.cs.umass.edu/~miyyer/cs685/
 
-**Advantages**
+[5] https://phontron.com/class/anlp2024/
 
-Speculative decoding reduces the number of sequential steps required by $ M_p $, accelerating the inference process. The technique is flexible, compatible with various sampling methods, and can be adapted to different models. Importantly, the final outputs align with the target model's distribution, maintaining text generation quality.
+[6] https://web.stanford.edu/class/cs224n/
 
-**Limitations**
-
-The algorithm adds complexity to the decoding process, requiring careful implementation. There may be increased computational resource requirements due to parallel computations. Additionally, the effectiveness of speculative decoding relies on the approximation quality of $ M_q $; if $ M_q $ is not a good approximation of $ M_p $, the acceptance rate may be low, reducing the efficiency gains.
-
----
-
-## Conclusion
-
-Speculative decoding offers an innovative approach to speeding up language model inference without sacrificing output quality. By combining a fast approximation model with an acceptance-rejection mechanism, we can generate multiple tokens in parallel, significantly accelerating the decoding process. This technique is particularly beneficial when working with large models where inference speed is a bottleneck.
-
----
-
-*Note: This post simplifies complex mathematical concepts for clarity. For a deeper mathematical understanding, refer to the original research papers on speculative decoding and sampling methods in language models.*
-
----
-
-This detailed explanation covers the theoretical foundations, step-by-step procedures, practical considerations, and potential benefits and limitations of speculative decoding, providing a comprehensive understanding of the algorithm.

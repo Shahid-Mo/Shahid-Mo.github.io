@@ -4,322 +4,299 @@ date: 2024-10-11
 draft: true
 comments: false
 ---
+In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms, 
 
-<div style="text-align: center;">
-  <img src="/images/where/meme_where.png" alt="Mixed Precision Training" style="display: block; margin: 0 auto;width: 70%;">
-</div>
+as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.
 
-```CUDA error: out of memory```
+The topics i would like to cover are as follows
 
-If you've ever tried to train a deep learning model, the dreaded **CUDA error: out of memory** is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered **about how memory gets allocated during training?**? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models.
+1. DDP (Distributed Data Parallel)
+2. Tensor Model parallelism
+3. Pipeline model parallelism
+4. Memory efficient pipeline parallelism
 
-# Understanding Memory Consumption in Deep Learning
 
-Before diving into the solutions, it's crucial to understand **what consumes memory** during training. The main sources of memory usage are:
+Lest start Multi GPU Training 
 
-1. **Model Weights**: The parameters of your neural network.
-2. **Gradients**: Calculated during backpropagation.
-3. **Optimizer States**: Additional variables maintained by optimizers like Adam.
+start with DDP or distributed data parallel.
 
-Additionally, there's something called **Residual Memory** (a term coined by the ZeRO paper), which includes:
+## DDP (Distributed Data Parallel)
 
-- **Activations**: Outputs from each layer needed for backpropagation.
-- **Temporary Buffers**: Used for intermediate computations.
-- **Memory Fragmentation**: Wasted memory due to how GPUs allocate memory blocks.
+basically ddp is quite easy, most of the effort of ddp lies in making efficient in actula production, dealing wiht race conditions etc...
 
-Let's break these down.
+## Pipeline model parallelism
 
-## The Adam Optimizer: A Quick Refresher
+In data parallelism we say how we can fit multiple copies of the same model on different GPUs, but now we consider the more common scenarion of the model not being able to fit on a single gpu, 
+There are primarily two ways we can tackle this problem pipeline parallelism is the more intuitive one, so lets start with that.
 
-If you're already familiar with the Adam optimizer, feel free to skip this section. If not, here's a brief overview to ensure we're all on the same page.
+The basic idea of pipeline parallelism is quite simple, if your model dosent fit on a single GPU, slice up the different layers and put them across multiple gpus, so each gpu takes input as the output of the previous partition as input, but the problem here is obvious, you cant rent a h100 gpu cluster for 8 bucks an hour and have this bad gpu utilization, so here are some techniques that make model parallelism efficient
 
-### 1. Gradient Descent (GD)
+1. **PipeDream: Generalized Pipeline Parallelism for DNN Training**
 
-**Gradient Descent** is the foundational optimizer used to minimize a loss function by iteratively updating parameters in the direction of the steepest descent (negative gradient).
+**Pipeline Parallelism in Deep Learning Training: An In-Depth Explanation Inspired by the PipeDream Paper**
 
-**Update Rule:**
-$$
-\theta_{t+1} = \theta_t - \eta \cdot \nabla L(\theta_t)
-$$
+---
 
-- $\theta_t$: Parameters at iteration $t$
-- $\eta$: Learning rate
-- $\nabla L(\theta_t)$: Gradient of the loss function with respect to $\theta_t$
+Pipeline parallelism is a technique used to accelerate the training of deep neural networks (DNNs) by partitioning the computation graph across multiple devices, such as GPUs. The PipeDream paper introduces a novel approach to pipeline parallelism that addresses the limitations of traditional data and model parallelism methods. Below is a detailed explanation of pipeline parallelism as described in the PipeDream paper.
 
-**Limitations:**
-- **Fixed Learning Rate:** Choosing an appropriate learning rate can be challenging; too high may cause divergence, too low may slow down convergence.
-- **No Adaptation:** Doesn't adapt the learning rate based on the geometry of the loss surface, potentially leading to inefficient updates.
+### **Background**
 
-### 2. Introducing Adam Optimizer
+Traditional parallelization strategies for training DNNs include:
 
-**Adam (Adaptive Moment Estimation)** combines the advantages of two other extensions of GD: **Momentum** and **RMSProp**. It computes adaptive learning rates for each parameter by maintaining estimates of both the first moment (mean) and the second moment (uncentered variance) of the gradients.
-
-### Key Concepts:
-
-1. **Momentum:**
-   - Helps accelerate Gradient Descent in the relevant direction and dampens oscillations.
-   - Maintains an exponentially decaying average of past gradients.
-
-2. **RMSProp:**
-   - **Adaptive Learning Rates:** Adjusts the learning rate for each parameter individually based on the magnitude of recent gradients.
-   - Parameters with higher gradients receive smaller updates, and vice versa.
-   - **Moving Average of Squared Gradients:** Maintains a moving average of squared gradients to normalize parameter updates, preventing vanishing or exploding gradients.
-
-**Adam** effectively combines these by maintaining both moving averages (from Momentum and RMSProp) and adapting learning rates accordingly.
-
-### Adam's Update Mechanism:
-
-Adam maintains two estimates for each parameter $\theta$:
-
-- **First Moment ($m_t$):** Estimate of the mean of the gradients.
-- **Second Moment ($v_t$):** Estimate of the uncentered variance (mean of the squared gradients).
-
-**Update Steps:**
-
-1. **Initialize Parameters:**
-   - $m_0 = 0$ (first moment)
-   - $v_0 = 0$ (second moment)
-   - Choose hyperparameters:
-     - Learning rate ($\eta$)
-     - Decay rates for the moment estimates ($\beta_1$ for $m_t$, $\beta_2$ for $v_t$)
-     - Small constant ($\epsilon$) to prevent division by zero
-
-2. **At each iteration $t$:**
-
-   a. **Compute Gradient:**
-   $$
-   g_t = \nabla L(\theta_{t-1})
-   $$
-
-   b. **Update First Moment ($m_t$):**
-   $$
-   m_t = \beta_1 \cdot m_{t-1} + (1 - \beta_1) \cdot g_t
-   $$
-
-   c. **Update Second Moment ($v_t$):**
-   $$
-   v_t = \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2
-   $$
-
-   d. **Bias Correction:**
-   $$
-   \hat{m}_t = \frac{m_t}{1 - \beta_1^t}
-   $$
-   $$
-   \hat{v}_t = \frac{v_t}{1 - \beta_2^t}
-   $$
-
-   e. **Update Parameters:**
-   $$
-   \theta_t = \theta_{t-1} - \eta \cdot \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
-   $$
-
-**Algorithm Summary:**
-
-<div style="text-align: center;">
-  <img src="/images/where/where_adam.png" alt="Adam Optimizer Overview" style="display: block; margin: 0 auto; width: 50%;">
-</div>
-
-## Residual Memory Consumption
-
-Now that we understand the primary components consuming memory—**model weights**, **gradients**, and **optimizer states**—let's explore **Residual Memory**, which includes:
-
-1. **Activations:**
-   - Outputs of each sub-component (e.g., self-attention, feed-forward networks) within each layer.
-   - For large models, activations can consume significant memory. For example, training a 1.5B parameter GPT-2 model with a sequence length of 1,000 tokens and a batch size of 32 can consume around **60 GB** of memory solely for activations.
-   - **Mitigation:** **Activation checkpointing** (or recomputation) saves memory by storing only a subset of activations and recomputing others during the backward pass. This can reduce memory consumption (e.g., from 60 GB to 8 GB) but introduces a computational overhead of about **33%**.
-
-<div style="text-align: center;">
-  <img src="/images/where/where_checkpointing.png" alt="Mixed Precision Training" style="display: block; margin: 0 auto;width: 70%;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-    Figure 1: Activation Checkpointing Process. Source: 
-    <a href="https://blog.dailydoseofds.com/p/where-did-the-gpu-memory-go" style="color: rgba(0, 0, 0, 0.6);">Daily Dose of Data Science</a>
-  </p>
-</div>
-
-2. **Temporary Buffers:**
-   - Store intermediate results during operations like gradient all-reduce (used in distributed training) and gradient norm computation (used for gradient clipping).
-   - For large models, temporary buffers can require significant memory. For instance, a 1.5B parameter model might need around **6 GB** for a flattened FP32 buffer used during gradient all-reduce operations.
-
-3. **Memory Fragmentation:**
-   - Even with considerable available memory, fragmentation can cause **Out-of-Memory (OOM)** errors because the GPU allocates memory in blocks. If there's space for some parameters but not enough contiguous space for all, OOM errors occur.
-   - **Example:** Training extremely large models might fail with over **30%** of memory still free but unusable due to fragmentation.
-
-<div style="text-align: center;">
-  <img src="/images/where/where_fragment.png" alt="Mixed Precision Training" style="display: block; margin: 0 auto; width: 70%;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-    Figure 2: Memory Fragmentation in GPU Training. Source: 
-    <a href="https://blog.dailydoseofds.com/p/where-did-the-gpu-memory-go" style="color: rgba(0, 0, 0, 0.6);">Daily Dose of Data Science</a>
-  </p>
-</div>
-
-Unfortunately, **Residual Memory** consumption is largely out of our control. However, understanding where the memory goes is essential for optimizing what we can manage.
-
-## Controlling Memory Consumption: Model Weights, Gradients, and Optimizer States
-
-Now, let's focus on the memory components we can control: **model weights**, **gradients**, and **optimizer states**.
-
-### Mixed Precision Training: A Memory-Saving Technique
-
-While you can store all components in FP32, it's often unnecessary. **Mixed Precision Training** is a widely adopted technique in the industry that involves storing some components in lower precision (e.g., FP16) to save memory.
-
-#### How Mixed Precision Training Works
-
-<div style="text-align: center;">
-  <img src="/images/multi_gpu/mp_training.png" alt="Mixed Precision Training" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-    Figure 3:  Mixed precision training iteration for a layer. Source: 
-    <a href="https://arxiv.org/pdf/1710.03740" style="color: rgba(0, 0, 0, 0.6);">Narang et al. (2018)</a>
-  </p>
-</div>
-
-**Mixed Precision Training** leverages both FP16 and FP32 data types:
-
-- **Parameters and Activations:** Stored as FP16, enabling the use of high-throughput tensor cores on NVIDIA GPUs.
-- **Optimizer States:** Maintained in FP32 to ensure numerical stability during updates.
-
-During mixed-precision training, both the forward and backward propagation are performed using FP16 weights and activations. However, to effectively compute and apply the updates at the end of the backward propagation, the mixed-precision optimizer keeps an FP32 copy of the parameters as well as an FP32 copy of all the other optimizer states.
-
-### Memory Computation
-
-Mixed precision training for a model with $ \Psi $ parameters, an FP16 (16-bit floating point) copy of the parameters requires $ 2\Psi $ bytes of memory. During training, gradients of these parameters are also computed and stored in FP16 format, which consumes another $ 2\Psi $ bytes. 
-
-In addition to the parameters and gradients, Adam maintains optimizer states to efficiently update the model during training. These optimizer states include an FP32 (32-bit floating point) copy of the parameters, as well as momentum (first moment estimates) and variance (second moment estimates) for each parameter. Each of these three components—parameter copies, momentum, and variance—requires $ 4\Psi $ bytes of memory, totaling $ 12\Psi $ bytes for all optimizer states.
-
-Combining these components, the total memory requirement for mixed-precision Adam training becomes:
-$$
-2\Psi \ (\text{FP16 Parameters}) + 2\Psi \ (\text{FP16 Gradients}) + 12\Psi \ (\text{FP32 Optimizer States}) = 16\Psi \ \text{bytes}
-$$
-
-For example, consider the GPT-2 model, which has 1.5 billion parameters ($ \Psi = 1.5 \times 10^9 $). Plugging this into the equation:
-$$
-16\Psi = 16 \times 1.5 \times 10^9 \ \text{bytes} = 24 \ \text{GB}
-$$
-This means that training GPT-2 with mixed-precision Adam requires at least **24 GB** of memory. In contrast, storing only the FP16 parameters of the model would require just $ 1.5 \times 10^9 \times 2 $ bytes, which equals **3 GB**. This comparison clearly illustrates that while mixed-precision training with Adam offers computational advantages, it significantly increases the memory usage—from 3 GB for the parameters alone to 24 GB when including gradients and optimizer states.
-
-However, the **FP16-FP32 precision scheme** comes with its own set of challenges. Due to the restricted numerical range of FP16, this scheme can cause instabilities when training large models. Below is an excerpt from the BLOOM model training team, who shared their experiences in a [blog post on Hugging Face](https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer "The Technology Behind BLOOM Training"):
-
-> ### BF16Optimizer
-> Training huge LLM models in FP16 is a no-no.
-> We have proved it to ourselves by spending several months training a 104B model which, as you can tell from the TensorBoard, was a complete failure. We learned a lot of things while fighting the ever-diverging LM loss:
-> 
-> <div style="text-align: center;">
->   <img src="/images/multi_gpu/tensorboard_hf_excerpt.png" alt="TensorBoard Excerpt" style="display: block; margin: 0 auto;">
-> </div>
-> 
-> We also received the same advice from the Megatron-LM and DeepSpeed teams after training a 530B model. The recent release of OPT-175B also reported significant difficulties in training with FP16.
-
-This does not mean that you **can't** train deep learning models using the FP16-FP32 precision scheme. However, for massive models with hundreds of billions of parameters, this approach is not the most effective.
-
-### Embracing BF16-FP32 Precision
-
-So, should we abandon the hope for mixed precision training for massive llms? **Absolutely not!** You might remember from the [quantization blog post](https://shahid-mo.github.io/posts/quantization/ "Quantization and BF16 Datatype") my praise of the BF16 datatype. If you have a GPU with the Ampere architecture or later, you can leverage the **BF16-FP32 precision format** for mixed precision training. This approach is not fundamentally different from the FP16-FP32 scheme but offers significant advantages, especially for training massive language models.
-
-### Implementing Mixed Precision with BF16
-
-<div style="text-align: center;">
-  <img src="/images/multi_gpu/mp_bf16_training.png" alt="Mixed Precision with BF16" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-    Figure 4: shows the mixed precision data flow used to train deep neural networks using BFLOAT16 numeric format. The core compute kernels represented as GEMM operations accept inputs as BFLOAT16 tensors and accumulate the output to FP32 tensors. Source: 
-    <a href="https://arxiv.org/pdf/1905.12322" style="color: rgba(0, 0, 0, 0.6);">Kalamkar et al. (2019)</a>
-  </p>
-</div>
-
-Here's a more concise explanation of the mixed precision data flow using BFLOAT16:
-
-1. **Input:** Activations from the previous layer (L-1) in BFLOAT16.
-2. **Forward Pass:**
-   - Multiply BFLOAT16 activations with BFLOAT16 weights.
-   - Accumulate results in FP32.
-   - Quantize output to BFLOAT16 for the next layer's input.
-
-3. **Backward Pass:**
-
-   a. **Error Gradients:**
-   - Multiply BFLOAT16 error gradients with transposed weights.
-   - Accumulate in FP32, then quantize to BFLOAT16.
-
-   b. **Weight Gradients:**
-   - Multiply error gradients with transposed activations.
-   - Accumulate results in FP32.
-
-4. **Weight Update:**
-   - Add FP32 weight gradients to FP32 master weights.
+1. **Data Parallelism (DP):** Distributes different data samples (minibatches) across multiple GPUs, each with a complete copy of the model. After computing gradients, the GPUs synchronize to update the model parameters.
    
-5. **Precision Management:**
-   - Store master weights in FP32.
-   - Use BFLOAT16 for computations and storage where possible.
-   - Perform critical accumulations in FP32.
-   - Convert between FP32 and BFLOAT16 as needed (shown as 'Q' operations).
+2. **Model Parallelism (MP):** Splits the model itself across multiple GPUs. Each GPU holds a portion of the model and processes the same data sample sequentially through the different parts.
 
-This approach balances **computational efficiency** (using BFLOAT16) with **numerical stability** (using FP32 for critical operations), enabling effective training of large neural networks.
+While these methods have their advantages, they also have limitations, especially when scaling to large models or a high number of GPUs. Pipeline parallelism aims to overcome these limitations by combining aspects of both data and model parallelism.
 
-Since the BF16 datatype shares the same mantissa as FP32 (allowing it to represent the same range of values), you might wonder: **Why not use BF16 for the optimizer states as well?** 
+### **What is Pipeline Parallelism?**
 
-As you might correctly guess, training models in lower precision allows us to save memory and avoid numerical instabilities. However, an important question remains: **Will models trained in lower precision be as effective as their FP32 counterparts if all other factors remain the same?** To explore this issue, let's examine the paper **"Scaling Language Models: Methods, Analysis & Insights from Training Gopher"** by Google DeepMind.
+Pipeline parallelism involves dividing the layers of a DNN into sequential stages and assigning each stage to a different GPU. Each GPU is responsible for the forward and backward computations of its assigned layers. By injecting multiple minibatches into the pipeline, all GPUs can work simultaneously, processing different minibatches at different stages.
 
-<div style="text-align: center;">
-  <img src="/images/where/where_lessons_learnt.png" alt="Mixed Precision Training" style="display: block; margin: 0 auto;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
-    Figure 5: For four different combinations of float32 and bfloat16 parameters (detailed below) show performance on three different downstream tasks using a 417M parameter model. Source: 
-    <a href="https://arxiv.org/pdf/2112.11446" style="color: rgba(0, 0, 0, 0.6);">Rae et al. (2021)</a>
-  </p>
-</div>
+### **How Pipeline Parallelism Works**
 
-In this paper, the authors examined the effects of using the **bfloat16 (bf16)** numerical format compared to full **float32 (fp32)** precision for training large language models. They discovered that the optimal approach is to **maintain float32 parameters solely for optimizer updates** by storing a float32 copy in the optimizer state, while using bf16 for both model parameters and activations. This configuration effectively **matches the performance of full fp32 training**. The study tested four different precision configurations on a 417M parameter model across three downstream tasks, demonstrating that using a float32 optimizer state preserves key performance metrics—loss, accuracy, and perplexity—while leveraging the efficiency benefits of bf16 training.
+1. **Partitioning the Model:**
+   - The DNN is divided into several stages, each containing a consecutive set of layers.
+   - Each stage is assigned to a separate GPU.
 
-### Exploring FP8: The Next Frontier
+2. **Injecting Minibatches:**
+   - Multiple minibatches are introduced into the pipeline sequentially.
+   - As one GPU completes the forward pass for a minibatch, it sends the output activations to the next GPU and starts processing the next minibatch.
 
-The latest NVIDIA Hopper architecture and beyond support the **FP8** format. Researchers have been exploring using FP8 to further optimize model training. However, instead of using FP8 as a data storage format, it is primarily utilized for **GEMM (General Matrix-Matrix Multiplication) computations**. The **NVIDIA Transformer Engine (TE)** applies FP8 solely for GEMM operations while retaining master weights and gradients in higher precision formats like FP16 or FP32.
+3. **Forward and Backward Passes:**
+   - The last stage (GPU) starts the backward pass immediately after completing the forward pass for a minibatch.
+   - Each GPU performs the backward pass for its stage and sends the gradients to the previous GPU while starting computations for the next minibatch.
 
-Despite not offering substantial memory savings—since model weights are still stored in higher precision—FP8 calculations are **twice as fast** as FP16/BF16 computations. 
+4. **Asynchronous Communication:**
+   - Communication of activations and gradients between GPUs is done asynchronously.
+   - This allows for overlapping computation and communication, improving overall efficiency.
 
-<div style="text-align: center;">
-  <img src="/images/quant_p1/fp8_vs_bf16.png" alt="Training loss comparison across different floating-point formats and model sizes" style="display: block; margin: 0 auto;width: 70%;">
-  <p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
- Training loss comparison across different floating-point formats and model sizes. Source: nai milra 
-  <a href="https://arxiv.org/pdf/2209.05433" style="color: rgba(0, 0, 0, 0.6);">(FP8 FORMATS FOR DEEP LEARNING)</a>
-</p>
-</div>
+### **Advantages of Pipeline Parallelism**
 
-The results are quite impressive: FP8 achieves comparable performance to BF16, even for models scaling up to 175 billion parameters. This suggests that FP8 is a highly promising format for accelerating training without significantly affecting model accuracy.
+1. **Reduced Communication Overhead:**
+   - Communication is limited to adjacent GPUs, transferring only the necessary activations and gradients.
+   - This is more efficient than DP, which requires global synchronization and communication of all model parameters.
 
-## Summary and Final Thoughts
+2. **Improved Resource Utilization:**
+   - By keeping multiple minibatches in flight, all GPUs remain active, reducing idle time.
+   - Overlapping computation and communication maximizes hardware utilization.
 
-Effective GPU memory management is a critical component in training large and complex deep learning models. Encountering the **CUDA out-of-memory** error is a common hurdle, but with the right strategies, you can overcome these challenges and optimize your training processes.
+### **Challenges and Solutions in PipeDream**
 
-### Key Strategies We've Explored:
+The PipeDream paper identifies three main challenges in implementing effective pipeline parallelism and proposes solutions for each.
 
-- **Optimizer States:** Understanding how optimizers like Adam maintain additional states helps in making informed choices about memory usage. Selecting memory-efficient optimizers or tweaking their configurations can lead to significant savings.
+#### **Challenge 1: Work Partitioning**
 
-- **Mixed Precision Training:** Utilizing lower precision formats such as **FP16**, **BF16**, and the emerging **FP8** offers substantial reductions in memory consumption. These precision formats strike a balance between efficiency and maintaining model performance, making them invaluable for training large-scale models.
+**Problem:**
+- Uneven computational workloads across stages can lead to pipeline bubbles, where some GPUs are idle waiting for others to complete.
+- Excessive communication between GPUs can reduce throughput.
 
-By implementing these strategies, you can train larger models more efficiently and avoid the common pitfalls of running out of GPU memory. Happy training!
+**Solution:**
+- **Automated Partitioning Algorithm:**
+  - Profiles the DNN to estimate computation times and output sizes for each layer.
+  - Uses dynamic programming to partition layers into stages such that each stage has a balanced computational load.
+  - Takes into account hardware topology and communication bandwidth to minimize communication overhead.
+  - Allows for stage replication (using data parallelism within a stage) when perfect load balancing isn't possible with simple partitioning.
+
+**Process:**
+1. **Profiling:**
+   - Measure computation times (forward and backward passes) and activation sizes for each layer.
+2. **Optimization:**
+   - Solve a dynamic programming problem to find the optimal partitioning that balances the workload and minimizes communication.
+   - Consider replication factors for stages to further balance the pipeline.
+
+#### **Challenge 2: Work Scheduling**
+
+**Problem:**
+- Deciding whether a GPU should perform a forward or backward pass at any given time.
+- Routing minibatches correctly when stages are replicated.
+
+**Solution:**
+- **One-Forward-One-Backward (1F1B) Scheduling:**
+  - Each GPU alternates between performing a forward pass for one minibatch and a backward pass for another minibatch.
+  - This schedule ensures that all GPUs are continuously utilized.
+
+- **Deterministic Round-Robin Load Balancing (1F1B-RR):**
+  - When stages are replicated, minibatches are assigned to replicas in a round-robin fashion based on their IDs.
+  - Ensures that each minibatch is processed by the same GPU for both forward and backward passes within a stage.
+
+**Process:**
+1. **Startup Phase:**
+   - The pipeline is filled with an optimal number of minibatches to reach steady state.
+2. **Steady State:**
+   - GPUs follow the 1F1B schedule, maintaining a balance between forward and backward computations.
+
+#### **Challenge 3: Effective Learning**
+
+**Problem:**
+- Inconsistency in parameter versions used during forward and backward passes can lead to invalid gradients and hinder convergence.
+- Since parameters are updated asynchronously across stages, a minibatch might use different parameter versions in its forward and backward passes.
+
+**Solution:**
+- **Weight Stashing:**
+  - Store (stash) the parameters used during the forward pass of each minibatch.
+  - Use the same stashed parameters during the backward pass to compute gradients.
+  - Ensures that gradients are computed consistently with the parameters used in the forward pass.
+
+- **Vertical Sync (Optional):**
+  - Coordinates the use of parameter versions across stages.
+  - Each minibatch uses the same parameter version for both forward and backward passes across all stages.
+  - Involves more coordination and storage but provides consistency similar to synchronous data parallelism.
+
+**Process:**
+1. **During Forward Pass:**
+   - Use the latest available parameters.
+   - Stash the parameters for each minibatch.
+2. **During Backward Pass:**
+   - Retrieve the stashed parameters corresponding to the minibatch.
+   - Compute gradients and update parameters accordingly.
+
+### **Understanding Staleness and Consistency**
+
+- **Staleness:**
+  - Refers to the difference in parameter versions used when computing gradients.
+  - Weight stashing reduces staleness within a stage but doesn't eliminate it across stages.
+  
+- **Consistency Models:**
+  - **Without Weight Stashing:** Parameters may be inconsistent, leading to invalid gradients.
+  - **With Weight Stashing:** Consistent within a stage; some staleness across stages.
+  - **With Vertical Sync:** Consistent across all stages for each minibatch; mimics synchronous training.
+
+### **Memory Considerations**
+
+- **Memory Overhead:**
+  - Weight stashing increases memory usage since parameters need to be stored for each in-flight minibatch.
+  - However, the per-GPU memory usage remains comparable to data parallelism.
+
+- **Optimization Techniques:**
+  - **Activation Recomputation:** Discard activations after forward pass and recompute them during backward pass to save memory.
+  - **Gradient Accumulation:** Aggregate gradients over multiple minibatches before updating parameters.
+
+### **Implementation Highlights**
+
+- **PipeDream Runtime:**
+  - Manages device memory, schedules tasks, and handles communication between GPUs.
+  - Integrates with deep learning frameworks like PyTorch.
+
+- **Communication Backend:**
+  - Uses efficient communication libraries (e.g., Gloo, NCCL) for transferring activations and gradients.
+
+- **Checkpointing:**
+  - Supports periodic saving of model parameters for fault tolerance.
+  - Each stage checkpoints independently, reducing coordination overhead.
+
+### **Benefits of PipeDream's Pipeline Parallelism**
+
+- **Scalability:**
+  - Enables training of larger models that don't fit into the memory of a single GPU.
+  - Efficiently utilizes multiple GPUs without incurring excessive communication overhead.
+
+- **Throughput Improvement:**
+  - By keeping all GPUs busy and overlapping computation with communication, PipeDream achieves higher throughput compared to traditional methods.
+
+- **Flexibility:**
+  - Can be combined with data parallelism within stages (hybrid parallelism) for further scalability.
+
+### **Conclusion**
+
+Pipeline parallelism, as implemented in the PipeDream paper, presents an effective method for scaling DNN training across multiple GPUs. By carefully partitioning the model, scheduling work to maximize GPU utilization, and ensuring consistent parameter usage through weight stashing, PipeDream overcomes the challenges associated with pipeline parallelism. This approach leads to significant improvements in training throughput while maintaining model convergence, making it a valuable technique for training large-scale deep learning models.
+
+8:37
+parallelism uh we split the layers or operators in the model over multiple devices uh and then we also will split
+8:45
+each batch of inputs into smaller micro batches and then paralyze execution across these micro
+8:52
+batches to be very concrete uh let's look at this visually um so this is a
+8:57
+model uh that we're splitting over four devices uh so let's say that if the if the model
+9:06
+has eight Transformer layers uh what we're going to do is we're going to assign the first two Transformer layers
+9:12
+to the first device the next two to the second device and so on now in order to perform a single
+9:18
+forward and backward path through the model we're going to need to take a single input pass it through device one
+9:26
+device one performs its computation uh represented by this blue box computes an
+9:32
+what what we call an output activation and then this output activation needs to be communicated to the next device uh uh
+9:40
+and and and and and the second device can start it uh it its computation until it's receive this activation from the
+9:47
+the first device um and and so what that means is that there is this sequential
+9:53
+data dependency across each of these devices um and lots of these devices are
+9:58
+idle um in in particular at any point in time only one device is
+10:04
+active um and so so very quickly you can see that uh this scheme has uh pretty uh
+10:11
+poor utilization and low throughput so instead what we can do is we can take this input batch a um and
+10:19
+split it into smaller micro batches uh let's say that this this uh input batch
+10:26
+a has has four inputs in it um what we can do is we can split that um input of
+10:32
+uh input batch of four into four micro batches of size one and then pipeline execution across um those micro
+10:41
+batches um in particular um this is this is what this looks like um we note now
+10:46
+that we only have sequential uh sequential data dependencies um between
+10:53
+uh devices for a given microbatch um in other words um device 2 now only needs
+10:59
+to wait on device one for um uh this output activation of microbatch A1
+11:06
+before it starts computation so no longer do you have to wait for all four for for device one to complete uh
+11:12
+computation for all four um input samples in in in in in this patch um
+11:18
+instead we can just um we can immediately start uh processing on device 2 as soon as just an a single
+11:26
+input's uh worth of computation is is completed on on device
+11:35
+one after we complete uh uh computation for all of these forward and and
+11:42
+backward passes for these four um uh micro batches uh then we can step the
+11:47
+the optimizer uh which is basically around here um and then we can update
+11:54
+the the weights and move on to the next training iteration
+12:00
+it's easy to see from from from these figures that uh this is much more efficient um compared to the the naive
+12:07
+case where um we only have a single batch uh but there are still some idle
+12:14
+periods we haven't completely eliminated um these idle periods from
+12:20
+from from these timelines um we call um the periods of of time that each device
+12:27
+is is Idle um uh at the start and end of a training iteration the pipeline flush
+12:33
+um and and these are basically fundamental right um uh basically the pipeline flush is the time that devices
+12:39
+need to wait for inputs to actually flow through the the pipeline um and then
+12:45
+subsequently get drained
+12:52
+out so to summarize with pipeline model parallelism we need to perform uh point-to-point communication between
+12:58
+between consecutive pipeline stages uh and we have these pipeline Bubbles at the start and end of every
+13:05
+batch we can actually exactly quantify how much time is spent in the pipeline bubble uh it's actually going to be
+13:11
+equal to P minus one microb batches worth of forward and backward passes uh
+13:16
+where p is the number of pipeline stages um so in the previous figure uh the uh
+13:23
+the number of pipeline stages was four um and the size of the pipeline bubble was three micro batches worth of forward
+13:31
+and and backward pass
 
 
-------
+------------
 
-## References:
+# References
 
-[1] https://blog.dailydoseofds.com/p/where-did-the-gpu-memory-go
+[1] https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer
 
-[2] https://arxiv.org/pdf/1412.6980
-
-[3] https://arxiv.org/pdf/1910.02054
-
-[4] https://arxiv.org/pdf/2112.11446
-
-[5] https://arxiv.org/pdf/2210.02414
-
-[6] https://arxiv.org/pdf/1905.12322
-
-[7] https://arxiv.org/pdf/1710.03740
-
-[8] https://arxiv.org/pdf/2310.18313
-
-[9] https://arxiv.org/pdf/2209.05433
-
-[10] https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer
-
-[11] https://arxiv.org/abs/2305.14314
-
+[2] https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/
