@@ -1,5 +1,5 @@
 ---
-title: "Deconding From Language Models"
+title: "Decoding From Language Models"
 date: 2024-09-11
 draft: false
 comments: true
