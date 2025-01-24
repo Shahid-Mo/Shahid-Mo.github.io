@@ -8,8 +8,17 @@
     <loc>http://localhost:1313/</loc>
     <lastmod>2024-12-11T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>http://localhost:1313/posts/llm_reasoning/</loc>
+    <lastmod>2024-11-09T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>http://localhost:1313/posts/where_v3/</loc>
     <lastmod>2024-10-21T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/rlhf_v2/</loc>
+    <lastmod>2024-10-13T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/multi_gpu_training/</loc>
+    <lastmod>2024-10-11T00:00:00+00:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/posts/decoding-from-language-models/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
@@ -17,8 +26,14 @@
     <loc>http://localhost:1313/posts/from-retrieval-to-rag-part1/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
   </url><url>
+    <loc>http://localhost:1313/posts/pfet/</loc>
+    <lastmod>2024-09-11T00:00:00+00:00</lastmod>
+  </url><url>
     <loc>http://localhost:1313/posts/quantization/</loc>
     <lastmod>2024-09-11T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/posts/gptq/</loc>
+    <lastmod>2024-08-01T09:51:17-04:00</lastmod>
   </url><url>
     <loc>http://localhost:1313/categories/</loc>
   </url><url>

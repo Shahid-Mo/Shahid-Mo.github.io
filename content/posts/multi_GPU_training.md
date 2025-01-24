@@ -1,7 +1,7 @@
 ---
-title: 'Multi_GPU_Training'
+title: 'Multi_GPU_Training [Draft]'
 date: 2024-10-11
-draft: true
+draft: false
 comments: false
 ---
 In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms, 

@@ -1,7 +1,7 @@
 ---
-title: 'Parameter Efficient Fine-tuning of LLMs (PEFT)'
+title: 'Parameter Efficient Fine-tuning of LLMs (PEFT) [Draft]'
 date: 2024-09-11
-draft: true
+draft: false
 ---
 
 # Motivation for PEFT

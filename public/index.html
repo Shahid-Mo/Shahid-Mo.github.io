@@ -175,6 +175,18 @@
 
 <article class="post-entry"> 
   <header class="entry-header">
+    <h2 class="entry-hint-parent">LLM Reasoning [Draft]
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Motivation for Reasoning Classical ML algorithms like Linear Regression, Support Vector Machines, K- Nearest Neighbours etc, have long served as powerful tools for narrow, well-structured problems, but what sets apaprt todays field of AI that distinguishes itself from the previous generation is the ability of todays models to reason (or do sometinig that resembels reasonig, quite convincingly i might add), the ideal of AGI (artificial general intellingence) is a computer that can reason and plan ahead, and current llms can be taught to do many things, this just comes under the paradigm of prompt engineering....</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-11-09 00:00:00 +0000 UTC'>November 9, 2024</span></footer>
+  <a class="entry-link" aria-label="post link to LLM Reasoning [Draft]" href="http://localhost:1313/posts/llm_reasoning/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
     <h2 class="entry-hint-parent">Where Did All the Memory Go?
     </h2>
   </header>
@@ -184,6 +196,33 @@ If you’ve ever tried to train a deep learning model, the dreaded CUDA error: o
   </div>
   <footer class="entry-footer"><span title='2024-10-21 00:00:00 +0000 UTC'>October 21, 2024</span></footer>
   <a class="entry-link" aria-label="post link to Where Did All the Memory Go?" href="http://localhost:1313/posts/where_v3/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">RLHF: PPO [Draft]
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Reinforcement Learning from Human Feedback (RLHF): Aligning LLMs with Human Intent Reinforcement Learning from Human Feedback (RLHF) is a pivotal technique in the advancement of large language models (LLMs), aiming to align their behavior more closely with human intentions and ethical standards. While starting with a large pretrained LLM—such as LLaMA 2 with its 7 billion parameters trained on a trillion tokens—provides a strong foundation, these models can still struggle with handling harmful or toxic queries effectively....</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-10-13 00:00:00 +0000 UTC'>October 13, 2024</span></footer>
+  <a class="entry-link" aria-label="post link to RLHF: PPO [Draft]" href="http://localhost:1313/posts/rlhf_v2/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Multi_GPU_Training [Draft]
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,
+as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.
+The topics i would like to cover are as follows
+DDP (Distributed Data Parallel) Tensor Model parallelism Pipeline model parallelism Memory efficient pipeline parallelism Lest start Multi GPU Training...</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-10-11 00:00:00 +0000 UTC'>October 11, 2024</span></footer>
+  <a class="entry-link" aria-label="post link to Multi_GPU_Training [Draft]" href="http://localhost:1313/posts/multi_gpu_training/"></a>
 </article>
 
 <article class="post-entry"> 
@@ -213,6 +252,20 @@ At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in 
 
 <article class="post-entry"> 
   <header class="entry-header">
+    <h2 class="entry-hint-parent">Parameter Efficient Fine-tuning of LLMs (PEFT) [Draft]
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Motivation for PEFT Consider a company like character.ai, which provides different personas for users. For example, you can talk to a chat bot that mimics Elon Musk and ask, “Why did you buy Twitter?” The model responds as Elon Musk would.
+Now there are primarily three approaches to solving this:
+Context-based approach: Take an LLM and provide it with extensive data about the persona (e.g., Elon Musk’s interviews and tweets) as context, and then tag on your question....</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
+  <a class="entry-link" aria-label="post link to Parameter Efficient Fine-tuning of LLMs (PEFT) [Draft]" href="http://localhost:1313/posts/pfet/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
     <h2 class="entry-hint-parent">Quantization in LLMS (Part 1): LLM.int8(), NF4
     </h2>
   </header>
@@ -223,6 +276,20 @@ Quantization Aware Training (QAT): This involves training the model with reduced
   </div>
   <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
   <a class="entry-link" aria-label="post link to Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/quantization/"></a>
+</article>
+
+<article class="post-entry"> 
+  <header class="entry-header">
+    <h2 class="entry-hint-parent">Quantization in LLMS Part 2: GPTQ [Draft]
+    </h2>
+  </header>
+  <div class="entry-content">
+    <p>Introduction
+Quantization is a crucial technique in deep learning that reduces the memory footprint and computational requirements of neural networks by representing weights and activations with lower-precision numerical formats. This is particularly important when deploying large models on devices with limited resources. However, quantizing a neural network without significantly degrading its performance is challenging.
+The GPTQ (Gradient Post-Training Quantization) algorithm is a method designed to efficiently quantize large-scale neural networks, such as those used in natural language processing, while maintaining high accuracy....</p>
+  </div>
+  <footer class="entry-footer"><span title='2024-08-01 09:51:17 -0400 EDT'>August 1, 2024</span></footer>
+  <a class="entry-link" aria-label="post link to Quantization in LLMS Part 2: GPTQ [Draft]" href="http://localhost:1313/posts/gptq/"></a>
 </article>
     </main>
     

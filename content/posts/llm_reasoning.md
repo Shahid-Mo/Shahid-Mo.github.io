@@ -1,7 +1,7 @@
 ---
-title: 'LLM Reasoning'
+title: 'LLM Reasoning [Draft]'
 date: 2024-11-09
-draft: true
+draft: false
 ---
 ## Motivation for Reasoning
 
