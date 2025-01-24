@@ -144,7 +144,7 @@ The above process is continued till we reach the \<EOS> end of sequence token or
   <img src="/images/Decoding/beam_4.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 80%;">
 </div>
 
-Greedy decoding and Beam Seach are some of the most popular approaches for decoding in LLM’s like chat GPT, Llam and Gemini. 
+Greedy decoding and Beam Seach are some of the most popular approaches for decoding in LLM’s like chat GPT, Llama and Gemini. 
 
 ### The issue with these approaches.
 

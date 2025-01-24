@@ -17,12 +17,19 @@
 If you&amp;rsquo;ve ever tried to train a deep learning model, the dreaded CUDA error: out of memory is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered about how memory gets allocated during training?? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models.</description>
     </item>
     <item>
-      <title>Deconding From Language Models</title>
+      <title>Decoding From Language Models</title>
       <link>http://localhost:1313/posts/decoding-from-language-models/</link>
       <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
       <guid>http://localhost:1313/posts/decoding-from-language-models/</guid>
       <description>A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&amp;lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
 At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary.</description>
+    </item>
+    <item>
+      <title>From Retrieval to RAG (Part - 1)</title>
+      <link>http://localhost:1313/posts/from-retrieval-to-rag-part1/</link>
+      <pubDate>Wed, 11 Sep 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/from-retrieval-to-rag-part1/</guid>
+      <description>ChatGPT can make mistakes. Check important info. This disclaimer appears beneath the input field in ChatGPT and is not unique to it—similar notices can be found across all major large language models (LLMs). This is because one of the most well-known issues with LLMs is their tendency to hallucinate, meaning they can generate information that isn&amp;rsquo;t accurate or grounded in reality. So, before submitting your history paper directly from ChatGPT, make sure to proofread it carefully.</description>
     </item>
     <item>
       <title>Quantization in LLMS (Part 1): LLM.int8(), NF4</title>

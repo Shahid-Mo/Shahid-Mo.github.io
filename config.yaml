@@ -11,7 +11,7 @@ params:
   homeInfoParams:
     Title: "Welcome to TensorTunes 🎶"
     Content: |
-      Hi, I’m **Shahid**, currently pursuing my master's in Artificial Intelligence at the **University at Buffalo** 🎓 (graduating December 2024). 
+      Hi, I’m Shahid, and I recently earned my Master’s degree in Artificial Intelligence from the University at Buffalo 🎓.
 
       This blog is where I compile my notes on **Large Language Models (LLMs)** 🤖, drawn from papers, videos, and other resources.
 

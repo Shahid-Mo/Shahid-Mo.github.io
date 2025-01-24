@@ -22,7 +22,7 @@ start with DDP or distributed data parallel.
 
 ## DDP (Distributed Data Parallel)
 
-basically ddp is quite easy, most of the effort of ddp lies in making efficient in actula production, dealing wiht race conditions etc...
+conceptually, ddp is quite simple, most of the effort of ddp lies in making efficient in actual production, dealing wiht race conditions etc...
 
 ## Pipeline model parallelism
 

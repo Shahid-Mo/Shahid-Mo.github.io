@@ -5,11 +5,12 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Posts | TensorTunes</title>
+<title>Knowledge distillation | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="Posts - TensorTunes">
+<meta name="description" content="Knowledge distillation is a compression technique in which a compact model - the student - is trained to reproduce the behaviour of a larger model - the teacher - or an ensemble of models.
+In supervised learning, a classification model is trained to classify each sample by maximizing the estimated probability of the gold labels. A standard training objective thus involves minimizing the cross-entropy between the model’s predicted distribution and the one-hot empirical distribution of training labels.">
 <meta name="author" content="">
-<link rel="canonical" href="http://localhost:1313/posts/">
+<link rel="canonical" href="http://localhost:1313/posts/knowledge_distillation/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
 <link rel="icon" href="http://localhost:1313/favicon.ico">
 <link rel="icon" type="image/png" sizes="16x16" href="http://localhost:1313/favicon-16x16.png">
@@ -18,8 +19,7 @@
 <link rel="mask-icon" href="http://localhost:1313/safari-pinned-tab.svg">
 <meta name="theme-color" content="#2e2e33">
 <meta name="msapplication-TileColor" content="#2e2e33">
-<link rel="alternate" type="application/rss+xml" href="http://localhost:1313/posts/index.xml">
-<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/">
+<link rel="alternate" hreflang="en" href="http://localhost:1313/posts/knowledge_distillation/">
 <noscript>
     <style>
         #theme-toggle,
@@ -73,7 +73,7 @@
 </script>
 </head>
 
-<body class="list" id="top">
+<body class="" id="top">
 <script>
     if (localStorage.getItem("pref-theme") === "dark") {
         document.body.classList.add('dark');
@@ -115,7 +115,7 @@
         <ul id="menu">
             <li>
                 <a href="http://localhost:1313/posts/" title="Posts">
-                    <span class="active">Posts</span>
+                    <span>Posts</span>
                 </a>
             </li>
             <li>
@@ -126,63 +126,47 @@
         </ul>
     </nav>
 </header>
-<main class="main"> 
-<header class="page-header">
-  <h1>
-    Posts
-  </h1>
-</header>
+<main class="main">
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Where Did All the Memory Go?
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>CUDA error: out of memory
-If you’ve ever tried to train a deep learning model, the dreaded CUDA error: out of memory is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered about how memory gets allocated during training?? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-10-21 00:00:00 +0000 UTC'>October 21, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Where Did All the Memory Go?" href="http://localhost:1313/posts/where_v3/"></a>
-</article>
+<article class="post-single">
+  <header class="post-header">
+    
+    <h1 class="post-title entry-hint-parent">
+      Knowledge distillation
+    </h1>
+    <div class="post-meta"><span title='2024-12-11 00:00:00 +0000 UTC'>December 11, 2024</span>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Decoding From Language Models
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>A quick refresher on Autoregressive text generation Autoregressive language models generate text through a sequential process of predicting one token at a time. The model takes a sequence of tokens $ \lbrace y \rbrace _{&lt;t} $ as input and outputs a new token $ \hat{y_t} $. This process repeats iteratively, with each newly generated token becoming part of the input for the subsequent prediction.
-At each time step $ t $, the model computes a vector of scores $ \mathbf{S} \in \mathbb{R}^V $, where $ V $ is the size of the vocabulary....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Decoding From Language Models" href="http://localhost:1313/posts/decoding-from-language-models/"></a>
-</article>
+</div>
+  </header> 
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">From Retrieval to RAG (Part - 1)
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>ChatGPT can make mistakes. Check important info. This disclaimer appears beneath the input field in ChatGPT and is not unique to it—similar notices can be found across all major large language models (LLMs). This is because one of the most well-known issues with LLMs is their tendency to hallucinate, meaning they can generate information that isn’t accurate or grounded in reality. So, before submitting your history paper directly from ChatGPT, make sure to proofread it carefully....</p>
-  </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to From Retrieval to RAG (Part - 1)" href="http://localhost:1313/posts/from-retrieval-to-rag-part1/"></a>
-</article>
+  <div class="post-content"><p><strong>Knowledge distillation</strong>  is a compression technique in which a compact model - the student - is trained to reproduce the behaviour of a larger model - the teacher - or an ensemble of models.</p>
+<p>In supervised learning, a classification model is trained to classify each sample by maximizing the estimated probability of the gold labels. A standard training objective thus involves minimizing the cross-entropy between the model’s predicted distribution and the one-hot empirical distribution of training labels. A model performing well on the training set will predict an output distribution with high probability on the correct class and with near-zero probabilities on other classes. But some of these &ldquo;near-zero&rdquo; probabilities are larger than others and reflect, in part, the generalization capabilities of the model and how well it will perform on the test set.</p>
+<p><strong>Training loss</strong><br>
+The student is trained with a distillation loss over the soft target probabilities of the teacher:</p>
+<p>$$
+L_{ce} = \sum_i t_i \cdot \log(s_i)
+$$</p>
+<p>where $t_i$ (resp. $s_i$) is a probability estimated by the teacher (resp. the student). This objective results in a rich training signal by leveraging the full teacher distribution.</p>
+<p>Following Hinton et al. [2015], we used a <strong>softmax-temperature</strong>:</p>
+<p>$$
+p_i = \frac{\exp(z_i / T)}{\sum_j \exp(z_j / T)}
+$$</p>
+<p>where $T$ controls the smoothness of the output distribution and $z_i$ is the model score for the class $i$. The same temperature $T$ is applied to the student and the teacher at training time, while at inference, $T$ is set to 1 to recover a standard <strong>softmax</strong>.</p>
+<p>The final training objective is a linear combination of the distillation loss $L_{ce}$ with the supervised training loss, in our case the <strong>masked language modeling loss $L_{mlm}$</strong> [Devlin et al., 2018]. We found it beneficial to add a <strong>cosine embedding loss ($L_{cos}$)</strong> which will tend to align the directions of the student and teacher hidden states vectors.</p>
 
-<article class="post-entry"> 
-  <header class="entry-header">
-    <h2 class="entry-hint-parent">Quantization in LLMS (Part 1): LLM.int8(), NF4
-    </h2>
-  </header>
-  <div class="entry-content">
-    <p>Introduction to Quantization Whether you’re an AI enthusiast looking to run large language models (LLMs) on your personal device, a startup aiming to serve state-of-the-art models efficiently, or a researcher fine-tuning models for specific tasks, quantization is a key technique to understand.
-Quantization can be broadly categorized into two main approaches:
-Quantization Aware Training (QAT): This involves training the model with reduced precision, allowing it to adjust during the training process to perform well under quantized conditions....</p>
+
   </div>
-  <footer class="entry-footer"><span title='2024-09-11 00:00:00 +0000 UTC'>September 11, 2024</span></footer>
-  <a class="entry-link" aria-label="post link to Quantization in LLMS (Part 1): LLM.int8(), NF4" href="http://localhost:1313/posts/quantization/"></a>
+
+  <footer class="post-footer">
+    <ul class="post-tags">
+    </ul>
+  </footer><script src="https://utteranc.es/client.js"
+        repo="Shahid-Mo/Shahid-Mo.github.io"
+        issue-term="pathname"
+        theme="github-light"
+        crossorigin="anonymous"
+        async>
+</script>
 </article>
     </main>
     

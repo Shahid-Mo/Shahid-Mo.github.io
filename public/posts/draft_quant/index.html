@@ -5,11 +5,11 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <meta name="robots" content="noindex, nofollow">
-<title>Decoding Test | TensorTunes</title>
+<title>Multi GPU Training (current working) | TensorTunes</title>
 <meta name="keywords" content="">
-<meta name="description" content="SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS Chain-of-Thought Reasoning without Prompting
-In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,
-as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.">
+<meta name="description" content="ZeRO ZeRO can train large models of up to 13B parameters (e.g., larger than Megatron GPT 8.3B and T5 11B) without requiring model parallelism
+Data Parallelism
+Data parallelism is a widely used technique in parallel computing, especially in the field of deep learning. It involves distributing data across multiple computational resources (such as CPUs or GPUs) to perform the same operation simultaneously. In the context of neural network training, data parallelism allows for the acceleration of training by splitting the input data into smaller batches and processing them in parallel across different devices.">
 <meta name="author" content="">
 <link rel="canonical" href="http://localhost:1313/posts/draft_quant/">
 <link crossorigin="anonymous" href="/assets/css/stylesheet.fc220c15db4aef0318bbf30adc45d33d4d7c88deff3238b23eb255afdc472ca6.css" integrity="sha256-/CIMFdtK7wMYu/MK3EXTPU18iN7/MjiyPrJVr9xHLKY=" rel="preload stylesheet" as="style">
@@ -133,7 +133,7 @@ as stated in my post on Qunatization, you would need a cluster of gpus just to g
   <header class="post-header">
     
     <h1 class="post-title entry-hint-parent">
-      Decoding Test
+      Multi GPU Training (current working)
     </h1>
     <div class="post-meta"><span title='2024-10-16 00:00:00 +0000 UTC'>October 16, 2024</span>
 
@@ -144,11 +144,152 @@ as stated in my post on Qunatization, you would need a cluster of gpus just to g
             <span class="details">Table of Contents</span>
         </summary>
 
-        <div class="inner"><ul><ul>
+        <div class="inner"><ul>
+                <li>
+                    <a href="#zero" aria-label="ZeRO">ZeRO</a><ul>
+                        
+                <li>
+                    <a href="#1-setup-and-configuration" aria-label="1. Setup and Configuration">1. Setup and Configuration</a><ul>
+                        
+                <li>
+                    <a href="#11-neural-network-architecture" aria-label="1.1. Neural Network Architecture">1.1. Neural Network Architecture</a></li>
+                <li>
+                    <a href="#12-model-partitioning-across-gpus" aria-label="1.2. Model Partitioning Across GPUs">1.2. Model Partitioning Across GPUs</a></li>
+                <li>
+                    <a href="#13-training-configuration" aria-label="1.3. Training Configuration">1.3. Training Configuration</a></li></ul>
+                </li>
+                <li>
+                    <a href="#2-naive-pipeline-parallelism" aria-label="2. Naive Pipeline Parallelism">2. Naive Pipeline Parallelism</a><ul>
+                        
+                <li>
+                    <a href="#21-forward-pass" aria-label="2.1. Forward Pass">2.1. Forward Pass</a></li>
+                <li>
+                    <a href="#22-backward-pass" aria-label="2.2. Backward Pass">2.2. Backward Pass</a></li>
+                <li>
+                    <a href="#23-parameter-update" aria-label="2.3. Parameter Update">2.3. Parameter Update</a></li>
+                <li>
+                    <a href="#24-key-characteristics-and-limitations" aria-label="2.4. Key Characteristics and Limitations">2.4. Key Characteristics and Limitations</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-gpipe-pipeline-parallelism" aria-label="3. GPipe Pipeline Parallelism">3. GPipe Pipeline Parallelism</a><ul>
+                        
+                <li>
+                    <a href="#31-core-principles-of-gpipe" aria-label="3.1. Core Principles of GPipe">3.1. Core Principles of GPipe</a></li>
+                <li>
+                    <a href="#32-forward-pass-in-gpipe" aria-label="3.2. Forward Pass in GPipe">3.2. Forward Pass in GPipe</a></li>
+                <li>
+                    <a href="#33-backward-pass-in-gpipe" aria-label="3.3. Backward Pass in GPipe">3.3. Backward Pass in GPipe</a></li>
+                <li>
+                    <a href="#34-parameter-update" aria-label="3.4. Parameter Update">3.4. Parameter Update</a></li>
+                <li>
+                    <a href="#35-memory-usage-comparison" aria-label="3.5. Memory Usage Comparison">3.5. Memory Usage Comparison</a></li>
+                <li>
+                    <a href="#36-key-advantages-of-gpipe-parallelism" aria-label="3.6. Key Advantages of GPipe Parallelism">3.6. Key Advantages of GPipe Parallelism</a></li></ul>
+                </li>
+                <li>
+                    <a href="#4-detailed-comparison-naive-vs-gpipe-parallelism" aria-label="4. Detailed Comparison: Naive vs. GPipe Parallelism">4. Detailed Comparison: Naive vs. GPipe Parallelism</a></li>
+                <li>
+                    <a href="#5-illustrative-example-training-step" aria-label="5. Illustrative Example: Training Step">5. Illustrative Example: Training Step</a><ul>
+                        
+                <li>
+                    <a href="#51-naive-pipeline-parallelism--m--2-" aria-label="5.1. Naive Pipeline Parallelism (( M = 2 ))">5.1. Naive Pipeline Parallelism (( M = 2 ))</a></li>
+                <li>
+                    <a href="#52-gpipe-pipeline-parallelism--m--8-" aria-label="5.2. GPipe Pipeline Parallelism (( M = 8 ))">5.2. GPipe Pipeline Parallelism (( M = 8 ))</a></li>
+                <li>
+                    <a href="#33-backward-pass" aria-label="3.3. Backward Pass">3.3. Backward Pass</a></li>
+                <li>
+                    <a href="#53-parameter-update" aria-label="5.3. Parameter Update">5.3. Parameter Update</a></li>
+                <li>
+                    <a href="#54-memory-usage-comparison" aria-label="5.4. Memory Usage Comparison">5.4. Memory Usage Comparison</a></li></ul>
+                </li>
+                <li>
+                    <a href="#6-performance-optimization-in-gpipe" aria-label="6. Performance Optimization in GPipe">6. Performance Optimization in GPipe</a><ul>
+                        
+                <li>
+                    <a href="#61-activation-memory-reduction" aria-label="6.1. Activation Memory Reduction">6.1. Activation Memory Reduction</a></li>
+                <li>
+                    <a href="#62-bubble-overhead-reduction" aria-label="6.2. Bubble Overhead Reduction">6.2. Bubble Overhead Reduction</a></li>
+                <li>
+                    <a href="#63-communication-overhead" aria-label="6.3. Communication Overhead">6.3. Communication Overhead</a></li></ul>
+                </li>
+                <li>
+                    <a href="#7-summary-and-conclusion" aria-label="7. Summary and Conclusion">7. Summary and Conclusion</a></li>
+                <li>
+                    <a href="#8-visual-illustration" aria-label="8. Visual Illustration">8. Visual Illustration</a><ul>
+                        
+                <li>
+                    <a href="#81-naive-pipeline-parallelism--m--2-" aria-label="8.1. Naive Pipeline Parallelism (( M = 2 ))">8.1. Naive Pipeline Parallelism (( M = 2 ))</a></li>
+                <li>
+                    <a href="#82-gpipe-pipeline-parallelism--m--8-" aria-label="8.2. GPipe Pipeline Parallelism (( M = 8 ))">8.2. GPipe Pipeline Parallelism (( M = 8 ))</a></li></ul>
+                </li>
+                <li>
+                    <a href="#9-final-thoughts" aria-label="9. Final Thoughts">9. Final Thoughts</a></li>
+                <li>
+                    <a href="#pipeline-model-parallelism" aria-label="Pipeline Model parallelism">Pipeline Model parallelism</a></li>
+                <li>
+                    <a href="#gpipe" aria-label="GPipe">GPipe</a></li></ul>
+                </li>
+                <li>
+                    <a href="#certainly-lets-break-down-the-schedule-with-interleaved-stages-understand-how-it-operates-and-clearly-contrast-it-with-gpipes-pipeline-parallelism-approach" aria-label="Certainly! Let&rsquo;s break down the Schedule with Interleaved Stages, understand how it operates, and clearly contrast it with GPipe&rsquo;s pipeline parallelism approach.">Certainly! Let&rsquo;s break down the Schedule with Interleaved Stages, understand how it operates, and clearly contrast it with GPipe&rsquo;s pipeline parallelism approach.</a><ul>
+                        
+                <li>
+                    <a href="#1-understanding-gpipes-pipeline-parallelism" aria-label="1. Understanding GPipe&rsquo;s Pipeline Parallelism">1. Understanding GPipe&rsquo;s Pipeline Parallelism</a><ul>
+                        
+                <li>
+                    <a href="#11-gpipes-approach" aria-label="1.1. GPipe&rsquo;s Approach">1.1. GPipe&rsquo;s Approach</a></li>
+                <li>
+                    <a href="#12-pipeline-bubble-in-gpipe" aria-label="1.2. Pipeline Bubble in GPipe">1.2. Pipeline Bubble in GPipe</a></li></ul>
+                </li>
+                <li>
+                    <a href="#2-introducing-the-schedule-with-interleaved-stages" aria-label="2. Introducing the Schedule with Interleaved Stages">2. Introducing the Schedule with Interleaved Stages</a><ul>
+                        
+                <li>
+                    <a href="#21-core-concept" aria-label="2.1. Core Concept">2.1. Core Concept</a></li>
+                <li>
+                    <a href="#22-how-it-works" aria-label="2.2. How It Works">2.2. How It Works</a></li></ul>
+                </li>
+                <li>
+                    <a href="#3-contrasting-interleaved-schedule-with-gpipe" aria-label="3. Contrasting Interleaved Schedule with GPipe">3. Contrasting Interleaved Schedule with GPipe</a><ul>
+                        
+                <li>
+                    <a href="#31-pipeline-bubble-reduction" aria-label="3.1. Pipeline Bubble Reduction">3.1. Pipeline Bubble Reduction</a></li>
+                <li>
+                    <a href="#32-memory-efficiency" aria-label="3.2. Memory Efficiency">3.2. Memory Efficiency</a></li>
+                <li>
+                    <a href="#33-gpu-utilization" aria-label="3.3. GPU Utilization">3.3. GPU Utilization</a></li>
+                <li>
+                    <a href="#34-communication-overhead" aria-label="3.4. Communication Overhead">3.4. Communication Overhead</a></li></ul>
+                </li>
+                <li>
+                    <a href="#4-summary" aria-label="4. Summary">4. Summary</a></li>
+                <li>
+                    <a href="#tensor-model-parallelism" aria-label="Tensor Model parallelism">Tensor Model parallelism</a><ul>
+                        
+                <li>
+                    <a href="#implementation-details" aria-label="Implementation Details">Implementation Details</a></li>
+                <li>
+                    <a href="#gpt-2-small-model-dimensions" aria-label="GPT-2 Small Model Dimensions">GPT-2 Small Model Dimensions</a></li>
+                <li>
+                    <a href="#mlp-block-operations" aria-label="MLP Block Operations">MLP Block Operations</a></li></ul>
+                </li>
+                <li>
+                    <a href="#parallelization-strategy" aria-label="Parallelization Strategy">Parallelization Strategy</a><ul>
+                        
+                <li>
+                    <a href="#column-wise-split-of-gemm-1" aria-label="Column-Wise Split of GEMM 1">Column-Wise Split of GEMM 1</a></li>
+                <li>
+                    <a href="#row-wise-split-of-gemm-2" aria-label="Row-Wise Split of GEMM 2">Row-Wise Split of GEMM 2</a></li>
+                <li>
+                    <a href="#self-attention-parallelization" aria-label="Self-Attention Parallelization">Self-Attention Parallelization</a></li>
+                <li>
+                    <a href="#parallelization-approach" aria-label="Parallelization Approach">Parallelization Approach</a></li>
+                <li>
+                    <a href="#step-by-step-parallelization" aria-label="Step-by-Step Parallelization">Step-by-Step Parallelization</a></li></ul>
+                </li>
                 <li>
                     <a href="#ddp-distributed-data-parallel" aria-label="DDP (Distributed Data Parallel)">DDP (Distributed Data Parallel)</a></li>
                 <li>
-                    <a href="#pipeline-model-parallelism" aria-label="Pipeline model parallelism">Pipeline model parallelism</a><ul>
+                    <a href="#pipeline-model-parallelism-1" aria-label="Pipeline model parallelism">Pipeline model parallelism</a><ul>
                         
                 <li>
                     <a href="#background" aria-label="Background">Background</a></li>
@@ -179,7 +320,7 @@ as stated in my post on Qunatization, you would need a cluster of gpus just to g
                 <li>
                     <a href="#conclusion" aria-label="Conclusion">Conclusion</a></li></ul>
                 </li></ul>
-                    
+                </li>
                 <li>
                     <a href="#references" aria-label="References">References</a>
                 </li>
@@ -188,7 +329,2771 @@ as stated in my post on Qunatization, you would need a cluster of gpus just to g
     </details>
 </div>
 
-  <div class="post-content"><p>SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS
+  <div class="post-content"><h1 id="zero">ZeRO<a hidden class="anchor" aria-hidden="true" href="#zero">#</a></h1>
+<p>ZeRO can train large models of up to 13B parameters (e.g., larger than
+Megatron GPT 8.3B and T5 11B) without requiring model parallelism</p>
+<p><strong>Data Parallelism</strong></p>
+<p>Data parallelism is a widely used technique in parallel computing, especially in the field of deep learning. It involves distributing data across multiple computational resources (such as CPUs or GPUs) to perform the same operation simultaneously. In the context of neural network training, data parallelism allows for the acceleration of training by splitting the input data into smaller batches and processing them in parallel across different devices. Each device maintains a complete copy of the model parameters and processes a subset of the data.</p>
+<p><strong>How Data Parallelism Works:</strong></p>
+<ol>
+<li>
+<p><strong>Model Replication:</strong> The neural network model is copied to each device participating in the training process.</p>
+</li>
+<li>
+<p><strong>Data Distribution:</strong> The input data is divided into mini-batches, and each mini-batch is sent to a different device.</p>
+</li>
+<li>
+<p><strong>Forward Pass:</strong> Each device performs the forward pass independently using its portion of the data, computing the loss and intermediate activations.</p>
+</li>
+<li>
+<p><strong>Backward Pass:</strong> Gradients are computed independently on each device during the backward pass.</p>
+</li>
+<li>
+<p><strong>Gradient Aggregation:</strong> The gradients from all devices are aggregated (typically by averaging) to ensure that each model replica has the same parameters.</p>
+</li>
+<li>
+<p><strong>Parameter Update:</strong> The optimizer updates the model parameters on each device using the aggregated gradients.</p>
+</li>
+</ol>
+<p><strong>Advantages of Data Parallelism:</strong></p>
+<ul>
+<li><strong>Scalability:</strong> Easily scales to multiple devices, leading to faster training times.</li>
+<li><strong>Simplicity:</strong> Implementation is straightforward since each device performs the same operations independently.</li>
+</ul>
+<p><strong>Limitations of Data Parallelism:</strong></p>
+<ul>
+<li><strong>Model Size Constraints:</strong> Since each device holds a full copy of the model, the model size is limited by the memory capacity of a single device.</li>
+<li><strong>Communication Overhead:</strong> Aggregating gradients requires communication between devices, which can become a bottleneck, especially in distributed environments.</li>
+</ul>
+<hr>
+<p><strong>PyTorch&rsquo;s DistributedDataParallel (DDP)</strong></p>
+<p>PyTorch&rsquo;s <code>DistributedDataParallel</code> (DDP) is a module that facilitates data parallelism across multiple GPUs and nodes. It is designed to be an efficient and easy-to-use tool for parallelizing training in both single-machine and multi-machine settings.</p>
+<p><strong>Key Features of DDP:</strong></p>
+<ol>
+<li>
+<p><strong>Model Replication:</strong> DDP replicates the entire model across all specified devices. Each replica is responsible for processing a portion of the input data.</p>
+</li>
+<li>
+<p><strong>Efficient Gradient Synchronization:</strong> During the backward pass, DDP uses collective communication operations (like <code>AllReduce</code>) to synchronize gradients across all model replicas. This ensures that all models stay in sync after each update.</p>
+</li>
+<li>
+<p><strong>Overlap of Computation and Communication:</strong> DDP overlaps gradient communication with backward computation to improve training efficiency. This means that while gradients are being computed, communication of previously computed gradients is already in progress.</p>
+</li>
+<li>
+<p><strong>Support for Multiple Network Backends:</strong> DDP supports various backends like NCCL (NVIDIA Collective Communications Library) for GPUs and Gloo for CPUs.</p>
+</li>
+</ol>
+<p><strong>How DDP Works:</strong></p>
+<ul>
+<li>
+<p><strong>Initialization:</strong></p>
+<ul>
+<li>The model is wrapped with <code>torch.nn.parallel.DistributedDataParallel</code>.</li>
+<li>A process group is created to manage communication between devices.</li>
+</ul>
+</li>
+<li>
+<p><strong>Data Loading:</strong></p>
+<ul>
+<li>Each process uses a <code>DistributedSampler</code> to ensure that each device gets a unique subset of the data.</li>
+</ul>
+</li>
+<li>
+<p><strong>Training Loop:</strong></p>
+<ul>
+<li><strong>Forward Pass:</strong> Each device performs a forward pass independently.</li>
+<li><strong>Backward Pass:</strong> Gradients are computed locally. DDP hooks into the backward pass to trigger <code>AllReduce</code> operations that synchronize gradients across devices.</li>
+<li><strong>Parameter Update:</strong> Each device updates its model parameters using the synchronized gradients.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Advantages of DDP:</strong></p>
+<ul>
+<li><strong>Performance:</strong> Highly optimized for speed and efficiency, making it suitable for large-scale training.</li>
+<li><strong>Ease of Use:</strong> Minimal code changes are required to convert a single-GPU training script to use DDP.</li>
+<li><strong>Scalability:</strong> Works seamlessly across multiple GPUs and nodes.</li>
+</ul>
+<p><strong>Limitations of DDP:</strong></p>
+<ul>
+<li><strong>Memory Constraints:</strong> Since the entire model is replicated on each device, models that are too large to fit into a single GPU cannot be trained using DDP.</li>
+<li><strong>Communication Overhead:</strong> Synchronizing gradients can become a bottleneck, especially with large models and slow interconnects.</li>
+</ul>
+<hr>
+<p><strong>Fully Sharded Data Parallel (FSDP)</strong></p>
+<p>Fully Sharded Data Parallel (FSDP) is an advanced parallelism technique introduced in PyTorch to address the limitations of traditional data parallelism and DDP when dealing with extremely large models that cannot fit into the memory of a single GPU. FSDP shards the model&rsquo;s parameters, gradients, and optimizer states across multiple devices, significantly reducing the per-device memory footprint.</p>
+<p><strong>Key Features of FSDP:</strong></p>
+<ol>
+<li>
+<p><strong>Parameter Sharding:</strong> Model parameters are partitioned across multiple devices, so each device only stores a portion (shard) of the parameters.</p>
+</li>
+<li>
+<p><strong>On-Demand Materialization:</strong> Parameters are gathered (all-gathered) just before they are needed for computation and immediately discarded (resharded) afterward to free up memory.</p>
+</li>
+<li>
+<p><strong>Optimizer State Sharding:</strong> Optimizer states are also sharded, which further reduces memory consumption.</p>
+</li>
+<li>
+<p><strong>Layer-wise Parallelism:</strong> FSDP allows for fine-grained control over how layers are sharded and can support various sharding strategies.</p>
+</li>
+<li>
+<p><strong>Communication Optimization:</strong> FSDP includes optimizations such as overlapping communication with computation, prefetching of parameters, and efficient collective communication operations.</p>
+</li>
+</ol>
+<p><strong>How FSDP Works:</strong></p>
+<ul>
+<li>
+<p><strong>Model Initialization:</strong></p>
+<ul>
+<li>The model is wrapped with FSDP, which partitions the model into smaller units (e.g., layers or blocks).</li>
+<li>Each unit&rsquo;s parameters are sharded across devices.</li>
+</ul>
+</li>
+<li>
+<p><strong>Training Loop:</strong></p>
+<ul>
+<li><strong>Forward Pass:</strong>
+<ul>
+<li>Before computing a layer, FSDP gathers the necessary parameter shards from other devices to reconstruct the full parameters needed for computation.</li>
+<li>After the computation, the gathered parameters are discarded to save memory.</li>
+</ul>
+</li>
+<li><strong>Backward Pass:</strong>
+<ul>
+<li>Gradients are computed as usual.</li>
+<li>FSDP performs a reduce-scatter operation to shard the gradients across devices.</li>
+</ul>
+</li>
+<li><strong>Optimizer Step:</strong>
+<ul>
+<li>Optimizer states are kept in their sharded form and updated accordingly.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>Sharding Strategies in FSDP:</strong></p>
+<ul>
+<li>
+<p><strong>Full Sharding (Sharding Factor ( F = W )):</strong></p>
+<ul>
+<li>Parameters and optimizer states are fully sharded across all devices.</li>
+<li>Maximum memory savings but introduces additional communication overhead.</li>
+</ul>
+</li>
+<li>
+<p><strong>Hybrid Sharding (Sharding Factor ( 1 &lt; F &lt; W )):</strong></p>
+<ul>
+<li>Combines parameter sharding and replication.</li>
+<li>Parameters are sharded within groups and replicated across groups.</li>
+<li>Balances memory savings and communication efficiency.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Communication Optimizations:</strong></p>
+<ul>
+<li>
+<p><strong>Parameter Flattening:</strong></p>
+<ul>
+<li>Parameters within an FSDP unit are flattened into a single tensor to optimize collective communication operations.</li>
+</ul>
+</li>
+<li>
+<p><strong>Overlapping Communication and Computation:</strong></p>
+<ul>
+<li>Uses separate CUDA streams to overlap all-gather and reduce-scatter operations with computation.</li>
+</ul>
+</li>
+<li>
+<p><strong>Prefetching:</strong></p>
+<ul>
+<li><strong>Backward Prefetching:</strong> Anticipates the next parameters needed in the backward pass and starts fetching them early.</li>
+<li><strong>Forward Prefetching:</strong> Similar prefetching in the forward pass to prevent delays due to communication.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Memory Management:</strong></p>
+<ul>
+<li>
+<p><strong>Caching Allocator Awareness:</strong></p>
+<ul>
+<li>FSDP is designed to work efficiently with PyTorch&rsquo;s caching allocator, reducing memory fragmentation and allocation overhead.</li>
+</ul>
+</li>
+<li>
+<p><strong>Rate Limiter:</strong></p>
+<ul>
+<li>Controls the number of in-flight all-gather operations to prevent the caching allocator from over-allocating memory.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Advantages of FSDP:</strong></p>
+<ul>
+<li>
+<p><strong>Supports Extremely Large Models:</strong></p>
+<ul>
+<li>Can train models that are too large to fit into a single GPU&rsquo;s memory.</li>
+</ul>
+</li>
+<li>
+<p><strong>Memory Efficiency:</strong></p>
+<ul>
+<li>By sharding parameters and optimizer states, FSDP significantly reduces the per-device memory footprint.</li>
+</ul>
+</li>
+<li>
+<p><strong>Scalability:</strong></p>
+<ul>
+<li>Scales to large numbers of GPUs and can utilize available memory effectively.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Limitations and Challenges of FSDP:</strong></p>
+<ul>
+<li>
+<p><strong>Complexity:</strong></p>
+<ul>
+<li>More complex to understand and implement compared to traditional data parallelism.</li>
+</ul>
+</li>
+<li>
+<p><strong>Communication Overhead:</strong></p>
+<ul>
+<li>Increased communication due to parameter sharding can impact performance if not properly optimized.</li>
+</ul>
+</li>
+<li>
+<p><strong>Model Initialization:</strong></p>
+<ul>
+<li>Requires careful handling to initialize models without fully materializing all parameters on a single device.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Use Cases for FSDP:</strong></p>
+<ul>
+<li>
+<p><strong>Large Language Models:</strong></p>
+<ul>
+<li>Training transformer-based models with billions of parameters.</li>
+</ul>
+</li>
+<li>
+<p><strong>Memory-Constrained Environments:</strong></p>
+<ul>
+<li>Situations where GPU memory is limited, but computational resources are abundant.</li>
+</ul>
+</li>
+<li>
+<p><strong>Distributed Training Across Multiple Nodes:</strong></p>
+<ul>
+<li>When training across multiple machines, FSDP can effectively distribute memory and computation.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>Comparing DDP and FSDP</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>DistributedDataParallel (DDP)</th>
+<th>Fully Sharded Data Parallel (FSDP)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model Replication</strong></td>
+<td>Full model replicated on each device</td>
+<td>Model parameters are sharded across devices</td>
+</tr>
+<tr>
+<td><strong>Memory Efficiency</strong></td>
+<td>Limited by single device memory capacity</td>
+<td>Can handle models larger than single device memory</td>
+</tr>
+<tr>
+<td><strong>Communication</strong></td>
+<td>Synchronizes gradients via AllReduce</td>
+<td>Synchronizes parameters and gradients via AllGather and ReduceScatter</td>
+</tr>
+<tr>
+<td><strong>Ease of Use</strong></td>
+<td>Simple to implement with minimal code changes</td>
+<td>Requires more careful setup and understanding</td>
+</tr>
+<tr>
+<td><strong>Scalability</strong></td>
+<td>Good for models that fit in single device</td>
+<td>Excellent for scaling large models</td>
+</tr>
+<tr>
+<td><strong>Performance</strong></td>
+<td>High performance for models within memory limits</td>
+<td>Performance depends on communication optimization</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<p><strong>Practical Considerations</strong></p>
+<ul>
+<li>
+<p><strong>When to Use DDP:</strong></p>
+<ul>
+<li>Use DDP when your model fits comfortably within the memory of a single GPU.</li>
+<li>Ideal for situations where simplicity and ease of implementation are priorities.</li>
+</ul>
+</li>
+<li>
+<p><strong>When to Use FSDP:</strong></p>
+<ul>
+<li>Use FSDP when dealing with extremely large models that cannot fit into a single GPU&rsquo;s memory.</li>
+<li>Requires careful tuning of sharding strategies and communication optimizations.</li>
+</ul>
+</li>
+<li>
+<p><strong>Optimizations:</strong></p>
+<ul>
+<li>Both DDP and FSDP benefit from using mixed precision training (e.g., FP16 or BF16) to reduce memory usage and improve performance.</li>
+<li>Proper use of CUDA streams and overlapping communication with computation can significantly enhance performance.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<p><strong>Conclusion</strong></p>
+<p>Data parallelism is a foundational technique in deep learning for accelerating training by distributing data across multiple devices. PyTorch&rsquo;s DistributedDataParallel (DDP) module provides a robust and efficient implementation of data parallelism suitable for many training scenarios. However, as models continue to grow in size, the limitations of DDP become apparent, necessitating more advanced techniques.</p>
+<p>Fully Sharded Data Parallel (FSDP) in PyTorch addresses these limitations by sharding model parameters, gradients, and optimizer states across devices, allowing for the training of extremely large models that exceed the memory capacity of a single GPU. While FSDP introduces additional complexity, it provides the necessary tools and optimizations to train state-of-the-art models efficiently.</p>
+<p>Understanding the trade-offs between DDP and FSDP is crucial for selecting the appropriate parallelism strategy for your specific use case. Factors such as model size, available computational resources, network bandwidth, and desired performance will influence this decision.</p>
+<p>Absolutely! Let&rsquo;s refine the previous example to clearly illustrate the advantages of GPipe&rsquo;s pipeline parallelism by using <strong>more micro-batches</strong> compared to <strong>naive pipeline parallelism</strong>. We&rsquo;ll achieve this by <strong>increasing the number of micro-batches</strong> in GPipe and <strong>reducing the number of micro-batches</strong> in the naive approach, effectively <strong>increasing the size of each micro-batch</strong> in the naive pipeline.</p>
+<p>This adjustment will highlight how GPipe maintains higher GPU utilization and minimizes idle times through increased micro-batching, while the naive approach may suffer from underutilization due to larger micro-batch sizes.</p>
+<hr>
+<h2 id="1-setup-and-configuration"><strong>1. Setup and Configuration</strong><a hidden class="anchor" aria-hidden="true" href="#1-setup-and-configuration">#</a></h2>
+<h3 id="11-neural-network-architecture"><strong>1.1. Neural Network Architecture</strong><a hidden class="anchor" aria-hidden="true" href="#11-neural-network-architecture">#</a></h3>
+<p>Consider a simple <strong>4-layer feedforward neural network</strong>:</p>
+<ul>
+<li>
+<p><strong>Layer 1 (L1)</strong>:
+[
+h_1 = f_1(x; W_1) = \sigma(W_1 x + b_1)
+]</p>
+</li>
+<li>
+<p><strong>Layer 2 (L2)</strong>:
+[
+h_2 = f_2(h_1; W_2) = \sigma(W_2 h_1 + b_2)
+]</p>
+</li>
+<li>
+<p><strong>Layer 3 (L3)</strong>:
+[
+h_3 = f_3(h_2; W_3) = \sigma(W_3 h_2 + b_3)
+]</p>
+</li>
+<li>
+<p><strong>Layer 4 (L4)</strong>:
+[
+y = f_4(h_3; W_4) = W_4 h_3 + b_4
+]</p>
+</li>
+</ul>
+<p><strong>Activation Function</strong>: (\sigma) (e.g., ReLU, sigmoid)</p>
+<h3 id="12-model-partitioning-across-gpus"><strong>1.2. Model Partitioning Across GPUs</strong><a hidden class="anchor" aria-hidden="true" href="#12-model-partitioning-across-gpus">#</a></h3>
+<ul>
+<li>
+<p><strong>GPU 1</strong>:</p>
+<ul>
+<li><strong>Layer 1 (L1)</strong></li>
+<li><strong>Layer 2 (L2)</strong></li>
+</ul>
+</li>
+<li>
+<p><strong>GPU 2</strong>:</p>
+<ul>
+<li><strong>Layer 3 (L3)</strong></li>
+<li><strong>Layer 4 (L4)</strong></li>
+</ul>
+</li>
+</ul>
+<h3 id="13-training-configuration"><strong>1.3. Training Configuration</strong><a hidden class="anchor" aria-hidden="true" href="#13-training-configuration">#</a></h3>
+<ul>
+<li><strong>Batch Size</strong> (( N )): 8</li>
+<li><strong>Number of GPUs</strong> (( K )): 2</li>
+<li><strong>Number of Micro-Batches</strong>:
+<ul>
+<li><strong>Naive Pipeline Parallelism</strong> (( M_{\text{naive}} )): 2</li>
+<li><strong>GPipe Pipeline Parallelism</strong> (( M_{\text{GPipe}} )): 8</li>
+</ul>
+</li>
+<li><strong>Micro-Batch Size</strong> (( n )):
+<ul>
+<li><strong>Naive Pipeline Parallelism</strong>: ( n_{\text{naive}} = \frac{N}{M_{\text{naive}}} = 4 )</li>
+<li><strong>GPipe Pipeline Parallelism</strong>: ( n_{\text{GPipe}} = \frac{N}{M_{\text{GPipe}}} = 1 )</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="2-naive-pipeline-parallelism"><strong>2. Naive Pipeline Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#2-naive-pipeline-parallelism">#</a></h2>
+<p>In <strong>naive pipeline parallelism</strong>, the neural network is split across multiple GPUs, and micro-batches are processed sequentially without any optimization for overlapping computations or memory usage.</p>
+<h3 id="21-forward-pass"><strong>2.1. Forward Pass</strong><a hidden class="anchor" aria-hidden="true" href="#21-forward-pass">#</a></h3>
+<p><strong>Step-by-Step Computation:</strong></p>
+<ol>
+<li>
+<p><strong>Time Step 1</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 1</strong> (( x^{(1)} )):
+[
+h_1^{(1)} = \sigma(W_1 x^{(1)} + b_1)
+]
+[
+h_2^{(1)} = \sigma(W_2 h_1^{(1)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 2</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 2</strong> (( x^{(2)} )):
+[
+h_1^{(2)} = \sigma(W_1 x^{(2)} + b_1)
+]
+[
+h_2^{(2)} = \sigma(W_2 h_1^{(2)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(1)} ) and processes <strong>Micro-Batch 1</strong>:
+[
+h_3^{(1)} = \sigma(W_3 h_2^{(1)} + b_3)
+]
+[
+y^{(1)} = W_4 h_3^{(1)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 3</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> is <strong>idle</strong>.</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(2)} ) and processes <strong>Micro-Batch 2</strong>:
+[
+h_3^{(2)} = \sigma(W_3 h_2^{(2)} + b_3)
+]
+[
+y^{(2)} = W_4 h_3^{(2)} + b_4
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Forward ( x^{(1)} ) → ( h_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Forward ( x^{(2)} ) → ( h_2^{(2)} )</td>
+<td>Forward ( h_2^{(1)} ) → ( y^{(1)} )</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Idle</td>
+<td>Forward ( h_2^{(2)} ) → ( y^{(2)} )</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-backward-pass"><strong>2.2. Backward Pass</strong><a hidden class="anchor" aria-hidden="true" href="#22-backward-pass">#</a></h3>
+<p><strong>Gradient Computation Sequence:</strong></p>
+<ol>
+<li>
+<p><strong>Time Step 4</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 2</strong>:
+[
+\delta_4^{(2)} = \frac{\partial \mathcal{L}}{\partial y^{(2)}} \cdot W_4^\top
+]
+[
+\delta_3^{(2)} = \delta_4^{(2)} \cdot \sigma&rsquo;(h_3^{(2)})
+]</li>
+<li><strong>GPU 1</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 5</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 1</strong>:
+[
+\delta_4^{(1)} = \frac{\partial \mathcal{L}}{\partial y^{(1)}} \cdot W_4^\top
+]
+[
+\delta_3^{(1)} = \delta_4^{(1)} \cdot \sigma&rsquo;(h_3^{(1)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(2)} ) and processes gradients for <strong>Micro-Batch 2</strong>:
+[
+\delta_2^{(2)} = \delta_3^{(2)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(2)})
+]
+[
+\delta_1^{(2)} = \delta_2^{(2)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(2)})
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 6</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes gradients for <strong>Micro-Batch 1</strong>:
+[
+\delta_2^{(1)} = \delta_3^{(1)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(1)})
+]
+[
+\delta_1^{(1)} = \delta_2^{(1)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(1)})
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>Idle</td>
+<td>Backward ( \delta_4^{(2)} ) → ( \delta_3^{(2)} )</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Backward ( \delta_1^{(2)} ) → ( \delta_2^{(2)} )</td>
+<td>Backward ( \delta_4^{(1)} ) → ( \delta_3^{(1)} )</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Backward ( \delta_1^{(1)} ) → ( \delta_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-parameter-update"><strong>2.3. Parameter Update</strong><a hidden class="anchor" aria-hidden="true" href="#23-parameter-update">#</a></h3>
+<p>After computing gradients for all micro-batches:</p>
+<p>[
+W_i \leftarrow W_i - \eta \Delta W_i \quad \text{for } i = 1, 2, 3, 4
+]</p>
+<p>where ( \Delta W_i ) is the accumulated gradient for weights ( W_i ), and ( \eta ) is the learning rate.</p>
+<h3 id="24-key-characteristics-and-limitations"><strong>2.4. Key Characteristics and Limitations</strong><a hidden class="anchor" aria-hidden="true" href="#24-key-characteristics-and-limitations">#</a></h3>
+<ul>
+<li><strong>Sequential Processing</strong>: Each GPU processes micro-batches one after another, leading to idle times.</li>
+<li><strong>Bubble Overhead</strong>: Initial and final time steps have GPUs idle, reducing overall efficiency.</li>
+<li><strong>Activation Storage</strong>: All intermediate activations (( h_1^{(m)}, h_2^{(m)} )) are stored during the forward pass, increasing memory usage.</li>
+<li><strong>GPU Utilization</strong>: Limited due to sequential dependencies; GPUs are not fully utilized.</li>
+<li><strong>Scalability</strong>: Adding more GPUs exacerbates idle times unless batch sizes are increased proportionally.</li>
+</ul>
+<hr>
+<h2 id="3-gpipe-pipeline-parallelism"><strong>3. GPipe Pipeline Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#3-gpipe-pipeline-parallelism">#</a></h2>
+<p><strong>GPipe</strong> enhances pipeline parallelism by introducing <strong>micro-batching</strong>, <strong>activation storage optimization</strong>, and <strong>re-materialization</strong>. In this refined example, GPipe uses <strong>8 micro-batches</strong>, while the naive pipeline uses <strong>2 micro-batches</strong>. This configuration showcases GPipe&rsquo;s ability to maintain higher GPU utilization and reduce idle times.</p>
+<h3 id="31-core-principles-of-gpipe"><strong>3.1. Core Principles of GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#31-core-principles-of-gpipe">#</a></h3>
+<ol>
+<li><strong>Model Partitioning</strong>: Similar to naive pipeline parallelism, but optimized for memory and computation.</li>
+<li><strong>Micro-Batching</strong>: Divides the mini-batch into smaller micro-batches to enable concurrent processing.</li>
+<li><strong>Activation Storage Optimization</strong>: Only stores activations at partition boundaries; recomputes intermediate activations during backpropagation.</li>
+<li><strong>Performance Optimization</strong>: Minimizes bubble overhead and optimizes communication between GPUs.</li>
+</ol>
+<h3 id="32-forward-pass-in-gpipe"><strong>3.2. Forward Pass in GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#32-forward-pass-in-gpipe">#</a></h3>
+<p><strong>Step-by-Step Computation:</strong></p>
+<p>With <strong>8 micro-batches</strong> (( M = 8 )) of size ( n = 1 ):</p>
+<ol>
+<li>
+<p><strong>Time Step 1</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 1</strong> (( x^{(1)} )):
+[
+h_1^{(1)} = \sigma(W_1 x^{(1)} + b_1)
+]
+[
+h_2^{(1)} = \sigma(W_2 h_1^{(1)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 2</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 2</strong> (( x^{(2)} )):
+[
+h_1^{(2)} = \sigma(W_1 x^{(2)} + b_1)
+]
+[
+h_2^{(2)} = \sigma(W_2 h_1^{(2)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(1)} ) and processes <strong>Micro-Batch 1</strong>:
+[
+h_3^{(1)} = \sigma(W_3 h_2^{(1)} + b_3)
+]
+[
+y^{(1)} = W_4 h_3^{(1)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 3</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 3</strong> (( x^{(3)} )):
+[
+h_1^{(3)} = \sigma(W_1 x^{(3)} + b_1)
+]
+[
+h_2^{(3)} = \sigma(W_2 h_1^{(3)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(2)} ) and processes <strong>Micro-Batch 2</strong>:
+[
+h_3^{(2)} = \sigma(W_3 h_2^{(2)} + b_3)
+]
+[
+y^{(2)} = W_4 h_3^{(2)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 4</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 4</strong> (( x^{(4)} )):
+[
+h_1^{(4)} = \sigma(W_1 x^{(4)} + b_1)
+]
+[
+h_2^{(4)} = \sigma(W_2 h_1^{(4)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(3)} ) and processes <strong>Micro-Batch 3</strong>:
+[
+h_3^{(3)} = \sigma(W_3 h_2^{(3)} + b_3)
+]
+[
+y^{(3)} = W_4 h_3^{(3)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 5</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 5</strong> (( x^{(5)} )):
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1)
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(4)} ) and processes <strong>Micro-Batch 4</strong>:
+[
+h_3^{(4)} = \sigma(W_3 h_2^{(4)} + b_3)
+]
+[
+y^{(4)} = W_4 h_3^{(4)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 6</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 6</strong> (( x^{(6)} )):
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1)
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(5)} ) and processes <strong>Micro-Batch 5</strong>:
+[
+h_3^{(5)} = \sigma(W_3 h_2^{(5)} + b_3)
+]
+[
+y^{(5)} = W_4 h_3^{(5)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 7</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 7</strong> (( x^{(7)} )):
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1)
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(6)} ) and processes <strong>Micro-Batch 6</strong>:
+[
+h_3^{(6)} = \sigma(W_3 h_2^{(6)} + b_3)
+]
+[
+y^{(6)} = W_4 h_3^{(6)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 8</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 8</strong> (( x^{(8)} )):
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1)
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(7)} ) and processes <strong>Micro-Batch 7</strong>:
+[
+h_3^{(7)} = \sigma(W_3 h_2^{(7)} + b_3)
+]
+[
+y^{(7)} = W_4 h_3^{(7)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 9</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> receives ( h_2^{(8)} ) and processes <strong>Micro-Batch 8</strong>:
+[
+h_3^{(8)} = \sigma(W_3 h_2^{(8)} + b_3)
+]
+[
+y^{(8)} = W_4 h_3^{(8)} + b_4
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Forward ( x^{(1)} ) → ( h_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Forward ( x^{(2)} ) → ( h_2^{(2)} )</td>
+<td>Forward ( h_2^{(1)} ) → ( y^{(1)} )</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Forward ( x^{(3)} ) → ( h_2^{(3)} )</td>
+<td>Forward ( h_2^{(2)} ) → ( y^{(2)} )</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Forward ( x^{(4)} ) → ( h_2^{(4)} )</td>
+<td>Forward ( h_2^{(3)} ) → ( y^{(3)} )</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Forward ( x^{(5)} ) → ( h_2^{(5)} )</td>
+<td>Forward ( h_2^{(4)} ) → ( y^{(4)} )</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Forward ( x^{(6)} ) → ( h_2^{(6)} )</td>
+<td>Forward ( h_2^{(5)} ) → ( y^{(5)} )</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Forward ( x^{(7)} ) → ( h_2^{(7)} )</td>
+<td>Forward ( h_2^{(6)} ) → ( y^{(6)} )</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Forward ( x^{(8)} ) → ( h_2^{(8)} )</td>
+<td>Forward ( h_2^{(7)} ) → ( y^{(7)} )</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Idle</td>
+<td>Forward ( h_2^{(8)} ) → ( y^{(8)} )</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Differences from Naive Pipeline Parallelism:</strong></p>
+<ul>
+<li>
+<p><strong>Increased Micro-Batching</strong>: GPipe uses <strong>8 micro-batches</strong> (( M = 8 )) compared to <strong>2 micro-batches</strong> (( M_{\text{naive}} = 2 )) in the naive approach. This allows for finer granularity in pipeline filling.</p>
+</li>
+<li>
+<p><strong>Activation Storage Optimization</strong>: GPipe only stores activations at partition boundaries (i.e., ( h_2^{(m)} )) on <strong>GPU 1</strong> and outputs (( y^{(m)} )) on <strong>GPU 2</strong>, reducing memory usage compared to the naive approach, which stores all intermediate activations.</p>
+</li>
+</ul>
+<h3 id="33-backward-pass-in-gpipe"><strong>3.3. Backward Pass in GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#33-backward-pass-in-gpipe">#</a></h3>
+<p><strong>Gradient Computation Strategy:</strong></p>
+<ul>
+<li><strong>Re-materialization</strong>: Intermediate activations within each partition (e.g., ( h_1^{(m)}, h_2^{(m)} )) are <strong>not stored</strong> during the forward pass. Instead, they are <strong>recomputed</strong> during backpropagation as needed.</li>
+</ul>
+<p><strong>Step-by-Step Computation:</strong></p>
+<ol>
+<li>
+<p><strong>Time Step 10</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 8</strong>:
+[
+\delta_4^{(8)} = \frac{\partial \mathcal{L}}{\partial y^{(8)}} \cdot W_4^\top
+]
+[
+\delta_3^{(8)} = \delta_4^{(8)} \cdot \sigma&rsquo;(h_3^{(8)})
+]</li>
+<li><strong>GPU 1</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 11</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 7</strong>:
+[
+\delta_4^{(7)} = \frac{\partial \mathcal{L}}{\partial y^{(7)}} \cdot W_4^\top
+]
+[
+\delta_3^{(7)} = \delta_4^{(7)} \cdot \sigma&rsquo;(h_3^{(7)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(8)} ) and processes gradients for <strong>Micro-Batch 8</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(8)} = \delta_3^{(8)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(8)})
+]
+[
+\delta_1^{(8)} = \delta_2^{(8)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(8)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 12</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 6</strong>:
+[
+\delta_4^{(6)} = \frac{\partial \mathcal{L}}{\partial y^{(6)}} \cdot W_4^\top
+]
+[
+\delta_3^{(6)} = \delta_4^{(6)} \cdot \sigma&rsquo;(h_3^{(6)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(7)} ) and processes gradients for <strong>Micro-Batch 7</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(7)} = \delta_3^{(7)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(7)})
+]
+[
+\delta_1^{(7)} = \delta_2^{(7)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(7)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 13</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 5</strong>:
+[
+\delta_4^{(5)} = \frac{\partial \mathcal{L}}{\partial y^{(5)}} \cdot W_4^\top
+]
+[
+\delta_3^{(5)} = \delta_4^{(5)} \cdot \sigma&rsquo;(h_3^{(5)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(6)} ) and processes gradients for <strong>Micro-Batch 6</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(6)} = \delta_3^{(6)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(6)})
+]
+[
+\delta_1^{(6)} = \delta_2^{(6)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(6)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 14</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 4</strong>:
+[
+\delta_4^{(4)} = \frac{\partial \mathcal{L}}{\partial y^{(4)}} \cdot W_4^\top
+]
+[
+\delta_3^{(4)} = \delta_4^{(4)} \cdot \sigma&rsquo;(h_3^{(4)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(5)} ) and processes gradients for <strong>Micro-Batch 5</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(5)} = \delta_3^{(5)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(5)})
+]
+[
+\delta_1^{(5)} = \delta_2^{(5)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(5)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 15</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 3</strong>:
+[
+\delta_4^{(3)} = \frac{\partial \mathcal{L}}{\partial y^{(3)}} \cdot W_4^\top
+]
+[
+\delta_3^{(3)} = \delta_4^{(3)} \cdot \sigma&rsquo;(h_3^{(3)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(4)} ) and processes gradients for <strong>Micro-Batch 4</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(4)} = \sigma(W_1 x^{(4)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(4)} = \sigma(W_2 h_1^{(4)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(4)} = \delta_3^{(4)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(4)})
+]
+[
+\delta_1^{(4)} = \delta_2^{(4)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(4)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 16</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 2</strong>:
+[
+\delta_4^{(2)} = \frac{\partial \mathcal{L}}{\partial y^{(2)}} \cdot W_4^\top
+]
+[
+\delta_3^{(2)} = \delta_4^{(2)} \cdot \sigma&rsquo;(h_3^{(2)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(5)} ) and processes gradients for <strong>Micro-Batch 5</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(5)} = \delta_3^{(5)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(5)})
+]
+[
+\delta_1^{(5)} = \delta_2^{(5)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(5)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 17</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 1</strong>:
+[
+\delta_4^{(1)} = \frac{\partial \mathcal{L}}{\partial y^{(1)}} \cdot W_4^\top
+]
+[
+\delta_3^{(1)} = \delta_4^{(1)} \cdot \sigma&rsquo;(h_3^{(1)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(6)} ) and processes gradients for <strong>Micro-Batch 6</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(6)} = \delta_3^{(6)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(6)})
+]
+[
+\delta_1^{(6)} = \delta_2^{(6)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(6)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 18</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes gradients for <strong>Micro-Batch 7</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(7)} = \delta_3^{(7)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(7)})
+]
+[
+\delta_1^{(7)} = \delta_2^{(7)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(7)})
+]</li>
+</ul>
+</li>
+<li><strong>GPU 2</strong> receives ( \delta_3^{(3)} ) and processes gradients for <strong>Micro-Batch 3</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(3)} = \sigma(W_1 x^{(3)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(3)} = \sigma(W_2 h_1^{(3)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(3)} = \delta_3^{(3)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(3)})
+]
+[
+\delta_1^{(3)} = \delta_2^{(3)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(3)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 19</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes gradients for <strong>Micro-Batch 8</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(8)} = \delta_3^{(8)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(8)})
+]
+[
+\delta_1^{(8)} = \delta_2^{(8)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(8)})
+]</li>
+</ul>
+</li>
+<li><strong>GPU 2</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>Idle</td>
+<td>Backward ( \delta_4^{(8)} ) → ( \delta_3^{(8)} )</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Recompute ( h_1^{(8)} ), ( h_2^{(8)} ) → Compute ( \delta_1^{(8)} ), ( \delta_2^{(8)} )</td>
+<td>Backward ( \delta_4^{(7)} ) → ( \delta_3^{(7)} )</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Recompute ( h_1^{(7)} ), ( h_2^{(7)} ) → Compute ( \delta_1^{(7)} ), ( \delta_2^{(7)} )</td>
+<td>Backward ( \delta_4^{(6)} ) → ( \delta_3^{(6)} )</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Recompute ( h_1^{(6)} ), ( h_2^{(6)} ) → Compute ( \delta_1^{(6)} ), ( \delta_2^{(6)} )</td>
+<td>Backward ( \delta_4^{(5)} ) → ( \delta_3^{(5)} )</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Recompute ( h_1^{(5)} ), ( h_2^{(5)} ) → Compute ( \delta_1^{(5)} ), ( \delta_2^{(5)} )</td>
+<td>Backward ( \delta_4^{(4)} ) → ( \delta_3^{(4)} )</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Recompute ( h_1^{(4)} ), ( h_2^{(4)} ) → Compute ( \delta_1^{(4)} ), ( \delta_2^{(4)} )</td>
+<td>Backward ( \delta_4^{(3)} ) → ( \delta_3^{(3)} )</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Recompute ( h_1^{(3)} ), ( h_2^{(3)} ) → Compute ( \delta_1^{(3)} ), ( \delta_2^{(3)} )</td>
+<td>Backward ( \delta_4^{(2)} ) → ( \delta_3^{(2)} )</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Recompute ( h_1^{(2)} ), ( h_2^{(2)} ) → Compute ( \delta_1^{(2)} ), ( \delta_2^{(2)} )</td>
+<td>Backward ( \delta_4^{(1)} ) → ( \delta_3^{(1)} )</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Recompute ( h_1^{(1)} ), ( h_2^{(1)} ) → Compute ( \delta_1^{(1)} ), ( \delta_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Recompute ( h_1^{(8)} ), ( h_2^{(8)} ) → Compute ( \delta_1^{(8)} ), ( \delta_2^{(8)} )</td>
+<td>Idle</td>
+</tr>
+</tbody>
+</table>
+<h3 id="34-parameter-update"><strong>3.4. Parameter Update</strong><a hidden class="anchor" aria-hidden="true" href="#34-parameter-update">#</a></h3>
+<p>After computing gradients for all micro-batches, both GPUs update their respective parameters:</p>
+<p>[
+W_i \leftarrow W_i - \eta \Delta W_i \quad \text{for } i = 1, 2, 3, 4
+]</p>
+<p>where ( \Delta W_i ) is the accumulated gradient for weights ( W_i ), and ( \eta ) is the learning rate.</p>
+<h3 id="35-memory-usage-comparison"><strong>3.5. Memory Usage Comparison</strong><a hidden class="anchor" aria-hidden="true" href="#35-memory-usage-comparison">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Memory Component</th>
+<th>Naive Pipeline Parallelism</th>
+<th>GPipe Pipeline Parallelism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stored Activations</strong></td>
+<td>All ( h_1^{(m)}, h_2^{(m)} ) for ( m = 1 ) to ( M_{\text{naive}} = 2 )</td>
+<td>Only ( h_2^{(m)} ) at GPU 1&rsquo;s boundary for ( m = 1 ) to ( M_{\text{GPipe}} = 8 )</td>
+</tr>
+<tr>
+<td><strong>Recomputed Activations</strong></td>
+<td>None</td>
+<td>Recompute ( h_1^{(m)}, h_2^{(m)} ) during backprop for each micro-batch</td>
+</tr>
+<tr>
+<td><strong>Total Memory</strong></td>
+<td>( O(2 \times (\text{size}(h_1) + \text{size}(h_2))) )</td>
+<td>( O(8 \times \text{size}(h_2)) ) + computation overhead</td>
+</tr>
+<tr>
+<td><strong>Memory Overhead</strong></td>
+<td>Higher due to storing all intermediate activations</td>
+<td>Lower due to selective activation storage and recomputation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="36-key-advantages-of-gpipe-parallelism"><strong>3.6. Key Advantages of GPipe Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#36-key-advantages-of-gpipe-parallelism">#</a></h3>
+<ol>
+<li>
+<p><strong>Higher GPU Utilization</strong>:</p>
+<ul>
+<li><strong>Concurrent Processing</strong>: Multiple micro-batches are processed in a pipelined manner, keeping both GPUs busy.</li>
+</ul>
+</li>
+<li>
+<p><strong>Reduced Bubble Overhead</strong>:</p>
+<ul>
+<li><strong>More Micro-Batches</strong>: With ( M_{\text{GPipe}} = 8 ), bubble overhead is minimized compared to the naive pipeline with ( M_{\text{naive}} = 2 ).</li>
+</ul>
+</li>
+<li>
+<p><strong>Optimized Memory Usage</strong>:</p>
+<ul>
+<li><strong>Selective Activation Storage</strong>: Only boundary activations are stored, significantly reducing memory consumption.</li>
+<li><strong>Re-materialization</strong>: Intermediate activations are recomputed during backprop, trading off additional computation for memory savings.</li>
+</ul>
+</li>
+<li>
+<p><strong>Scalability</strong>:</p>
+<ul>
+<li><strong>Efficient Partitioning</strong>: GPipe’s approach scales better with more GPUs, maintaining high throughput and resource utilization.</li>
+</ul>
+</li>
+<li>
+<p><strong>Low Communication Overhead</strong>:</p>
+<ul>
+<li><strong>Boundary Activation Transfers</strong>: Only necessary activations are communicated between GPUs, minimizing data transfer overhead.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2 id="4-detailed-comparison-naive-vs-gpipe-parallelism"><strong>4. Detailed Comparison: Naive vs. GPipe Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#4-detailed-comparison-naive-vs-gpipe-parallelism">#</a></h2>
+<table>
+<thead>
+<tr>
+<th><strong>Aspect</strong></th>
+<th><strong>Naive Pipeline Parallelism</strong></th>
+<th><strong>GPipe Pipeline Parallelism</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Number of Micro-Batches (( M ))</strong></td>
+<td>( M_{\text{naive}} = 2 )</td>
+<td>( M_{\text{GPipe}} = 8 )</td>
+</tr>
+<tr>
+<td><strong>Micro-Batch Size (( n ))</strong></td>
+<td>( n_{\text{naive}} = 4 )</td>
+<td>( n_{\text{GPipe}} = 1 )</td>
+</tr>
+<tr>
+<td><strong>Model Partitioning</strong></td>
+<td>Sequential split across GPUs</td>
+<td>Sequential split with optimized activation handling</td>
+</tr>
+<tr>
+<td><strong>Forward Pass</strong></td>
+<td>Each GPU processes micro-batches sequentially</td>
+<td>Micro-batches are pipelined across GPUs for concurrent processing</td>
+</tr>
+<tr>
+<td><strong>Backward Pass</strong></td>
+<td>Sequential gradient computation</td>
+<td>Recompute intermediate activations, allowing concurrent gradient computation</td>
+</tr>
+<tr>
+<td><strong>Activation Storage</strong></td>
+<td>Store all intermediate activations ( h_1^{(m)}, h_2^{(m)} )</td>
+<td>Store only boundary activations ( h_2^{(m)} ); recompute ( h_1^{(m)}, h_2^{(m)} )</td>
+</tr>
+<tr>
+<td><strong>Memory Usage</strong></td>
+<td>Higher due to full activation storage</td>
+<td>Lower due to selective activation storage and recomputation</td>
+</tr>
+<tr>
+<td><strong>GPU Utilization</strong></td>
+<td>Lower; GPUs often idle waiting for data</td>
+<td>Higher; GPUs remain busy processing different micro-batches</td>
+</tr>
+<tr>
+<td><strong>Bubble Overhead</strong></td>
+<td>Higher due to fewer micro-batches and sequential dependencies</td>
+<td>Lower due to increased micro-batches and overlapping computations</td>
+</tr>
+<tr>
+<td><strong>Scalability</strong></td>
+<td>Limited; adding more GPUs yields diminishing returns</td>
+<td>Better; scalable with efficient partitioning and micro-batching</td>
+</tr>
+<tr>
+<td><strong>Computation Overhead</strong></td>
+<td>Lower; no recomputation needed</td>
+<td>Higher; recomputation introduces additional computational cost</td>
+</tr>
+<tr>
+<td><strong>Overall Efficiency</strong></td>
+<td>Lower due to underutilization and higher memory usage</td>
+<td>Higher due to better utilization and optimized memory management</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5-illustrative-example-training-step"><strong>5. Illustrative Example: Training Step</strong><a hidden class="anchor" aria-hidden="true" href="#5-illustrative-example-training-step">#</a></h2>
+<p>Let’s walk through a <strong>single training step</strong> (forward and backward pass) using both naive and GPipe pipeline parallelism for clarity.</p>
+<h3 id="51-naive-pipeline-parallelism--m--2-"><strong>5.1. Naive Pipeline Parallelism (( M = 2 ))</strong><a hidden class="anchor" aria-hidden="true" href="#51-naive-pipeline-parallelism--m--2-">#</a></h3>
+<p><strong>Forward Pass:</strong></p>
+<ol>
+<li>
+<p><strong>GPU 1</strong>:</p>
+<ul>
+<li><strong>Micro-Batch 1</strong>:
+[
+h_1^{(1)} = \sigma(W_1 x^{(1)} + b_1)
+]
+[
+h_2^{(1)} = \sigma(W_2 h_1^{(1)} + b_2)
+]</li>
+<li><strong>Micro-Batch 2</strong>:
+[
+h_1^{(2)} = \sigma(W_1 x^{(2)} + b_1)
+]
+[
+h_2^{(2)} = \sigma(W_2 h_1^{(2)} + b_2)
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>GPU 2</strong>:</p>
+<ul>
+<li><strong>Micro-Batch 1</strong>:
+[
+h_3^{(1)} = \sigma(W_3 h_2^{(1)} + b_3)
+]
+[
+y^{(1)} = W_4 h_3^{(1)} + b_4
+]</li>
+<li><strong>Micro-Batch 2</strong>:
+[
+h_3^{(2)} = \sigma(W_3 h_2^{(2)} + b_3)
+]
+[
+y^{(2)} = W_4 h_3^{(2)} + b_4
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Backward Pass:</strong></p>
+<ol>
+<li>
+<p><strong>GPU 2</strong>:</p>
+<ul>
+<li><strong>Micro-Batch 2</strong>:
+[
+\delta_4^{(2)} = \frac{\partial \mathcal{L}}{\partial y^{(2)}} \cdot W_4^\top
+]
+[
+\delta_3^{(2)} = \delta_4^{(2)} \cdot \sigma&rsquo;(h_3^{(2)})
+]</li>
+<li><strong>Micro-Batch 1</strong>:
+[
+\delta_4^{(1)} = \frac{\partial \mathcal{L}}{\partial y^{(1)}} \cdot W_4^\top
+]
+[
+\delta_3^{(1)} = \delta_4^{(1)} \cdot \sigma&rsquo;(h_3^{(1)})
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>GPU 1</strong>:</p>
+<ul>
+<li><strong>Micro-Batch 2</strong>:
+[
+\delta_2^{(2)} = \delta_3^{(2)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(2)})
+]
+[
+\delta_1^{(2)} = \delta_2^{(2)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(2)})
+]</li>
+<li><strong>Micro-Batch 1</strong>:
+[
+\delta_2^{(1)} = \delta_3^{(1)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(1)})
+]
+[
+\delta_1^{(1)} = \delta_2^{(1)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(1)})
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Forward ( x^{(1)} ) → ( h_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Forward ( x^{(2)} ) → ( h_2^{(2)} )</td>
+<td>Forward ( h_2^{(1)} ) → ( y^{(1)} )</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Idle</td>
+<td>Forward ( h_2^{(2)} ) → ( y^{(2)} )</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Idle</td>
+<td>Backward ( \delta_4^{(2)} ) → ( \delta_3^{(2)} )</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Backward ( \delta_1^{(2)} ) → ( \delta_2^{(2)} )</td>
+<td>Backward ( \delta_4^{(1)} ) → ( \delta_3^{(1)} )</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Backward ( \delta_1^{(1)} ) → ( \delta_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Observations:</strong></p>
+<ul>
+<li><strong>GPU 2</strong> remains <strong>idle</strong> during Time Steps 1 and 3.</li>
+<li><strong>GPU 1</strong> is <strong>idle</strong> during Time Steps 3, 4, and 5.</li>
+<li><strong>Total Bubble Overhead</strong>: High, leading to underutilization of both GPUs.</li>
+</ul>
+<h3 id="52-gpipe-pipeline-parallelism--m--8-"><strong>5.2. GPipe Pipeline Parallelism (( M = 8 ))</strong><a hidden class="anchor" aria-hidden="true" href="#52-gpipe-pipeline-parallelism--m--8-">#</a></h3>
+<p><strong>Forward Pass:</strong></p>
+<p>With <strong>8 micro-batches</strong> (( M = 8 )) of size ( n = 1 ):</p>
+<ol>
+<li>
+<p><strong>Time Step 1</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 1</strong> (( x^{(1)} )):
+[
+h_1^{(1)} = \sigma(W_1 x^{(1)} + b_1)
+]
+[
+h_2^{(1)} = \sigma(W_2 h_1^{(1)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 2</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 2</strong> (( x^{(2)} )):
+[
+h_1^{(2)} = \sigma(W_1 x^{(2)} + b_1)
+]
+[
+h_2^{(2)} = \sigma(W_2 h_1^{(2)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(1)} ) and processes <strong>Micro-Batch 1</strong>:
+[
+h_3^{(1)} = \sigma(W_3 h_2^{(1)} + b_3)
+]
+[
+y^{(1)} = W_4 h_3^{(1)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 3</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 3</strong> (( x^{(3)} )):
+[
+h_1^{(3)} = \sigma(W_1 x^{(3)} + b_1)
+]
+[
+h_2^{(3)} = \sigma(W_2 h_1^{(3)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(2)} ) and processes <strong>Micro-Batch 2</strong>:
+[
+h_3^{(2)} = \sigma(W_3 h_2^{(2)} + b_3)
+]
+[
+y^{(2)} = W_4 h_3^{(2)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 4</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 4</strong> (( x^{(4)} )):
+[
+h_1^{(4)} = \sigma(W_1 x^{(4)} + b_1)
+]
+[
+h_2^{(4)} = \sigma(W_2 h_1^{(4)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(3)} ) and processes <strong>Micro-Batch 3</strong>:
+[
+h_3^{(3)} = \sigma(W_3 h_2^{(3)} + b_3)
+]
+[
+y^{(3)} = W_4 h_3^{(3)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 5</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 5</strong> (( x^{(5)} )):
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1)
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(4)} ) and processes <strong>Micro-Batch 4</strong>:
+[
+h_3^{(4)} = \sigma(W_3 h_2^{(4)} + b_3)
+]
+[
+y^{(4)} = W_4 h_3^{(4)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 6</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 6</strong> (( x^{(6)} )):
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1)
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(5)} ) and processes <strong>Micro-Batch 5</strong>:
+[
+h_3^{(5)} = \sigma(W_3 h_2^{(5)} + b_3)
+]
+[
+y^{(5)} = W_4 h_3^{(5)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 7</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 7</strong> (( x^{(7)} )):
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1)
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(6)} ) and processes <strong>Micro-Batch 6</strong>:
+[
+h_3^{(6)} = \sigma(W_3 h_2^{(6)} + b_3)
+]
+[
+y^{(6)} = W_4 h_3^{(6)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 8</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes <strong>Micro-Batch 8</strong> (( x^{(8)} )):
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1)
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2)
+]</li>
+<li><strong>GPU 2</strong> receives ( h_2^{(7)} ) and processes <strong>Micro-Batch 7</strong>:
+[
+h_3^{(7)} = \sigma(W_3 h_2^{(7)} + b_3)
+]
+[
+y^{(7)} = W_4 h_3^{(7)} + b_4
+]</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 9</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> receives ( h_2^{(8)} ) and processes <strong>Micro-Batch 8</strong>:
+[
+h_3^{(8)} = \sigma(W_3 h_2^{(8)} + b_3)
+]
+[
+y^{(8)} = W_4 h_3^{(8)} + b_4
+]</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Forward ( x^{(1)} ) → ( h_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Forward ( x^{(2)} ) → ( h_2^{(2)} )</td>
+<td>Forward ( h_2^{(1)} ) → ( y^{(1)} )</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Forward ( x^{(3)} ) → ( h_2^{(3)} )</td>
+<td>Forward ( h_2^{(2)} ) → ( y^{(2)} )</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Forward ( x^{(4)} ) → ( h_2^{(4)} )</td>
+<td>Forward ( h_2^{(3)} ) → ( y^{(3)} )</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Forward ( x^{(5)} ) → ( h_2^{(5)} )</td>
+<td>Forward ( h_2^{(4)} ) → ( y^{(4)} )</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Forward ( x^{(6)} ) → ( h_2^{(6)} )</td>
+<td>Forward ( h_2^{(5)} ) → ( y^{(5)} )</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Forward ( x^{(7)} ) → ( h_2^{(7)} )</td>
+<td>Forward ( h_2^{(6)} ) → ( y^{(6)} )</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Forward ( x^{(8)} ) → ( h_2^{(8)} )</td>
+<td>Forward ( h_2^{(7)} ) → ( y^{(7)} )</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Idle</td>
+<td>Forward ( h_2^{(8)} ) → ( y^{(8)} )</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-backward-pass"><strong>3.3. Backward Pass</strong><a hidden class="anchor" aria-hidden="true" href="#33-backward-pass">#</a></h3>
+<p><strong>Gradient Computation Steps with Re-materialization:</strong></p>
+<ol>
+<li>
+<p><strong>Time Step 10</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 8</strong>:
+[
+\delta_4^{(8)} = \frac{\partial \mathcal{L}}{\partial y^{(8)}} \cdot W_4^\top
+]
+[
+\delta_3^{(8)} = \delta_4^{(8)} \cdot \sigma&rsquo;(h_3^{(8)})
+]</li>
+<li><strong>GPU 1</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 11</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 7</strong>:
+[
+\delta_4^{(7)} = \frac{\partial \mathcal{L}}{\partial y^{(7)}} \cdot W_4^\top
+]
+[
+\delta_3^{(7)} = \delta_4^{(7)} \cdot \sigma&rsquo;(h_3^{(7)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(8)} ) and processes gradients for <strong>Micro-Batch 8</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(8)} = \delta_3^{(8)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(8)})
+]
+[
+\delta_1^{(8)} = \delta_2^{(8)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(8)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 12</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 6</strong>:
+[
+\delta_4^{(6)} = \frac{\partial \mathcal{L}}{\partial y^{(6)}} \cdot W_4^\top
+]
+[
+\delta_3^{(6)} = \delta_4^{(6)} \cdot \sigma&rsquo;(h_3^{(6)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(7)} ) and processes gradients for <strong>Micro-Batch 7</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(7)} = \delta_3^{(7)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(7)})
+]
+[
+\delta_1^{(7)} = \delta_2^{(7)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(7)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 13</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 5</strong>:
+[
+\delta_4^{(5)} = \frac{\partial \mathcal{L}}{\partial y^{(5)}} \cdot W_4^\top
+]
+[
+\delta_3^{(5)} = \delta_4^{(5)} \cdot \sigma&rsquo;(h_3^{(5)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(6)} ) and processes gradients for <strong>Micro-Batch 6</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(6)} = \delta_3^{(6)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(6)})
+]
+[
+\delta_1^{(6)} = \delta_2^{(6)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(6)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 14</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 4</strong>:
+[
+\delta_4^{(4)} = \frac{\partial \mathcal{L}}{\partial y^{(4)}} \cdot W_4^\top
+]
+[
+\delta_3^{(4)} = \delta_4^{(4)} \cdot \sigma&rsquo;(h_3^{(4)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(5)} ) and processes gradients for <strong>Micro-Batch 5</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(5)} = \delta_3^{(5)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(5)})
+]
+[
+\delta_1^{(5)} = \delta_2^{(5)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(5)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 15</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 3</strong>:
+[
+\delta_4^{(3)} = \frac{\partial \mathcal{L}}{\partial y^{(3)}} \cdot W_4^\top
+]
+[
+\delta_3^{(3)} = \delta_4^{(3)} \cdot \sigma&rsquo;(h_3^{(3)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(4)} ) and processes gradients for <strong>Micro-Batch 4</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(4)} = \sigma(W_1 x^{(4)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(4)} = \sigma(W_2 h_1^{(4)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(4)} = \delta_3^{(4)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(4)})
+]
+[
+\delta_1^{(4)} = \delta_2^{(4)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(4)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 16</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 2</strong>:
+[
+\delta_4^{(2)} = \frac{\partial \mathcal{L}}{\partial y^{(2)}} \cdot W_4^\top
+]
+[
+\delta_3^{(2)} = \delta_4^{(2)} \cdot \sigma&rsquo;(h_3^{(2)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(5)} ) and processes gradients for <strong>Micro-Batch 5</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(5)} = \sigma(W_1 x^{(5)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(5)} = \sigma(W_2 h_1^{(5)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(5)} = \delta_3^{(5)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(5)})
+]
+[
+\delta_1^{(5)} = \delta_2^{(5)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(5)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 17</strong>:</p>
+<ul>
+<li><strong>GPU 2</strong> computes gradients for <strong>Micro-Batch 1</strong>:
+[
+\delta_4^{(1)} = \frac{\partial \mathcal{L}}{\partial y^{(1)}} \cdot W_4^\top
+]
+[
+\delta_3^{(1)} = \delta_4^{(1)} \cdot \sigma&rsquo;(h_3^{(1)})
+]</li>
+<li><strong>GPU 1</strong> receives ( \delta_3^{(6)} ) and processes gradients for <strong>Micro-Batch 6</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(6)} = \sigma(W_1 x^{(6)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(6)} = \sigma(W_2 h_1^{(6)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(6)} = \delta_3^{(6)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(6)})
+]
+[
+\delta_1^{(6)} = \delta_2^{(6)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(6)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 18</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes gradients for <strong>Micro-Batch 7</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(7)} = \sigma(W_1 x^{(7)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(7)} = \sigma(W_2 h_1^{(7)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(7)} = \delta_3^{(7)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(7)})
+]
+[
+\delta_1^{(7)} = \delta_2^{(7)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(7)})
+]</li>
+</ul>
+</li>
+<li><strong>GPU 2</strong> receives ( \delta_3^{(3)} ) and processes gradients for <strong>Micro-Batch 3</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(3)} = \sigma(W_1 x^{(3)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(3)} = \sigma(W_2 h_1^{(3)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(3)} = \delta_3^{(3)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(3)})
+]
+[
+\delta_1^{(3)} = \delta_2^{(3)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(3)})
+]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Time Step 19</strong>:</p>
+<ul>
+<li><strong>GPU 1</strong> processes gradients for <strong>Micro-Batch 8</strong>:
+<ul>
+<li><strong>Recompute Activations</strong>:
+[
+h_1^{(8)} = \sigma(W_1 x^{(8)} + b_1) \quad \text{(Recomputed)}
+]
+[
+h_2^{(8)} = \sigma(W_2 h_1^{(8)} + b_2) \quad \text{(Recomputed)}
+]</li>
+<li><strong>Compute Gradients</strong>:
+[
+\delta_2^{(8)} = \delta_3^{(8)} \cdot W_3^\top \cdot \sigma&rsquo;(h_2^{(8)})
+]
+[
+\delta_1^{(8)} = \delta_2^{(8)} \cdot W_2^\top \cdot \sigma&rsquo;(h_1^{(8)})
+]</li>
+</ul>
+</li>
+<li><strong>GPU 2</strong> is <strong>idle</strong>.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Visualization:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Time Step</th>
+<th>GPU 1 (Layers 1 &amp; 2)</th>
+<th>GPU 2 (Layers 3 &amp; 4)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>10</td>
+<td>Idle</td>
+<td>Backward ( \delta_4^{(8)} ) → ( \delta_3^{(8)} )</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Recompute ( h_1^{(8)} ), ( h_2^{(8)} ) → Compute ( \delta_1^{(8)} ), ( \delta_2^{(8)} )</td>
+<td>Backward ( \delta_4^{(7)} ) → ( \delta_3^{(7)} )</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Recompute ( h_1^{(7)} ), ( h_2^{(7)} ) → Compute ( \delta_1^{(7)} ), ( \delta_2^{(7)} )</td>
+<td>Backward ( \delta_4^{(6)} ) → ( \delta_3^{(6)} )</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Recompute ( h_1^{(6)} ), ( h_2^{(6)} ) → Compute ( \delta_1^{(6)} ), ( \delta_2^{(6)} )</td>
+<td>Backward ( \delta_4^{(5)} ) → ( \delta_3^{(5)} )</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Recompute ( h_1^{(5)} ), ( h_2^{(5)} ) → Compute ( \delta_1^{(5)} ), ( \delta_2^{(5)} )</td>
+<td>Backward ( \delta_4^{(4)} ) → ( \delta_3^{(4)} )</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Recompute ( h_1^{(4)} ), ( h_2^{(4)} ) → Compute ( \delta_1^{(4)} ), ( \delta_2^{(4)} )</td>
+<td>Backward ( \delta_4^{(3)} ) → ( \delta_3^{(3)} )</td>
+</tr>
+<tr>
+<td>16</td>
+<td>Recompute ( h_1^{(3)} ), ( h_2^{(3)} ) → Compute ( \delta_1^{(3)} ), ( \delta_2^{(3)} )</td>
+<td>Backward ( \delta_4^{(2)} ) → ( \delta_3^{(2)} )</td>
+</tr>
+<tr>
+<td>17</td>
+<td>Recompute ( h_1^{(2)} ), ( h_2^{(2)} ) → Compute ( \delta_1^{(2)} ), ( \delta_2^{(2)} )</td>
+<td>Backward ( \delta_4^{(1)} ) → ( \delta_3^{(1)} )</td>
+</tr>
+<tr>
+<td>18</td>
+<td>Recompute ( h_1^{(1)} ), ( h_2^{(1)} ) → Compute ( \delta_1^{(1)} ), ( \delta_2^{(1)} )</td>
+<td>Idle</td>
+</tr>
+<tr>
+<td>19</td>
+<td>Recompute ( h_1^{(8)} ), ( h_2^{(8)} ) → Compute ( \delta_1^{(8)} ), ( \delta_2^{(8)} )</td>
+<td>Idle</td>
+</tr>
+</tbody>
+</table>
+<h3 id="53-parameter-update"><strong>5.3. Parameter Update</strong><a hidden class="anchor" aria-hidden="true" href="#53-parameter-update">#</a></h3>
+<p>After computing gradients for all micro-batches, both GPUs update their respective parameters:</p>
+<p>[
+W_i \leftarrow W_i - \eta \Delta W_i \quad \text{for } i = 1, 2, 3, 4
+]</p>
+<p>where ( \Delta W_i ) is the accumulated gradient for weights ( W_i ), and ( \eta ) is the learning rate.</p>
+<h3 id="54-memory-usage-comparison"><strong>5.4. Memory Usage Comparison</strong><a hidden class="anchor" aria-hidden="true" href="#54-memory-usage-comparison">#</a></h3>
+<table>
+<thead>
+<tr>
+<th>Memory Component</th>
+<th>Naive Pipeline Parallelism</th>
+<th>GPipe Pipeline Parallelism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Stored Activations</strong></td>
+<td>All ( h_1^{(m)}, h_2^{(m)} ) for ( m = 1 ) to ( M_{\text{naive}} = 2 )</td>
+<td>Only ( h_2^{(m)} ) at GPU 1&rsquo;s boundary for ( m = 1 ) to ( M_{\text{GPipe}} = 8 )</td>
+</tr>
+<tr>
+<td><strong>Recomputed Activations</strong></td>
+<td>None</td>
+<td>Recompute ( h_1^{(m)}, h_2^{(m)} ) during backprop for each micro-batch</td>
+</tr>
+<tr>
+<td><strong>Total Memory</strong></td>
+<td>( O(2 \times (\text{size}(h_1) + \text{size}(h_2))) )</td>
+<td>( O(8 \times \text{size}(h_2)) ) + computation overhead</td>
+</tr>
+<tr>
+<td><strong>Memory Overhead</strong></td>
+<td>Higher due to storing all intermediate activations</td>
+<td>Lower due to selective activation storage and recomputation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Explanation:</strong></p>
+<ul>
+<li>
+<p><strong>Naive Pipeline Parallelism</strong>:</p>
+<ul>
+<li>Stores all intermediate activations ( h_1^{(1)}, h_2^{(1)}, h_1^{(2)}, h_2^{(2)} ) on <strong>GPU 1</strong>.</li>
+</ul>
+</li>
+<li>
+<p><strong>GPipe Pipeline Parallelism</strong>:</p>
+<ul>
+<li>Stores only boundary activations ( h_2^{(1)}, h_2^{(2)}, \dots, h_2^{(8)} ) on <strong>GPU 1</strong>.</li>
+<li>Recomputes ( h_1^{(m)}, h_2^{(m)} ) during backpropagation for each micro-batch, reducing memory usage.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2 id="6-performance-optimization-in-gpipe"><strong>6. Performance Optimization in GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#6-performance-optimization-in-gpipe">#</a></h2>
+<h3 id="61-activation-memory-reduction"><strong>6.1. Activation Memory Reduction</strong><a hidden class="anchor" aria-hidden="true" href="#61-activation-memory-reduction">#</a></h3>
+<p><strong>Standard Approach (Naive Pipeline):</strong></p>
+<ul>
+<li><strong>Memory Requirement</strong>:
+[
+O(2 \times (\text{size}(h_1) + \text{size}(h_2)))
+]
+<ul>
+<li>All intermediate activations for each micro-batch are stored during the forward pass.</li>
+</ul>
+</li>
+</ul>
+<p><strong>GPipe’s Approach:</strong></p>
+<ul>
+<li><strong>Memory Requirement</strong>:
+[
+O(8 \times \text{size}(h_2)) + \text{Computation Overhead}
+]
+<ul>
+<li>Only boundary activations ( h_2^{(m)} ) are stored.</li>
+<li>Intermediate activations ( h_1^{(m)}, h_2^{(m)} ) are recomputed during backpropagation, reducing memory usage.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Memory Savings:</strong></p>
+<ul>
+<li>GPipe reduces memory usage by <strong>not storing intermediate activations</strong> within each partition, enabling the training of larger models or the use of larger batch sizes without exceeding memory constraints.</li>
+</ul>
+<h3 id="62-bubble-overhead-reduction"><strong>6.2. Bubble Overhead Reduction</strong><a hidden class="anchor" aria-hidden="true" href="#62-bubble-overhead-reduction">#</a></h3>
+<p><strong>Bubble Overhead</strong>: Idle times where GPUs wait for data to process, reducing overall efficiency.</p>
+<p><strong>GPipe’s Strategies to Minimize Bubble Overhead:</strong></p>
+<ol>
+<li>
+<p><strong>Increased Micro-Batches</strong>:</p>
+<ul>
+<li>More micro-batches (( M = 8 )) allow for better pipeline filling.</li>
+<li>Ensures that GPUs are processing different micro-batches concurrently, minimizing idle times.</li>
+</ul>
+</li>
+<li>
+<p><strong>Overlapping Computations</strong>:</p>
+<ul>
+<li>Re-computation during backprop can be overlapped with gradient computations from other micro-batches.</li>
+<li>Efficient scheduling ensures that GPUs remain busy throughout the training step.</li>
+</ul>
+</li>
+</ol>
+<p><strong>Practical Observation:</strong></p>
+<ul>
+<li><strong>GPipe</strong>: Bubble overhead becomes negligible when ( M \geq 4K ). For ( K = 2 ) GPUs, setting ( M = 8 ) ensures minimal bubble overhead.</li>
+<li><strong>Example</strong>: In our case with ( M_{\text{GPipe}} = 8 ) and ( M_{\text{naive}} = 2 ), bubble overhead is significantly reduced in GPipe compared to the naive approach.</li>
+</ul>
+<h3 id="63-communication-overhead"><strong>6.3. Communication Overhead</strong><a hidden class="anchor" aria-hidden="true" href="#63-communication-overhead">#</a></h3>
+<p><strong>Naive Pipeline Parallelism:</strong></p>
+<ul>
+<li><strong>Communication</strong>: Transfers activations (( h_2^{(m)} )) from <strong>GPU 1</strong> to <strong>GPU 2</strong> for each micro-batch.</li>
+<li><strong>Overhead</strong>: Higher due to sequential dependencies and fewer micro-batches.</li>
+</ul>
+<p><strong>GPipe Pipeline Parallelism:</strong></p>
+<ul>
+<li><strong>Communication</strong>: Efficiently pipelines activation transfers for multiple micro-batches.</li>
+<li><strong>Overhead</strong>: Low, as multiple micro-batches are communicated concurrently, and only boundary activations are transferred.</li>
+</ul>
+<p><strong>Impact:</strong></p>
+<ul>
+<li>GPipe’s approach ensures that communication does not become a bottleneck, maintaining high throughput even on accelerators without high-speed interconnects.</li>
+</ul>
+<hr>
+<h2 id="7-summary-and-conclusion"><strong>7. Summary and Conclusion</strong><a hidden class="anchor" aria-hidden="true" href="#7-summary-and-conclusion">#</a></h2>
+<p><strong>Naive Pipeline Parallelism</strong> offers a straightforward method to distribute neural network training across multiple GPUs by sequentially splitting the model and processing micro-batches one after another. However, it suffers from:</p>
+<ul>
+<li><strong>Underutilization of GPUs</strong>: GPUs often remain idle due to sequential dependencies.</li>
+<li><strong>Higher Memory Usage</strong>: All intermediate activations are stored during the forward pass.</li>
+<li><strong>Bubble Overhead</strong>: Initial and final time steps have GPUs idle, reducing efficiency.</li>
+<li><strong>Limited Scalability</strong>: Adding more GPUs does not proportionally increase throughput.</li>
+</ul>
+<p><strong>GPipe’s Pipeline Parallelism</strong> addresses these limitations through:</p>
+<ol>
+<li>
+<p><strong>Increased Micro-Batching</strong>: Using <strong>8 micro-batches</strong> instead of <strong>2</strong> allows for finer pipeline filling and higher GPU utilization.</p>
+</li>
+<li>
+<p><strong>Activation Storage Optimization</strong>: By storing only boundary activations and recomputing intermediate activations during backpropagation, GPipe significantly reduces memory usage.</p>
+</li>
+<li>
+<p><strong>Reduced Bubble Overhead</strong>: With more micro-batches and overlapping computations, GPipe minimizes idle times, ensuring that GPUs remain busy throughout the training process.</p>
+</li>
+<li>
+<p><strong>Efficient Communication</strong>: Streamlining activation transfers between GPUs by pipelining multiple micro-batches ensures low communication overhead, maintaining high throughput.</p>
+</li>
+</ol>
+<p><strong>Illustrative Comparison:</strong></p>
+<ul>
+<li><strong>4-Layer Network with 2 GPUs and Batch Size 8</strong>:
+<ul>
+<li><strong>Naive Pipeline</strong> processes <strong>2 micro-batches</strong> sequentially, leading to periods where one GPU is idle while the other is processing.</li>
+<li><strong>GPipe</strong> processes <strong>8 micro-batches</strong> in a pipelined fashion, keeping both GPUs active and reducing idle times.</li>
+</ul>
+</li>
+</ul>
+<p><strong>Conclusion:</strong></p>
+<p>GPipe’s advanced pipeline parallelism techniques significantly enhance the training efficiency of large-scale neural networks by optimizing GPU utilization, reducing memory consumption, and minimizing idle times. These improvements make GPipe a powerful tool for scaling deep learning models across multiple accelerators, effectively overcoming the limitations inherent in naive pipeline parallelism.</p>
+<hr>
+<h2 id="8-visual-illustration"><strong>8. Visual Illustration</strong><a hidden class="anchor" aria-hidden="true" href="#8-visual-illustration">#</a></h2>
+<p>To further solidify understanding, here’s a visual comparison of the computation flows with the updated micro-batch configurations:</p>
+<h3 id="81-naive-pipeline-parallelism--m--2-"><strong>8.1. Naive Pipeline Parallelism (( M = 2 ))</strong><a hidden class="anchor" aria-hidden="true" href="#81-naive-pipeline-parallelism--m--2-">#</a></h3>
+<pre tabindex="0"><code>Time Step | GPU 1                | GPU 2
+--------- | -------------------- | --------------------
+1         | Forward MB1          | Idle
+2         | Forward MB2          | Forward MB1
+3         | Idle                 | Forward MB2
+4         | Idle                 | Backward MB2
+5         | Backward MB2         | Backward MB1
+6         | Backward MB1         | Idle
+</code></pre><p><strong>Key Points:</strong></p>
+<ul>
+<li><strong>GPU 1</strong> is active during Time Steps 1 and 2, idle during 3, 4, 5, and active again at 6.</li>
+<li><strong>GPU 2</strong> is active during Time Steps 2, 3, 4, 5, and idle during 1 and 6.</li>
+<li><strong>Total Active Steps</strong>:
+<ul>
+<li><strong>GPU 1</strong>: 3 out of 6</li>
+<li><strong>GPU 2</strong>: 4 out of 6</li>
+</ul>
+</li>
+<li><strong>Idle Periods</strong>:
+<ul>
+<li><strong>GPU 1</strong>: Time Steps 3, 4, 5</li>
+<li><strong>GPU 2</strong>: Time Steps 1, 6</li>
+</ul>
+</li>
+</ul>
+<h3 id="82-gpipe-pipeline-parallelism--m--8-"><strong>8.2. GPipe Pipeline Parallelism (( M = 8 ))</strong><a hidden class="anchor" aria-hidden="true" href="#82-gpipe-pipeline-parallelism--m--8-">#</a></h3>
+<pre tabindex="0"><code>Time Step | GPU 1                | GPU 2
+--------- | -------------------- | --------------------
+1         | Forward MB1          | Idle
+2         | Forward MB2          | Forward MB1
+3         | Forward MB3          | Forward MB2
+4         | Forward MB4          | Forward MB3
+5         | Forward MB5          | Forward MB4
+6         | Forward MB6          | Forward MB5
+7         | Forward MB7          | Forward MB6
+8         | Forward MB8          | Forward MB7
+9         | Idle                 | Forward MB8
+10        | Idle                 | Backward MB8
+11        | Recompute MB8 → Compute \( \delta_1^{(8)}, \delta_2^{(8)} \) | Backward MB7
+12        | Recompute MB7 → Compute \( \delta_1^{(7)}, \delta_2^{(7)} \) | Backward MB6
+13        | Recompute MB6 → Compute \( \delta_1^{(6)}, \delta_2^{(6)} \) | Backward MB5
+14        | Recompute MB5 → Compute \( \delta_1^{(5)}, \delta_2^{(5)} \) | Backward MB4
+15        | Recompute MB4 → Compute \( \delta_1^{(4)}, \delta_2^{(4)} \) | Backward MB3
+16        | Recompute MB3 → Compute \( \delta_1^{(3)}, \delta_2^{(3)} \) | Backward MB2
+17        | Recompute MB2 → Compute \( \delta_1^{(2)}, \delta_2^{(2)} \) | Backward MB1
+18        | Recompute MB1 → Compute \( \delta_1^{(1)}, \delta_2^{(1)} \) | Idle
+19        | Idle                 | Idle
+</code></pre><p><strong>Key Points:</strong></p>
+<ul>
+<li><strong>GPU 1</strong> is active during Time Steps 1 to 8 and 11 to 18.</li>
+<li><strong>GPU 2</strong> is active during Time Steps 2 to 10 and 11 to 17.</li>
+<li><strong>Total Active Steps</strong>:
+<ul>
+<li><strong>GPU 1</strong>: 16 out of 19</li>
+<li><strong>GPU 2</strong>: 16 out of 19</li>
+</ul>
+</li>
+<li><strong>Idle Periods</strong>:
+<ul>
+<li><strong>GPU 1</strong>: Time Steps 9, 10, 19</li>
+<li><strong>GPU 2</strong>: Time Steps 1, 18, 19</li>
+</ul>
+</li>
+</ul>
+<p><strong>Efficiency Gains:</strong></p>
+<ul>
+<li><strong>Higher Utilization</strong>: Both GPUs are active for a more extended period compared to the naive approach.</li>
+<li><strong>Lower Bubble Overhead</strong>: Minimal idle times due to the higher number of micro-batches allowing continuous processing.</li>
+<li><strong>Concurrent Gradient Computation</strong>: Backward pass computations overlap with ongoing forward pass computations for different micro-batches.</li>
+</ul>
+<hr>
+<h2 id="9-final-thoughts"><strong>9. Final Thoughts</strong><a hidden class="anchor" aria-hidden="true" href="#9-final-thoughts">#</a></h2>
+<p>This detailed example showcases how <strong>GPipe’s pipeline parallelism</strong> optimizes both <strong>computational efficiency</strong> and <strong>memory usage</strong> compared to <strong>naive pipeline parallelism</strong>. By intelligently managing a higher number of micro-batches and optimizing activation storage, GPipe ensures that all GPUs remain actively engaged, leading to faster training times and the ability to handle larger models without exceeding memory constraints.</p>
+<p><strong>Understanding these mechanisms is crucial for scaling deep learning models effectively</strong>, especially when working with limited hardware resources or aiming to train exceptionally large networks. GPipe&rsquo;s strategies enable more efficient utilization of computational resources, making it a valuable tool for modern deep learning workflows.</p>
+<p>If you have further questions or need more detailed explanations on specific parts of the process, feel free to ask!</p>
+<h2 id="pipeline-model-parallelism">Pipeline Model parallelism<a hidden class="anchor" aria-hidden="true" href="#pipeline-model-parallelism">#</a></h2>
+<h2 id="gpipe">GPipe<a hidden class="anchor" aria-hidden="true" href="#gpipe">#</a></h2>
+<p>GPipe allows scaling arbitrary deep neural network architectures beyond the
+memory limitations of a single accelerator by partitioning the model across different accelerators and
+supporting re-materialization on every accelerator</p>
+<p>With GPipe, each model can be specified
+as a sequence of layers, and consecutive groups of layers can be partitioned into cells. Each cell is
+then placed on a separate accelerator. Based on this partitioned setup, we propose a novel pipeline
+parallelism algorithm with batch splitting. We first split a mini-batch of training examples into
+smaller micro-batches, then pipeline the execution of each set of micro-batches over cells. We apply
+synchronous mini-batch gradient descent for training, where gradients are accumulated across all
+micro-batches in a mini-batch and applied at the end of a mini-batch. Consequently, gradient updates
+using GPipe are consistent regardless of the number of partitions, allowing researchers to easily train
+increasingly large models by deploying more accelerators. GPipe can also be complemented with
+data parallelism to further scale training.</p>
+<h1 id="certainly-lets-break-down-the-schedule-with-interleaved-stages-understand-how-it-operates-and-clearly-contrast-it-with-gpipes-pipeline-parallelism-approach">Certainly! Let&rsquo;s break down the <strong>Schedule with Interleaved Stages</strong>, understand how it operates, and clearly contrast it with <strong>GPipe&rsquo;s</strong> pipeline parallelism approach.<a hidden class="anchor" aria-hidden="true" href="#certainly-lets-break-down-the-schedule-with-interleaved-stages-understand-how-it-operates-and-clearly-contrast-it-with-gpipes-pipeline-parallelism-approach">#</a></h1>
+<h2 id="1-understanding-gpipes-pipeline-parallelism"><strong>1. Understanding GPipe&rsquo;s Pipeline Parallelism</strong><a hidden class="anchor" aria-hidden="true" href="#1-understanding-gpipes-pipeline-parallelism">#</a></h2>
+<h3 id="11-gpipes-approach"><strong>1.1. GPipe&rsquo;s Approach</strong><a hidden class="anchor" aria-hidden="true" href="#11-gpipes-approach">#</a></h3>
+<p><strong>GPipe</strong> is a technique designed to distribute the training of large neural networks across multiple devices (e.g., GPUs) by dividing the model into <strong>pipeline stages</strong>. Here&rsquo;s a quick overview:</p>
+<ul>
+<li>
+<p><strong>Model Partitioning</strong>: The neural network is split into several sequential stages, each assigned to a different device.</p>
+</li>
+<li>
+<p><strong>Micro-Batching</strong>: The input data batch is divided into smaller <strong>micro-batches</strong> to enable concurrent processing across the pipeline.</p>
+</li>
+<li>
+<p><strong>Forward Pass</strong>: All micro-batches undergo the forward pass through the pipeline stages.</p>
+</li>
+<li>
+<p><strong>Backward Pass</strong>: Gradients are computed in reverse order, traversing back through the pipeline stages.</p>
+</li>
+</ul>
+<h3 id="12-pipeline-bubble-in-gpipe"><strong>1.2. Pipeline Bubble in GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#12-pipeline-bubble-in-gpipe">#</a></h3>
+<p>A <strong>pipeline bubble</strong> refers to periods when some devices are idle due to the sequential nature of processing. In GPipe&rsquo;s default schedule:</p>
+<ul>
+<li>
+<p><strong>Bubble Size</strong>: The pipeline bubble is proportional to the number of devices (<strong>p</strong>) minus one and the number of micro-batches (<strong>m</strong>).</p>
+</li>
+<li>
+<p><strong>Memory Overhead</strong>: To minimize the bubble, GPipe requires a large number of micro-batches (m ≫ p). However, this leads to high memory usage because activations from all micro-batches must be stored simultaneously.</p>
+</li>
+</ul>
+<h2 id="2-introducing-the-schedule-with-interleaved-stages"><strong>2. Introducing the Schedule with Interleaved Stages</strong><a hidden class="anchor" aria-hidden="true" href="#2-introducing-the-schedule-with-interleaved-stages">#</a></h2>
+<h3 id="21-core-concept"><strong>2.1. Core Concept</strong><a hidden class="anchor" aria-hidden="true" href="#21-core-concept">#</a></h3>
+<p>The <strong>Schedule with Interleaved Stages</strong> is an advanced pipeline parallelism strategy aimed at <strong>reducing the pipeline bubble size</strong> and <strong>optimizing memory usage</strong> compared to GPipe. The key idea is to <strong>interleave multiple subsets of the model&rsquo;s layers across each device</strong>, allowing each device to handle multiple pipeline stages concurrently.</p>
+<h3 id="22-how-it-works"><strong>2.2. How It Works</strong><a hidden class="anchor" aria-hidden="true" href="#22-how-it-works">#</a></h3>
+<ol>
+<li>
+<p><strong>Interleaved Model Chunks</strong>:</p>
+<ul>
+<li>
+<p><strong>Model Partitioning</strong>: Instead of assigning a single, contiguous block of layers to each device, the model is divided into multiple <strong>chunks</strong>. These chunks are then <strong>interleaved</strong> across devices.</p>
+</li>
+<li>
+<p><strong>Example</strong>: If you have 4 layers and 2 devices, instead of:</p>
+<ul>
+<li><strong>Device 1</strong>: Layers 1-2</li>
+<li><strong>Device 2</strong>: Layers 3-4</li>
+</ul>
+<p>With interleaving, it becomes:</p>
+<ul>
+<li><strong>Device 1</strong>: Layers 1 &amp; 3</li>
+<li><strong>Device 2</strong>: Layers 2 &amp; 4</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Multiple Pipeline Stages per Device</strong>:</p>
+<ul>
+<li>Each device handles <strong>v</strong> chunks (where <strong>v</strong> is the degree of interleaving).</li>
+<li>This means each device processes multiple micro-batches simultaneously but across different chunks of the model.</li>
+</ul>
+</li>
+<li>
+<p><strong>Reduced Pipeline Bubble</strong>:</p>
+<ul>
+<li>
+<p><strong>Original GPipe Bubble Time Fraction</strong>:
+[
+\text{Bubble Time Fraction} = \frac{p - 1}{m}
+]</p>
+</li>
+<li>
+<p><strong>Interleaved Schedule Bubble Time Fraction</strong>:
+[
+\text{Bubble Time Fraction} = \frac{p - 1}{v \times m}
+]</p>
+</li>
+<li>
+<p><strong>Effect</strong>: By introducing interleaving (<strong>v &gt; 1</strong>), the bubble time fraction decreases, meaning less time is wasted with devices idle.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Memory Efficiency</strong>:</p>
+<ul>
+<li><strong>GPipe</strong>: Requires storing activations for all <strong>m</strong> micro-batches.</li>
+<li><strong>Interleaved Schedule</strong>: Limits the number of <strong>in-flight micro-batches</strong> to the number of pipeline stages (<strong>p</strong>), drastically reducing memory overhead.</li>
+</ul>
+</li>
+<li>
+<p><strong>Communication Overhead</strong>:</p>
+<ul>
+<li><strong>Trade-off</strong>: While interleaving reduces the pipeline bubble and memory usage, it <strong>increases communication</strong> between devices by a factor of <strong>v</strong>.</li>
+<li><strong>Mitigation</strong>: Utilizing high-speed networking solutions (like multiple InfiniBand connections) can handle the additional communication efficiently.</li>
+</ul>
+</li>
+</ol>
+<h2 id="3-contrasting-interleaved-schedule-with-gpipe"><strong>3. Contrasting Interleaved Schedule with GPipe</strong><a hidden class="anchor" aria-hidden="true" href="#3-contrasting-interleaved-schedule-with-gpipe">#</a></h2>
+<table>
+<thead>
+<tr>
+<th><strong>Aspect</strong></th>
+<th><strong>GPipe</strong></th>
+<th><strong>Schedule with Interleaved Stages</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Model Partitioning</strong></td>
+<td>Single contiguous block of layers per device</td>
+<td>Multiple interleaved chunks of layers per device</td>
+</tr>
+<tr>
+<td><strong>Pipeline Bubble Size</strong></td>
+<td>(\frac{p - 1}{m})</td>
+<td>(\frac{p - 1}{v \times m})</td>
+</tr>
+<tr>
+<td><strong>Memory Overhead</strong></td>
+<td>High (requires storing activations for all micro-batches)</td>
+<td>Low (activations needed for only <strong>p</strong> micro-batches)</td>
+</tr>
+<tr>
+<td><strong>GPU Utilization</strong></td>
+<td>Lower due to larger pipeline bubbles</td>
+<td>Higher due to reduced pipeline bubbles</td>
+</tr>
+<tr>
+<td><strong>Communication Overhead</strong></td>
+<td>Moderate</td>
+<td>Increased by a factor of <strong>v</strong></td>
+</tr>
+<tr>
+<td><strong>Scalability</strong></td>
+<td>Limited by memory and pipeline bubble</td>
+<td>Better scalability with efficient communication management</td>
+</tr>
+</tbody>
+</table>
+<h3 id="31-pipeline-bubble-reduction"><strong>3.1. Pipeline Bubble Reduction</strong><a hidden class="anchor" aria-hidden="true" href="#31-pipeline-bubble-reduction">#</a></h3>
+<ul>
+<li><strong>GPipe</strong> requires a large number of micro-batches to minimize the bubble, leading to significant memory usage.</li>
+<li><strong>Interleaved Schedule</strong> reduces the bubble by a factor of <strong>v</strong>, allowing for fewer micro-batches while maintaining efficiency.</li>
+</ul>
+<h3 id="32-memory-efficiency"><strong>3.2. Memory Efficiency</strong><a hidden class="anchor" aria-hidden="true" href="#32-memory-efficiency">#</a></h3>
+<ul>
+<li><strong>GPipe</strong> stores all activations from every micro-batch, consuming substantial memory resources.</li>
+<li><strong>Interleaved Schedule</strong> only stores activations for a limited number of micro-batches (proportional to <strong>p</strong>), conserving memory.</li>
+</ul>
+<h3 id="33-gpu-utilization"><strong>3.3. GPU Utilization</strong><a hidden class="anchor" aria-hidden="true" href="#33-gpu-utilization">#</a></h3>
+<ul>
+<li><strong>GPipe</strong> experiences more idle times (bubbles), leading to underutilized GPUs.</li>
+<li><strong>Interleaved Schedule</strong> keeps GPUs more consistently busy by minimizing idle periods, enhancing overall utilization.</li>
+</ul>
+<h3 id="34-communication-overhead"><strong>3.4. Communication Overhead</strong><a hidden class="anchor" aria-hidden="true" href="#34-communication-overhead">#</a></h3>
+<ul>
+<li><strong>GPipe</strong> has moderate communication needs as each micro-batch is processed sequentially.</li>
+<li><strong>Interleaved Schedule</strong> increases communication due to handling multiple interleaved chunks but can be managed effectively with robust networking infrastructure.</li>
+</ul>
+<h2 id="4-summary"><strong>4. Summary</strong><a hidden class="anchor" aria-hidden="true" href="#4-summary">#</a></h2>
+<p>The <strong>Schedule with Interleaved Stages</strong> enhances pipeline parallelism by:</p>
+<ol>
+<li><strong>Reducing Pipeline Bubble Size</strong>: Minimizes idle times across devices, leading to better GPU utilization.</li>
+<li><strong>Optimizing Memory Usage</strong>: Limits the number of activations stored, allowing for larger models or larger batch sizes without exceeding memory constraints.</li>
+<li><strong>Maintaining Scalability</strong>: More gracefully scales with additional devices by balancing computational load and communication overhead.</li>
+</ol>
+<p>In contrast, <strong>GPipe&rsquo;s</strong> default pipeline parallelism, while effective, can suffer from higher memory usage and lower GPU utilization due to larger pipeline bubbles. The interleaved schedule addresses these limitations by introducing a more efficient way to manage pipeline stages and micro-batches.</p>
+<p><strong>Trade-off</strong>: The interleaved schedule requires handling increased communication between devices, but this can be mitigated with high-speed networking solutions, making it a powerful alternative for large-scale deep learning training.</p>
+<p>If you have further questions or need additional clarifications, feel free to ask!</p>
+<h2 id="tensor-model-parallelism">Tensor Model parallelism<a hidden class="anchor" aria-hidden="true" href="#tensor-model-parallelism">#</a></h2>
+<p>So in Pipeline model parallelism, the biggest issue is the bubble, wher the next gpu has to wait in line for the previous computation to be completed, so the Megatron LM researchers thought can we try and break up the matrix computations for a single mlp block across different gpus, this is the basic idea of Tensor Model parallelism, this is huge because the researchers achieved a &ldquo;76% scaling efficiency when compared to a strong single GPU baseline&rdquo;.</p>
+<p>So lests look at the transformer architecture one more time,</p>
+<div style="text-align: center;">
+  <img src="/images/Multi_GPU_Training/mgt_megatron_transformer.png" alt="TF32 Explained" style="display: block; margin: 0 auto;width: 30%;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>so as we can see there the transformer layer consists of a repeating Self attention and MLP block, the main idea here is to parallelize the computations simulataniously across different gpus.</p>
+<p>This approach is orthogonal to the previous Pipeline model parallelism and distributed data parallelism.</p>
+<h3 id="implementation-details">Implementation Details<a hidden class="anchor" aria-hidden="true" href="#implementation-details">#</a></h3>
+<p>Start by detailing the MLP block. The first part of the block is a $\text{GEMM} $ (General Matrix Multiplication) followed by a GeLU nonlinearity:
+$$
+Y = GeLU(XA)\qquad\qquad(1)
+$$</p>
+<div style="text-align: center;">
+  <img src="/images/Multi_GPU_Training/mgt_megatron_mlp.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>The basic idea here is to split this matrix multiplication across multiple gpu&rsquo;s.</p>
+<p>One option to parallelize the $\text{GEMM} $ is to split the weight matrix A along its rows and input X along its columns as:</p>
+<p>$$
+\begin{equation}
+X = [X_1, X_2], \quad A =
+\begin{bmatrix}
+A_1 \
+A_2
+\end{bmatrix}. \qquad\qquad (2)
+\end{equation}
+$$</p>
+<p>This partitioning will result in $Y = \text{GeLU}(X_1A_1 + X_2A_2)$. Since $\text{GeLU}$ is a nonlinear function:
+$$
+\text{GeLU}(X_1A_1 + X_2A_2) \neq \text{GeLU}(X_1A_1) + \text{GeLU}(X_2A_2),
+$$
+and this approach will require a synchronization point (you need the sum $ X_1A_1 + X_2A_2 $.) before applying the GeLU function.</p>
+<p>Alternatively, $A$ can be split along its columns as $A = [A_1, A_2]$. This partitioning allows the GeLU nonlinearity to be independently applied to the output of each partitioned $\text{GEMM} $:
+$$
+\begin{equation}
+[Y_1, Y_2] = [\text{GeLU}(X A_1), \text{GeLU}(X A_2)]. \qquad\qquad (3)
+\end{equation}
+$$</p>
+<p>This is advantageous as it removes a synchronization point. Hence, we partition the first $\text{GEMM} $ in this column parallel
+fashion and split the second $\text{GEMM} $ along its rows so it takes the output of the GeLU layer directly without requiring any
+communication as shown in Figure 3a. The output of the second $\text{GEMM} $ is then reduced across the GPUs before
+passing the output to the dropout layer. This approach splits both $\text{$\text{GEMM} $} $s in the MLP block across GPUs and requires
+only a single all-reduce operation in the forward pass (g operator) and a single all-reduce in the backward pass (f
+operator). These two operators are conjugates of each other and can be implemented in PyTorch with only a few lines of
+code.</p>
+<p>The devil is in the detail, this is espicially true in the case of Multi GPU trainig, the high level overviews are quite simple, so lets walk through a concise example of parallelizing the MLP block of the <strong>GPT-2 Small</strong> model across <strong>2 GPUs</strong> using a <strong>column-wise split</strong> for the first GEMM operation.</p>
+<h3 id="gpt-2-small-model-dimensions">GPT-2 Small Model Dimensions<a hidden class="anchor" aria-hidden="true" href="#gpt-2-small-model-dimensions">#</a></h3>
+<ul>
+<li>Hidden Size (<code>hidden_size</code>): 768</li>
+<li>MLP Intermediate Size (<code>intermediate_size</code>): 3072 $(4 * 768)$</li>
+<li>Batch Size (<code>batch_size</code>): 32 $\text{assumption}$</li>
+<li>Sequence Length (<code>seq_length</code>): 1024</li>
+<li>Number of GPUs: 2</li>
+</ul>
+<h3 id="mlp-block-operations">MLP Block Operations<a hidden class="anchor" aria-hidden="true" href="#mlp-block-operations">#</a></h3>
+<ol>
+<li>
+<p><strong>First Linear Layer (GEMM 1)</strong></p>
+<ul>
+<li>Input $ X $: <code>(32, 1024, 768)</code></li>
+<li>Weight Matrix $ A $: <code>(768, 3072)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>GeLU Activation</strong></p>
+<ul>
+<li>Applied after GEMM 1</li>
+</ul>
+</li>
+<li>
+<p><strong>Second Linear Layer (GEMM 2)</strong></p>
+<ul>
+<li>Weight Matrix $ B $: <code>(3072, 768)</code></li>
+</ul>
+</li>
+</ol>
+<h2 id="parallelization-strategy">Parallelization Strategy<a hidden class="anchor" aria-hidden="true" href="#parallelization-strategy">#</a></h2>
+<h3 id="column-wise-split-of-gemm-1">Column-Wise Split of GEMM 1<a hidden class="anchor" aria-hidden="true" href="#column-wise-split-of-gemm-1">#</a></h3>
+<ul>
+<li>
+<p>Split Weight Matrix $ A $ Along Columns :</p>
+</li>
+<li>
+<p>$ A = [A_1, A_2] $</p>
+</li>
+<li>
+<p>Each Partition :
+- $ A_1 $: <code>(768, 1536)</code>
+- $ A_2 $: <code>(768, 1536)</code></p>
+</li>
+<li>
+<p>Compute Partial GEMMs on Separate GPUs :</p>
+</li>
+<li>
+<p><strong>GPU 0</strong>:</p>
+<ul>
+<li>$ Y_1 = \text{GeLU}(X \times A_1) $ → <code>(32, 1024, 1536)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>GPU 1</strong>:</p>
+<ul>
+<li>$ Y_2 = \text{GeLU}(X \times A_2) $ → <code>(32, 1024, 1536)</code></li>
+</ul>
+</li>
+</ul>
+<h3 id="row-wise-split-of-gemm-2">Row-Wise Split of GEMM 2<a hidden class="anchor" aria-hidden="true" href="#row-wise-split-of-gemm-2">#</a></h3>
+<ul>
+<li>
+<p>Split Weight Matrix $ B $ Along Rows :</p>
+</li>
+<li>
+<p>$ B = \begin{bmatrix} B_1 \ B_2 \end{bmatrix} $</p>
+</li>
+<li>
+<p>Each Partition :
+- $ B_1 $: <code>(1536, 768)</code>
+- $ B_2 $: <code>(1536, 768)</code></p>
+</li>
+<li>
+<p>Compute Partial GEMMs on Separate GPUs :</p>
+</li>
+<li>
+<p><strong>GPU 0</strong>:</p>
+<ul>
+<li>$ Y_{\text{out}_1} = Y_1 \times B_1 $ → <code>(32, 1024, 768)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>GPU 1</strong>:</p>
+<ul>
+<li>$ Y_{\text{out}_2} = Y_2 \times B_2 $ → <code>(32, 1024, 768)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Aggregate Results</strong>:</p>
+<ul>
+<li>All-Reduce Operation : Sum $ Y_{\text{out}_1} + Y_{\text{out}_2} $ → <code>(32, 1024, 768)</code></li>
+</ul>
+</li>
+</ul>
+<p>Benefits :</p>
+<ul>
+<li>Minimal Synchronization : Only a single all-reduce operation is required after GEMM 2.</li>
+<li>Efficient Communication : Reduced inter-GPU communication overhead.</li>
+</ul>
+<div style="text-align: center;">
+  <img src="/images/Multi_GPU_Training/mgt_megatron_attention.png" alt="TF32 Explained" style="display: block; margin: 0 auto;">
+<p style="font-size: 0.8em; color: rgba(0, 0, 0, 0.6);">
+  Figure 1: Comparison of FP8 and BF16 formats. Source: 
+  <a href="https://arxiv.org/abs/xxxx.xxxxx" style="color: rgba(0, 0, 0, 0.6);">Smith et al. (2023)</a>
+</p>
+</div>
+<p>for the self attention block we exploit inherent parallelism in the multihead attention operation, partitioning the GEMMs associated with key (K), query (Q), and value (V ) in a column parallel fashion such that the matrix multiply corresponding to each attention head is done locally on one GPU. This allows us to split per attention head parameters and workload across the GPUs, and
+doesnt require any immediate communication to complete the self-attention. The subsequent GEMM from the output linear layer (after self attention) is parallelized along its rows and takes the output of the parallel attention layer directly, without requiring communication between the GPUs.</p>
+<p>This approach for both the MLP and self attention layer fuses groups of two GEMMs, eliminates a synchronization point in between, and results in better scaling. This enables us to perform all GEMMs in a simple transformer layer using only two all-reduces in the forward path and two in the backward path</p>
+<h3 id="self-attention-parallelization"><strong>Self-Attention Parallelization</strong><a hidden class="anchor" aria-hidden="true" href="#self-attention-parallelization">#</a></h3>
+<ol>
+<li>
+<p><strong>Multi-Head Setup</strong>:</p>
+<ul>
+<li>Number of Attention Heads: 12</li>
+<li>Heads per GPU: 6</li>
+</ul>
+</li>
+<li>
+<p><strong>Partitioning K, Q, V</strong>:</p>
+<ul>
+<li>
+<p>Weight Matrices:</p>
+<ul>
+<li>$ W_K $: <code>(768, 768)</code></li>
+<li>$ W_Q $: <code>(768, 768)</code></li>
+<li>$ W_V $: <code>(768, 768)</code></li>
+</ul>
+</li>
+<li>
+<p><strong>Column-Wise Split</strong>:</p>
+<ul>
+<li>Each GPU receives half of each weight matrix:
+<ul>
+<li><strong>GPU 0</strong>: Columns <code>0-383</code> of $ W_K, W_Q, W_V $</li>
+<li><strong>GPU 1</strong>: Columns <code>384-767</code> of $ W_K, W_Q, W_V $</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Local GEMMs</strong>:</p>
+<ul>
+<li><strong>GPU 0</strong> computes $ Q_0 = X \times W_{Q0} $, $ K_0 = X \times W_{K0} $, $ V_0 = X \times W_{V0} $</li>
+<li><strong>GPU 1</strong> computes $ Q_1 = X \times W_{Q1} $, $ K_1 = X \times W_{K1} $, $ V_1 = X \times W_{V1} $</li>
+</ul>
+</li>
+<li>
+<p><strong>Attention Computation</strong>:</p>
+<ul>
+<li>Each GPU computes attention for its assigned heads using $ Q_i, K_i, V_i $ locally.</li>
+</ul>
+</li>
+<li>
+<p><strong>Output Linear Layer</strong>:</p>
+<ul>
+<li>The concatenated attention outputs from both GPUs are processed by a row-wise split GEMM:
+<ul>
+<li><strong>GPU 0</strong> handles the first half of the output weights.</li>
+<li><strong>GPU 1</strong> handles the second half.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>All-Reduce Synchronization</strong>:</p>
+<ul>
+<li>After computing the output GEMM, an all-reduce operation aggregates the results across GPUs.</li>
+</ul>
+</li>
+</ol>
+<p>The transformer language model has an output embedding with the dimension of hidden-size (H) times vocabularysize (v). Since the vocabulary size is on the order of tens of thousands of tokens for modern language models (for example, GPT-2 used a vocabulary size of 50,257), it is beneficial to parallelize the output embedding GEMM. However, in transformer language models, the output embedding layer shares weights with the input embedding, requiring modifications to both.</p>
+<h3 id="parallelization-approach"><strong>Parallelization Approach</strong><a hidden class="anchor" aria-hidden="true" href="#parallelization-approach">#</a></h3>
+<ol>
+<li>
+<p><strong>Column-Wise Split of Embedding Matrix</strong></p>
+<ul>
+<li><strong>Weight Matrix $ E $</strong>: Shape <code>(H, V)</code> where <code>H</code> is hidden size and <code>V</code> is vocabulary size.</li>
+<li><strong>Partitioning</strong>: Split $ E $ along the vocabulary dimension into $ E = [E_1, E_2] $.
+<ul>
+<li><strong>Each Partition</strong>:
+<ul>
+<li>$ E_1 $: <code>(H, V/2)</code></li>
+<li>$ E_2 $: <code>(H, V/2)</code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Input Embedding Parallelization</strong></p>
+<ul>
+<li><strong>Operation</strong>:
+$$
+XE = [XE_1, XE_2]
+$$</li>
+<li><strong>Synchronization</strong>:
+<ul>
+<li>Perform an <strong>all-reduce (g operator)</strong> after computing $ XE_1 $ and $ XE_2 $ to maintain consistency across GPUs.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Output Embedding Parallelization</strong></p>
+<ul>
+<li><strong>Parallel GEMM</strong>:
+$$
+[Y_1, Y_2] = [XE_1, XE_2]
+$$</li>
+<li><strong>Optimized Loss Computation</strong>:
+<ul>
+<li>Instead of performing an all-gather on $ [Y_1, Y_2] $ (which would require communicating $ b \times s \times V $ elements), <strong>fuse</strong> the GEMM output with the cross-entropy loss:
+$$
+\text{Loss} = \text{CrossEntropyLoss}(Y_1 + Y_2, \text{Targets})
+$$</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<h3 id="step-by-step-parallelization"><strong>Step-by-Step Parallelization</strong><a hidden class="anchor" aria-hidden="true" href="#step-by-step-parallelization">#</a></h3>
+<ol>
+<li>
+<p><strong>Partitioning the Embedding Matrix</strong></p>
+<ul>
+<li>Split $ E $ into:
+<ul>
+<li>$ E_1 $: <code>(768, 25,129)</code></li>
+<li>$ E_2 $: <code>(768, 25,128)</code></li>
+</ul>
+</li>
+<li><em>(Note: Handle any uneven splits appropriately)</em></li>
+</ul>
+</li>
+<li>
+<p><strong>Input Embedding Computation</strong></p>
+<ul>
+<li><strong>GPU 0</strong> computes:
+$$
+Y_1 = X \times E_1 \quad \text{(Shape: } 32 \times 1024 \times 25,129 \text{)}
+$$</li>
+<li><strong>GPU 1</strong> computes:
+$$
+Y_2 = X \times E_2 \quad \text{(Shape: } 32 \times 1024 \times 25,128 \text{)}
+$$</li>
+</ul>
+</li>
+<li>
+<p><strong>Synchronization with All-Reduce (g Operator)</strong></p>
+<ul>
+<li>Aggregate $ Y_1 $ and $ Y_2 $ across GPUs to ensure synchronized input embeddings.</li>
+</ul>
+</li>
+<li>
+<p><strong>Output Embedding Computation and Loss Fusion</strong></p>
+<ul>
+<li><strong>Parallel GEMM</strong>:
+$$
+[Y_1, Y_2] = [X E_1, X E_2]
+$$</li>
+<li><strong>Fused Loss</strong>:
+$$
+\text{Loss} = \text{CrossEntropyLoss}(Y_1 + Y_2, \text{Targets})
+$$</li>
+<li><strong>Communication</strong>: Only scalar loss values are communicated, reducing data transfer significantly.</li>
+</ul>
+</li>
+</ol>
+<p>SELF-CONSISTENCY IMPROVES CHAIN OF THOUGHT REASONING IN LANGUAGE MODELS
 Chain-of-Thought Reasoning without Prompting</p>
 <p>In this post, i wont be discussing code implementations, my goal is to cover the foundational concepts related to multi-GPU Training of Massive llms,</p>
 <p>as stated in my post on Qunatization, you would need a cluster of gpus just to get up and running with the finetuning of of even small llms like the llama 7B models.</p>
@@ -203,7 +3108,7 @@ Chain-of-Thought Reasoning without Prompting</p>
 <p>start with DDP or distributed data parallel.</p>
 <h2 id="ddp-distributed-data-parallel">DDP (Distributed Data Parallel)<a hidden class="anchor" aria-hidden="true" href="#ddp-distributed-data-parallel">#</a></h2>
 <p>basically ddp is quite easy, most of the effort of ddp lies in making efficient in actula production, dealing wiht race conditions etc&hellip;</p>
-<h2 id="pipeline-model-parallelism">Pipeline model parallelism<a hidden class="anchor" aria-hidden="true" href="#pipeline-model-parallelism">#</a></h2>
+<h2 id="pipeline-model-parallelism-1">Pipeline model parallelism<a hidden class="anchor" aria-hidden="true" href="#pipeline-model-parallelism-1">#</a></h2>
 <p>In data parallelism we say how we can fit multiple copies of the same model on different GPUs, but now we consider the more common scenarion of the model not being able to fit on a single gpu,
 There are primarily two ways we can tackle this problem pipeline parallelism is the more intuitive one, so lets start with that.</p>
 <p>The basic idea of pipeline parallelism is quite simple, if your model dosent fit on a single GPU, slice up the different layers and put them across multiple gpus, so each gpu takes input as the output of the previous partition as input, but the problem here is obvious, you cant rent a h100 gpu cluster for 8 bucks an hour and have this bad gpu utilization, so here are some techniques that make model parallelism efficient</p>
@@ -558,7 +3463,7 @@ and and backward pass</p>
 <hr>
 <h1 id="references">References<a hidden class="anchor" aria-hidden="true" href="#references">#</a></h1>
 <p>[1] <a href="https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer">https://huggingface.co/blog/bloom-megatron-deepspeed#bf16optimizer</a></p>
-<p>[2] <a href="https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/">https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/</a>�</p>
+<p>[2] <a href="https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/">https://lightning.ai/blog/doubling-neural-network-finetuning-efficiency-with-16-bit-precision-techniques/</a></p>
 
 
   </div>
@@ -577,7 +3482,7 @@ and and backward pass</p>
     </main>
     
 <footer class="footer">
-        <span>&copy; 2024 <a href="http://localhost:1313/">TensorTunes</a></span> · 
+        <span>&copy; 2025 <a href="http://localhost:1313/">TensorTunes</a></span> · 
 
     <span>
         Powered by
