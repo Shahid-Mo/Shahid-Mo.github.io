@@ -24,6 +24,15 @@
 If you&amp;rsquo;ve ever tried to train a deep learning model, the dreaded CUDA error: out of memory is likely all too familiar. The usual quick fix is to decrease the batch size and move on without giving it much thought. But have you ever wondered about how memory gets allocated during training?? In this blog post, I want to demystify memory consumption during model training and and offer practical methods to reduce the demands of memory-heavy models.</description>
     </item>
     <item>
+      <title>From Retrieval to RAG (Part - 2) [Draft]</title>
+      <link>http://localhost:1313/posts/rag_part2/</link>
+      <pubDate>Sat, 19 Oct 2024 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/rag_part2/</guid>
+      <description>The concept of &amp;ldquo;Retriever + Generator End-to-end Training&amp;rdquo; (referred to as &amp;ldquo;RAG&amp;rdquo;) by Lewis et al. (2020) integrates retrieval and generation into a single, cohesive framework. This method enhances the accuracy of generating relevant and accurate responses by training both components together, ensuring that the retriever provides relevant documents and the generator produces high-quality responses. Let&amp;rsquo;s break down the details step by step:
+Components of RAG Retriever:
+The retriever is responsible for searching a large corpus to find documents relevant to the input query.</description>
+    </item>
+    <item>
       <title>RLHF: PPO [Draft]</title>
       <link>http://localhost:1313/posts/rlhf_v2/</link>
       <pubDate>Sun, 13 Oct 2024 00:00:00 +0000</pubDate>

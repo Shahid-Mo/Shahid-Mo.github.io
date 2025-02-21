@@ -182,45 +182,7 @@
                 <li>
                     <a href="#colbert" aria-label="ColBERT">ColBERT</a></li>
                 <li>
-                    <a href="#splade" aria-label="SPLADE">SPLADE</a></li>
-                <li>
-                    <a href="#term-document-matrix-1" aria-label="Term Document Matrix">Term Document Matrix</a></li></ul>
-                </li>
-                <li>
-                    <a href="#tf-idf-approach-1" aria-label="TF-IDF Approach">TF-IDF Approach</a><ul>
-                        
-                <li>
-                    <a href="#understanding-tf-idf-values-1" aria-label="Understanding TF-IDF Values">Understanding TF-IDF Values</a></li>
-                <li>
-                    <a href="#retrieval-based-on-a-query-1" aria-label="Retrieval based on a query">Retrieval based on a query</a></li></ul>
-                </li>
-                <li>
-                    <a href="#bm25-1" aria-label="BM25">BM25</a><ul>
-                        
-                <li>
-                    <a href="#smoothed-idf-1" aria-label="Smoothed IDF">Smoothed IDF</a></li>
-                <li>
-                    <a href="#scoring-1" aria-label="Scoring">Scoring</a></li>
-                <li>
-                    <a href="#bm25-weight-1" aria-label="BM25 Weight">BM25 Weight</a></li>
-                <li>
-                    <a href="#why-dense-vector-representations-1" aria-label="Why Dense Vector Representations?">Why Dense Vector Representations?</a></li></ul>
-                </li>
-                <li>
-                    <a href="#neural-information-retrieval-with-dense-vectors-1" aria-label="Neural Information Retrieval with Dense Vectors">Neural Information Retrieval with Dense Vectors</a><ul>
-                        
-                <li>
-                    <a href="#cross-encoders-1" aria-label="Cross Encoders">Cross Encoders</a></li>
-                <li>
-                    <a href="#training-and-loss-functions-1" aria-label="Training and Loss Functions">Training and Loss Functions</a></li>
-                <li>
-                    <a href="#dense-passage-retriever-dpr-1" aria-label="Dense Passage Retriever (DPR)">Dense Passage Retriever (DPR)</a></li>
-                <li>
-                    <a href="#colbert-1" aria-label="ColBERT">ColBERT</a></li>
-                <li>
-                    <a href="#splade-1" aria-label="SPLADE">SPLADE</a></li>
-                <li>
-                    <a href="#hypothetical-document-embeddings-hyde" aria-label="Hypothetical Document Embeddings (HyDE)">Hypothetical Document Embeddings (HyDE)</a>
+                    <a href="#splade" aria-label="SPLADE">SPLADE</a>
                 </li>
             </ul>
             </li>
@@ -249,10 +211,13 @@
 <p>Sparse retrieval works on the <strong>BoW (Bag of Words) model</strong>, where the documents are <strong>indexed</strong> and an <strong>exact match</strong> in the query is used to retrieve the relevant document. The words in your query have to <strong>exactly match</strong> the words in the document present.</p>
 <p>Let’s look at the inner workings of <strong>sparse retrieval</strong> starting with&hellip;</p>
 <h3 id="term-document-matrix">Term Document Matrix<a hidden class="anchor" aria-hidden="true" href="#term-document-matrix">#</a></h3>
+<div style="text-align: center;">
+  <img src="/images/rag_1/rag_1_a.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 500px; height: auto;">
+</div>
 <p>A <strong>term-document matrix (TDM)</strong> is a foundational tool in information retrieval and natural language processing. Each row in the matrix represents a <strong>word (term)</strong>, and each column represents a <strong>document</strong>. The cells in this matrix record how many times each word appears in each document.</p>
 <p>These matrices are typically <strong>very large and sparse</strong>. Despite this sparsity, term-document matrices hold significant latent information about the relationships between terms and documents, making them incredibly useful for identifying relevant documents based on specific query terms.</p>
 <p>In actual practice, an <strong>inverted index</strong> is used. You can compare it to the <strong>adjacency matrix</strong> and <strong>adjacency list</strong> representations in graphs, where they are conceptually the same but more efficient to store in a linked list format. An inverted index is similar in many respects.</p>
-<p>The basic approach is called <strong>TF-IDF</strong> (which stands for <strong>Term Frequency-Inverse Document Frequency</strong>). # dont like this, give me a different intro to tf-idf</p>
+<p>The basic approach is called <strong>TF-IDF</strong> (which stands for <strong>Term Frequency-Inverse Document Frequency</strong>).</p>
 <h2 id="tf-idf-approach">TF-IDF Approach<a hidden class="anchor" aria-hidden="true" href="#tf-idf-approach">#</a></h2>
 <p><strong>TF-IDF</strong> is a common method for refining term-document values to extract more information about the relevance of documents. Here’s how TF-IDF works: # dont like this intro here, tells nothing about what tf-idf does just says &ldquo;common method for refining term-document values to extract more information&hellip;&rdquo; thats very bad</p>
 <p>We start with a <strong>corpus of documents ($D$)</strong>.</p>
@@ -299,6 +264,9 @@ $$</li>
 </li>
 </ol>
 <h3 id="understanding-tf-idf-values">Understanding TF-IDF Values<a hidden class="anchor" aria-hidden="true" href="#understanding-tf-idf-values">#</a></h3>
+<div style="text-align: center;">
+  <img src="/images/rag_1/rag_1_b.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 400px; height: auto;">
+</div>
 <p>The image above shows <strong>TF-IDF values</strong> for various terms, highlighting the relationship between <strong>term frequency (TF)</strong> and <strong>document count (docCount)</strong>.</p>
 <p><strong>TF-IDF values are highest</strong> for terms that appear frequently in a few documents. For instance, the largest bubble corresponds to a term with a <strong>high term frequency</strong> (TF close to 1.0) but appearing in only one document. This indicates that the term is <strong>highly specific</strong> to that document, making it a strong distinguishing feature.</p>
 <p>Conversely, <strong>TF-IDF values are lowest</strong> for terms that appear infrequently across many documents. These terms are less helpful in distinguishing one document from another because their widespread presence dilutes their significance. For example, technical terms like &ldquo;specificity&rdquo; or &ldquo;granularity&rdquo; might appear in many documents but with low frequency in each, resulting in low TF-IDF values.</p>
@@ -328,6 +296,9 @@ $$</p>
 <h3 id="bm25-weight">BM25 Weight<a hidden class="anchor" aria-hidden="true" href="#bm25-weight">#</a></h3>
 <p>Finally, the <strong>BM25 weight</strong> is calculated by combining the adjusted IDF values with the scoring values:</p>
 <h3 id="why-dense-vector-representations">Why Dense Vector Representations?<a hidden class="anchor" aria-hidden="true" href="#why-dense-vector-representations">#</a></h3>
+<div style="text-align: center;">
+  <img src="/images/rag_1/rag_1_c.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 400px; height: auto;">
+</div>
 <p><strong>Sparse retrieval techniques</strong>, which rely on term matching, often fall short in understanding the <strong>semantic context</strong> of queries. For instance, a sparse approach might struggle to effectively link the query &ldquo;what compounds protect the digestive system against viruses&rdquo; with the relevant information that &ldquo;gastric acid and proteases serve as powerful chemical defenses against ingested pathogens.&rdquo; <strong>Dense vector representations</strong>, however, capture the deeper semantic meaning of words and phrases, enabling more accurate and context-aware retrieval of information. By transitioning to dense vectors, we can achieve significantly improved performance in understanding and responding to complex queries.</p>
 <p>Before we move on to <strong>fancy dense retrieval techniques</strong>, I would like to make some points in favor of <strong>sparse retrieval</strong>.</p>
 <ul>
@@ -337,6 +308,7 @@ $$</p>
 <h2 id="neural-information-retrieval-with-dense-vectors">Neural Information Retrieval with Dense Vectors<a hidden class="anchor" aria-hidden="true" href="#neural-information-retrieval-with-dense-vectors">#</a></h2>
 <p>In the realm of <strong>information retrieval (IR)</strong>, the adoption of <strong>dense vector representations</strong> has significantly enhanced the efficiency and effectiveness of search systems. Traditional <strong>sparse retrieval techniques</strong> often fall short in capturing the nuanced <strong>semantic relationships</strong> between queries and documents. In contrast, dense vector representations, powered by <strong>neural networks</strong>, offer a richer, more expressive way to understand and match text.</p>
 <h3 id="cross-encoders"><strong>Cross Encoders</strong><a hidden class="anchor" aria-hidden="true" href="#cross-encoders">#</a></h3>
+  <img src="/images/rag_1/rag_1_d.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 300px; height: auto;">
 <p><strong>Cross encoders</strong> are conceptually the simplest approach to neural IR. They work by <strong>concatenating the query and document texts</strong> into a single input, which is then processed through a pre-trained <strong>BERT model</strong>. The final output state above the <strong>[CLS] token</strong> is used for scoring.</p>
 <h3 id="training-and-loss-functions">Training and Loss Functions<a hidden class="anchor" aria-hidden="true" href="#training-and-loss-functions">#</a></h3>
 <ol>
@@ -365,6 +337,7 @@ $$</p>
 </ol>
 <p>While <strong>cross encoders</strong> are <strong>semantically rich</strong> due to the <strong>joint encoding</strong> of queries and documents, they are <strong>not scalable</strong>. This is because every document must be encoded at query time, which means that if we have a billion documents, we need to perform a billion forward passes with the BERT model for each query. This makes real-time retrieval <strong>infeasible</strong>.</p>
 <h3 id="dense-passage-retriever-dpr"><strong>Dense Passage Retriever (DPR)</strong><a hidden class="anchor" aria-hidden="true" href="#dense-passage-retriever-dpr">#</a></h3>
+  <img src="/images/rag_1/rag_1_e.png" alt="TF32 Explained" style="display: block; margin: 0 auto; width: 300px; height: auto;">
 <p><strong>DPR</strong> represents a <strong>scalable alternative</strong> by <strong>separately encoding</strong> queries and documents. Unlike cross encoders, DPR encodes queries and documents independently, allowing <strong>pre-encoding of documents</strong>, which enhances scalability.</p>
 <ol>
 <li>
@@ -460,215 +433,6 @@ $$</p>
 </li>
 </ol>
 <p><strong>SPLADE</strong> is <strong>efficient</strong> due to its use of <strong>sparse vectors</strong>, which reduces the <strong>computational overhead</strong>. By <strong>comparing sequences</strong> against the <strong>entire vocabulary</strong>, SPLADE captures a <strong>wide range of semantic information</strong>, making it <strong>versatile</strong> and <strong>effective</strong> in various retrieval scenarios. The <strong>regularization term</strong> ensures that the model produces <strong>balanced and sparse scores</strong>, optimizing both <strong>performance</strong> and <strong>computational efficiency</strong>.</p>
-<hr>
-<p>Feel free to further adjust the <strong>bolded sections</strong> or any other parts to better match your personal style and the specific direction of your blog!</p>
-<p>Sparse retrieval works on the BoW (Bag of words model), where the doucments are indexed and the we use an exact match in the query to retrieve the relevant document. The words in your query have to exactly match the words in the document present.</p>
-<p>Lets look at the inner workings of sparse retrieval starting with ..</p>
-<h3 id="term-document-matrix-1">Term Document Matrix<a hidden class="anchor" aria-hidden="true" href="#term-document-matrix-1">#</a></h3>
-<p>A term-document matrix (TDM) is a foundational tool in information retrieval and natural language processing. Each row in the matrix represents a word (term), and each column represents a document. The cells in this matrix record how many times each word appears in each document.</p>
-<p>These matrices are typically very large and sparse. Despite this sparsity, term-document matrices hold significant latent information about the relationships between terms and documents, making them incredibly useful for identifying relevant documents based on specific query terms.</p>
-<p>In actul practice an inverted index is used, you can compare it to the Adjacency matrix and Adjacency list representaions in graphs, wher they are conceputually the same but it is more efficient to store it in a linked list format, an inverted index is similar in many respects.</p>
-<p>The basic apprach is called TF-IDF (which stands for term frequency - inverted document frequency)</p>
-<h2 id="tf-idf-approach-1">TF-IDF Approach<a hidden class="anchor" aria-hidden="true" href="#tf-idf-approach-1">#</a></h2>
-<p>TF-IDF is a common method for refining term-document values to extract more information about the relevance of documents. Here’s how TF-IDF works:</p>
-<p>We start with a corpus of documents ($D$).</p>
-<ol>
-<li>
-<p><strong>Term Frequency (TF):</strong></p>
-<ul>
-<li>Term frequency is internal to each document. The TF of a word within a document is the number of times that word appears in the document divided by the total number of words in that document.</li>
-<li><strong>Formula:</strong> $ \text{TF}(w, \text{doc}) = \frac{\text{count}(w, \text{doc})}{|\text{doc}|} $</li>
-</ul>
-</li>
-<li>
-<p><strong>Document Frequency (DF):</strong></p>
-<ul>
-<li>Document frequency is a function of words and the entire corpus. It counts the number of documents that contain the target word, regardless of how often the word appears in each document.</li>
-<li><strong>Formula:</strong> $ \text{df}(w, D) = |\lbrace \text{doc} \in D : w \in \text{doc} \rbrace| $</li>
-</ul>
-</li>
-<li>
-<p><strong>Inverse Document Frequency (IDF):</strong></p>
-<ul>
-<li>Inverse document frequency is the log of the total number of documents divided by the document frequency.</li>
-<li><strong>Formula:</strong> $ \text{IDF}(w, D) = \log_e \left( \frac{|D|}{\text{df}(w, D)} \right) $</li>
-</ul>
-</li>
-<li>
-<p><strong>TF-IDF Calculation:</strong></p>
-<ul>
-<li>TF-IDF is the product of the TF and IDF values.</li>
-<li><strong>Formula:</strong> $ \text{TF-IDF}(w, \text{doc}, D) = \text{TF}(w, \text{doc}) \cdot \text{IDF}(w, D) $</li>
-</ul>
-</li>
-</ol>
-<h3 id="understanding-tf-idf-values-1">Understanding TF-IDF Values<a hidden class="anchor" aria-hidden="true" href="#understanding-tf-idf-values-1">#</a></h3>
-<p>The image above shows TF-IDF values for various terms, highlighting the relationship between term frequency (TF) and document count (docCount).</p>
-<p>TF-IDF values are highest for terms that appear frequently in a few documents. For instance, the largest bubble corresponds to a term with a high term frequency (TF close to 1.0) but appearing in only one document. This indicates that the term is highly specific to that document, making it a strong distinguishing feature.</p>
-<p>Conversely, TF-IDF values are lowest for terms that appear infrequently across many documents. These terms are less helpful in distinguishing one document from another because their widespread presence dilutes their significance. For example, technical terms like &ldquo;specificity&rdquo; or &ldquo;granularity&rdquo; might appear in many documents but with low frequency in each, resulting in low TF-IDF values.</p>
-<p>Lets look at a simple workde out example to get a more clear idea&hellip;</p>
-<h3 id="retrieval-based-on-a-query-1">Retrieval based on a query<a hidden class="anchor" aria-hidden="true" href="#retrieval-based-on-a-query-1">#</a></h3>
-<p>Relevance scores determine how well a document matches a user&rsquo;s query. To calculate relevance scores for a query containing multiple terms, the standard approach is to sum the weights used in the term-document matrix. A common weighting scheme is TF-IDF (Term Frequency-Inverse Document Frequency).</p>
-<p>The relevance score for a query $ q $ in a document $ \text{doc} $ within a corpus $ D $ is:</p>
-<p>$$
-\text{RelevanceScore}(q, \text{doc}, D) = \sum_{w \in q} \text{TF-IDF}(w, \text{doc}, D)
-$$</p>
-<blockquote>
-<p>just a quick side note, anybody who has dealt with the graph datastructure knows, we mostly never use an adjacency matrix when working with graphs, we use an adjacency list.
-In a similar way, we dont actually dont use the Term document matrix during actual use in a production system we use someting calle an inverted indes, you can think of this as a equilant to an adjacency list.
-used the term document matrix for better visualization and simpler explanations.</p>
-</blockquote>
-<h2 id="bm25-1">BM25<a hidden class="anchor" aria-hidden="true" href="#bm25-1">#</a></h2>
-<p>BM25 is an advanced weighting scheme that builds upon TF-IDF to provide more accurate relevance scores in information retrieval. It addresses some of the limitations of TF-IDF by incorporating term frequency saturation and document length normalization.</p>
-<h3 id="smoothed-idf-1">Smoothed IDF<a hidden class="anchor" aria-hidden="true" href="#smoothed-idf-1">#</a></h3>
-<p>The first component of BM25 is the smoothed Inverse Document Frequency (IDF). This adjusts the IDF calculation to avoid zero values and provide more stable results:</p>
-<p>$$
-\text{IDF}_{BM25}(w, D) = \log_e \left( 1 + \frac{|D| - \text{df}(w, D) + 0.5}{\text{df}(w, D) + 0.5} \right)
-$$</p>
-<h3 id="scoring-1">Scoring<a hidden class="anchor" aria-hidden="true" href="#scoring-1">#</a></h3>
-<p>BM25 modifies term frequency (TF) to account for term frequency saturation, ensuring that the impact of term frequency increases are logarithmic rather than linear. The scoring formula is:</p>
-<p>$$
-\text{Score}_{BM25}(w, \text{doc}) = \frac{\text{TF}(w, \text{doc}) \cdot (k + 1)}{\text{TF}(w, \text{doc}) + k \cdot \left( 1 - b + b \cdot \frac{|\text{doc}|}{\text{avgdoclen}} \right)}
-$$</p>
-<p>Here, $k$ and $b$ are parameters that control term frequency saturation and document length normalization, respectively. Typical values are $k = 1.2$ and $b = 0.75$.</p>
-<h3 id="bm25-weight-1">BM25 Weight<a hidden class="anchor" aria-hidden="true" href="#bm25-weight-1">#</a></h3>
-<p>Finally, the BM25 weight is calculated by combining the adjusted IDF values with the scoring values:</p>
-<h3 id="why-dense-vector-representations-1">Why Dense Vector Representations?<a hidden class="anchor" aria-hidden="true" href="#why-dense-vector-representations-1">#</a></h3>
-<p>Sparse retrieval techniques, which rely on term matching, often fall short in understanding the semantic context of queries. For instance, a sparse approach might struggle to effectively link the query &ldquo;what compounds protect the digestive system against viruses&rdquo; with the relevant information that &ldquo;gastric acid and proteases serve as powerful chemical defenses against ingested pathogens.&rdquo; Dense vector representations, however, capture the deeper semantic meaning of words and phrases, enabling more accurate and context-aware retrieval of information. By transitioning to dense vectors, we can achieve significantly improved performance in understanding and responding to complex queries.</p>
-<p>Before we move on to fancy dense retrieval techniques i would like to make some point in favour of sparse retrieval.</p>
-<ul>
-<li>If your pretraining data donsent match with the type of dicuments that you are trying to retrieve, then sparse retrival techniques like BM25 will still work better.</li>
-<li>Generally a mix of both sparse and dense retrieval is prefered, sparse retrieval to fetch around a 1000 docs or sometimes more, then dense retrieval techniques can be used to get the few docs necessary.</li>
-</ul>
-<h2 id="neural-information-retrieval-with-dense-vectors-1">Neural Information Retrieval with Dense Vectors<a hidden class="anchor" aria-hidden="true" href="#neural-information-retrieval-with-dense-vectors-1">#</a></h2>
-<p>In the realm of information retrieval (IR), the adoption of dense vector representations has significantly enhanced the efficiency and effectiveness of search systems. Traditional sparse retrieval techniques often fall short in capturing the nuanced semantic relationships between queries and documents. In contrast, dense vector representations, powered by neural networks, offer a richer, more expressive way to understand and match text.</p>
-<h3 id="cross-encoders-1"><strong>Cross Encoders</strong><a hidden class="anchor" aria-hidden="true" href="#cross-encoders-1">#</a></h3>
-<p>Cross encoders are conceptually the simplest approach to neural IR. They work by concatenating the query and document texts into a single input, which is then processed through a pre-trained BERT model. The final output state above the [CLS] token is used for scoring.</p>
-<h3 id="training-and-loss-functions-1">Training and Loss Functions<a hidden class="anchor" aria-hidden="true" href="#training-and-loss-functions-1">#</a></h3>
-<ol>
-<li>
-<p><strong>Data and Encoding:</strong> The dataset consists of triples $(q_i, \text{doc}_i^{+}, {\text{doc}_i^{-}})$, where $q_i$ is the query, $\text{doc}_i^{+}$ is a positive document, and ${\text{doc}_i^{-}}$ are negative documents.</p>
-<p>$$
-\text{Rep}(q, \text{doc}) = \text{Dense}(\text{Enc}([q; \text{doc}])_{N, 0})
-$$</p>
-</li>
-<li>
-<p><strong>Scoring:</strong> The basis for scoring is the final output state above the [CLS] token, which is fed through a dense layer.</p>
-</li>
-<li>
-<p><strong>Loss Function:</strong> The loss function used for training is typically the negative log-likelihood of the positive passage:
-$$
-\begin{align*}
--\log \left( \frac{\exp(\text{Rep}(q_i, \text{doc}_i^{+}))}
-{\exp(\text{Rep}(q_i, \text{doc}_i^{+})) + \sum_{j=1}^n \exp(\text{Rep}(q_i, \text{doc}_i^{-}))} \right)
-\end{align*}
-$$</p>
-<p>This loss function ensures that the model maximizes the score for the positive document while minimizing the scores for the negative documents, thereby refining the model&rsquo;s ability to distinguish relevant documents from irrelevant ones.</p>
-</li>
-</ol>
-<p>While cross encoders are semantically rich due to joint encoding of queries and documents, they are not scalable. This is because every document must be encoded at query time, which means that if we have a billion documents, we need to perform a billion forward passes with the BERT model for each query. This makes real-time retrieval infeasible.</p>
-<h3 id="dense-passage-retriever-dpr-1">Dense Passage Retriever (DPR)<a hidden class="anchor" aria-hidden="true" href="#dense-passage-retriever-dpr-1">#</a></h3>
-<p>DPR represents a scalable alternative by separately encoding queries and documents. Unlike cross encoders, DPR encodes queries and documents independently, allowing pre-encoding of documents, which enhances scalability.</p>
-<ol>
-<li>
-<p><strong>Separate Encoding:</strong> Queries and documents are encoded independently using a BERT-like model. The formula for the similarity score is:</p>
-<p>$$
-\text{Sim}(q, \text{doc}) = \text{EncQ}(q)_{N,0}^T \text{EncD}(\text{doc})_{N,0}
-$$</p>
-<ul>
-<li><strong>EncQ(q):</strong> The query $q$ is encoded into a dense vector representation using a BERT model.</li>
-<li><strong>EncD(doc):</strong> The document $\text{doc}$ is similarly encoded into a dense vector.</li>
-</ul>
-</li>
-<li>
-<p><strong>Scoring:</strong> The scoring function is the dot product of the query and document vectors, which efficiently measures their similarity.</p>
-</li>
-<li>
-<p><strong>Loss Function:</strong> The loss function for DPR is similar to that of cross encoders, but it uses the separately encoded vectors:</p>
-<p>$$
--\log \left( \frac{\exp(\text{Sim}(q_i, \text{doc}_i^{+}))}{\exp(\text{Sim}(q_i, \text{doc}_i^{+})) + \sum_{j=1}^n \exp(\text{Sim}(q_i, \text{doc}_i^{-}))} \right)
-$$</p>
-<p>This loss function ensures that the positive document (i.e., the relevant document) is scored higher than the negative documents (i.e., irrelevant documents).</p>
-</li>
-</ol>
-<p>DPR is highly scalable as documents can be encoded offline. At query time, we only need to encode the query and compute the dot product with pre-encoded document vectors. This allows for efficient real-time retrieval. However, this approach loses the rich token-level interactions present in cross encoders, potentially reducing the expressivity of the model. The independent encoding may not capture the intricate relationships between query terms and document terms as effectively as the joint encoding in cross encoders.</p>
-<h3 id="colbert-1">ColBERT<a hidden class="anchor" aria-hidden="true" href="#colbert-1">#</a></h3>
-<p>ColBERT (Contextualized Late Interaction over BERT) balances scalability and expressiveness by retaining some token-level interactions while ensuring efficiency. Here&rsquo;s how ColBERT works:</p>
-<ol>
-<li>
-<p><strong>Encoding:</strong> Queries and documents are encoded using a BERT model. The encoding produces dense vector representations for each token in the query and the document.</p>
-</li>
-<li>
-<p><strong>Scoring:</strong> The scoring in ColBERT is based on a matrix of similarity scores between query tokens and document tokens. This matrix is computed by taking the dot product of each query token vector with each document token vector.</p>
-<p>$$
-\text{MaxSim}(q, \text{doc}) = \sum_{i=1}^L \max_j \text{EncQ}(q)_{N,i}^T \text{EncD}(\text{doc})_{N,j}
-$$</p>
-<p>Here&rsquo;s a breakdown of this formula:</p>
-<ul>
-<li><strong>EncQ(q) and EncD(doc):</strong> These represent the token-level embeddings for the query and document, respectively, produced by the BERT encoder.</li>
-<li><strong>MaxSim:</strong> For each query token, we find the maximum similarity score across all document tokens, then sum these maximum values to get the overall similarity score.</li>
-</ul>
-</li>
-<li>
-<p><strong>Loss Function:</strong> The loss function used for training is the negative log-likelihood of the positive passage, with MaxSim as the basis.</p>
-<p>$$
--\log \left( \frac{\exp(\text{MaxSim}(q_i, \text{doc}_i^{+}))}{\exp(\text{MaxSim}(q_i, \text{doc}_i^{+})) + \sum_{j=1}^n \exp(\text{MaxSim}(q_i, \text{doc}_i^{-}))} \right)
-$$</p>
-<p>This loss function ensures that the model prioritizes the positive document by assigning it a higher score compared to negative documents.</p>
-<p>ColBERT is highly scalable because documents can be pre-encoded and stored, requiring only the query encoding at runtime. This enables fast retrieval through efficient dot product calculations. Additionally, ColBERT retains semantic richness by allowing token-level interactions at the output stage, making it a powerful compromise between expressiveness and efficiency.</p>
-</li>
-</ol>
-<h3 id="splade-1">SPLADE<a hidden class="anchor" aria-hidden="true" href="#splade-1">#</a></h3>
-<p>SPLADE (Sparse LAtent DEcoding) introduces a novel approach by scoring with respect to the entire vocabulary rather than directly between query and document pairs. Here&rsquo;s how SPLADE works:</p>
-<p>Let&rsquo;s break down this formula in detail:</p>
-<ol>
-<li>
-<p><strong>SPLADE($t, w_j$):</strong> This represents the score for each vocabulary item $w_j$ given a token $t$.</p>
-<ul>
-<li>
-<p><strong>$S_{ij}$:</strong> This score reflects the interaction between the $i$-th token in the sequence and the $j$-th vocabulary item. It is obtained by applying a transformation function to the inner product of the token embedding and the vocabulary embedding, plus a bias term $b_j$.</p>
-</li>
-<li>
-<p><strong>ReLU:</strong> The Rectified Linear Unit (ReLU) activation function is used to ensure that the scores are non-negative. This step helps in capturing only the significant interactions by zeroing out the negative values.</p>
-</li>
-<li>
-<p><strong>$\log(1 + \text{ReLU}(S_{ij}))$:</strong> Taking the logarithm of $1 + \text{ReLU}(S_{ij})$ smooths the scores and prevents very high values from dominating the overall score. This helps in achieving a more balanced distribution of scores.</p>
-</li>
-<li>
-<p><strong>Summation over $i$:</strong> The sum of the log-transformed scores across all tokens $i$ in the sequence aggregates their contributions to the score for the specific vocabulary item $w_j$. This results in a final SPLADE vector that is sparse, retaining only the most significant scores and thus reducing dimensionality and computational load.</p>
-</li>
-</ul>
-</li>
-<li>
-<p><strong>Scoring:</strong> The similarity function for SPLADE is the dot product of the sparse vectors for the query and document.</p>
-<p>$$
-\text{Sim}_{\text{SPLADE}}(q, \text{doc}) = \text{SPLADE}(q)^T \text{SPLADE}(\text{doc})
-$$</p>
-<p>This scoring method ensures that the comparison is made across all vocabulary items, leveraging the sparsity of the vectors for efficiency.</p>
-</li>
-<li>
-<p><strong>Loss Function:</strong> SPLADE includes a regularization term in its loss function to ensure sparsity and balanced scores.</p>
-<p>$$
-\text{Loss} = -\log \left( \frac{\exp(\text{Sim}_{\text{SPLADE}}(q_i, \text{doc}_i^{+}))}{\exp(\text{Sim}_{\text{SPLADE}}(q_i, \text{doc}_i^{+})) + \sum_{j=1}^n \exp(\text{Sim}_{\text{SPLADE}}(q_i, \text{doc}_i^{-}))} \right) + \text{Reg}
-$$</p>
-<p>The regularization term helps in maintaining the sparsity of the vectors, which is crucial for the efficiency of SPLADE.</p>
-</li>
-</ol>
-<p>SPLADE is efficient due to its use of sparse vectors, which reduces the computational overhead. By comparing sequences against the entire vocabulary, SPLADE captures a wide range of semantic information, making it versatile and effective in various retrieval scenarios. The regularization term ensures that the model produces balanced and sparse scores, optimizing both performance and computational efficiency.</p>
-<h3 id="hypothetical-document-embeddings-hyde">Hypothetical Document Embeddings (HyDE)<a hidden class="anchor" aria-hidden="true" href="#hypothetical-document-embeddings-hyde">#</a></h3>
-<pre tabindex="0"><code>ChatGPT can make mistakes. Check important info.
-</code></pre><p>This is the tag line below the input field in ChatGPT, This will be there for all the llms? but why.
-This is because LLMs can halicunate, and they do this becauese the cant fit all of theri training data in therir model params.<br>
-and the there is do direction of research that states that LLMs cant halicuante.</p>
-<p>Event for questions like triva &ldquo;in whcich movies Vin disel was a voice actor?&rdquo;, chat gpt has acces to a search engine and it might give you your lintk to certain answers, but Chat GPT uses Bing, and can you rellly trust the results of Bing!!
-&hellip;</p>
-<p>But you might not need trivia, you might me a medical bot that needs to give a diagnosis based on certain symptoms or a lawer bot that needs to find the correct &hellip;.
-This is Where RAG or Retrieval Augmented Generations comes to your rescue. Even though RAG has many limitations, this is the best way to interact with an llm and be confident to some degree that it is not halicunating.</p>
-<p>Not only this, llms can be more confidnt of the context of you quesiton if you provide them with the relevant information.
-But retrieving this relevant chunk of information is not that easy, you might have millions of documents, but the context lengt of llms is limited, you cant fit all of your millions of documents in the context length.</p>
-<p>This is where the rich field of Information Retrieval comes into picture.
-if you tag on a retirever which feeds into your language model this is basically in simple terms what a RAG system is.</p>
-<p>So lets first look at the retrieval part of RAG, then we will have a closer look at some rag techniques</p>
 
 
   </div>
